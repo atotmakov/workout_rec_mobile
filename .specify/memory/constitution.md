@@ -1,50 +1,76 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+# Workout Rec Mobile Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. Native Android App
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+- The Android app MUST be written in Kotlin.
+- There is no iOS app.
+- Cross-platform UI frameworks (Flutter, React Native, Kotlin Multiplatform UI, etc.) MUST NOT
+  be used for app code.
+- The app MUST follow Android platform conventions (navigation, lifecycle, permissions).
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+Rationale: native code gives the best access to platform health/sensor APIs, performance, and
+platform UX.
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+### II. Test-First (NON-NEGOTIABLE)
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+- Tests MUST be written before implementation and MUST be observed failing before the
+  implementing code is written (Red → Green → Refactor).
+- This applies to the Android app (JUnit-based tests) and to any Google Apps Script code.
+- Bug fixes MUST start with a failing test that reproduces the bug.
+- Code without tests MUST NOT be merged.
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+Rationale: workout logging and progress history are the product's core value; regressions there
+are silent and costly, so correctness is proven before code exists.
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+### III. Hybrid Data Architecture
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+- Workout logging data MUST be based on Google Sheets; all settings such as the exercise list,
+  top records, and workouts by day MUST be stored in the Google Sheet; it MUST be possible to
+  edit the sheet via the Google Sheets web UI.
+- Workout logging MUST work on-device without network connectivity; logged data MUST be
+  persisted locally first and synchronized to the Google Sheet when connectivity is available.
+- Synchronization MUST make a best effort to minimize data loss and conflicts, without
+  guaranteeing their absence; the app MUST sync data with the Google Sheet as often as possible
+  without degrading the user experience.
+- Each feature plan MUST define conflict resolution between app and sheet edits.
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+Rationale: users log workouts in gyms with unreliable connectivity, and the spreadsheet must
+remain editable via the web UI.
+
+### IV. Maximize Use of Google Services
+
+- All communication between the app and the Google Sheet MUST go through Google APIs; a custom
+  backend MUST NOT be introduced.
+- Google Apps Script MAY be used to implement backend logic.
+
+Rationale: avoiding a custom backend keeps the service simple.
+
+## Technology Constraints
+
+- Android: Kotlin. Specific UI frameworks, persistence libraries, and minimum OS
+  versions are chosen in each feature's implementation plan and MUST stay consistent across
+  features once chosen.
+- New third-party dependencies MUST be justified in the implementation plan.
+
+## Development Workflow & Quality Gates
+
+- Work follows the Spec Kit flow: specify → (clarify) → plan → tasks → implement, one feature
+  branch per feature.
+- Each implementation plan MUST include a Constitution Check confirming compliance with all
+  principles; any deviation MUST be documented with justification.
+- A change is mergeable only when: all tests pass for the Android app and any Google Apps Script
+  code, as applicable; and new behavior was developed test-first.
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+- This constitution supersedes all other development practices for this project.
+- Amendments are made via `/speckit-constitution`, MUST be documented in the Sync Impact Report,
+  and MUST be committed on their own.
+- Versioning follows semantic versioning: MAJOR for removing or redefining principles, MINOR for
+  adding principles or materially expanding guidance, PATCH for clarifications and wording.
+- Every spec, plan, and code review MUST verify compliance with these principles; complexity or
+  deviations MUST be justified in writing.
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+**Version**: 1.0.0 | **Ratified**: 2026-09-29 | **Last Amended**: 2026-09-29
