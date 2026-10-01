@@ -8,6 +8,22 @@
 
 **Input**: User description: "At first applicaton start user should choose google account he want to use with the app, after user pic show selected user in up right corner. On user google account in google sheets created the table with tabs: log, drills, rec, money, workout, balance."
 
+## Clarifications
+
+### Session 2026-10-01
+
+- Q: Should the app look for an existing workout_rec_database_ spreadsheet anywhere in the user's
+  Google Drive, or only among spreadsheets the app itself created? → A: Only spreadsheets the app
+  created; a hand-made spreadsheet with that name is ignored.
+- Q: When the user answers "Yes" to "want to rewrite it?", should the old spreadsheet's data be
+  deleted or kept as a backup? → A: Kept: the old spreadsheet is renamed to
+  workout_rec_database_backup_<date> and a fresh spreadsheet is created.
+- Q: Is it acceptable for first-time setup to need one manual step outside the app to switch on
+  the spreadsheet's automation? → A: Yes: the app opens the new spreadsheet in the browser and the
+  user taps "Enable automation" once, which approves the script and turns on its daily schedule.
+- Q: Which language should the app's screens and messages use? → A: Russian and English,
+  following the phone's language setting; English for any other language.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Choose a Google account on first launch (Priority: P1)
@@ -68,11 +84,19 @@ exactly the six tabs in the listed order.
    structure differs from the reference structure, **When** account selection completes,
    **Then** the app asks "Spreadsheet with name workout_rec_database_ already exists in the
    account, want to rewrite it?".
-5. **Given** that question is shown, **When** the user answers "Yes", **Then** the spreadsheet
-   is recreated with the reference structure; **When** the user answers "No", **Then** the app
-   returns to the account chooser.
-6. **Given** setup of the spreadsheet is in progress, **When** it completes, **Then** the user
-   sees a confirmation and the main screen; if it fails, the user sees why and can retry.
+5. **Given** that question is shown, **When** the user answers "Yes", **Then** the old
+   spreadsheet is renamed to workout_rec_database_backup_<date> with its data untouched, and a
+   new workout_rec_database_ is created with the reference structure; **When** the user answers
+   "No", **Then** the app returns to the account chooser.
+6. **Given** a new spreadsheet was created, **When** the app finishes creating it, **Then** the
+   app explains the one-time "Enable automation" step and opens the spreadsheet in the browser.
+7. **Given** the user tapped "Enable automation" and approved the script, **When** they return to
+   the app, **Then** the app confirms that automation is on and opens the main screen.
+8. **Given** the user returns without enabling automation, **When** the app checks, **Then** it
+   shows that automation is not yet on, with options to open the spreadsheet again or continue
+   for now.
+9. **Given** setup of the spreadsheet is in progress, **When** it fails, **Then** the user sees
+   why and can retry.
 
 ---
 
@@ -111,10 +135,19 @@ chooser is shown.
   matches, so the next account selection shows the rewrite question (FR-008).
 - The user adds extra tabs or extra columns after the reference columns: the structure check
   ignores them, and the existing spreadsheet is still used.
-- The user answers "Yes" to the rewrite question: all existing data in that spreadsheet is lost;
-  the question MUST make this clear.
-- More than one spreadsheet named workout_rec_database_ exists in the account: the app uses the
-  most recently modified one for the structure check.
+- The user answers "Yes" to the rewrite question: the old data stays in the backup spreadsheet;
+  the question MUST say where the old data will be kept.
+- A backup with the same date already exists (two rewrites in one day): the new backup name gets
+  a numeric suffix, e.g. workout_rec_database_backup_2026-10-01_2.
+- More than one app-created spreadsheet named workout_rec_database_ exists in the account: the
+  app uses the most recently modified one for the structure check.
+- The user made a spreadsheet named workout_rec_database_ by hand (or copied one): the app does
+  not see it and creates its own spreadsheet, so the account ends up with two files of that name.
+- The user skips "Enable automation": the spreadsheet works, the in-sheet auto-fill and follow
+  selection still work, but workout and balance are not updated until the step is done; the app
+  keeps reminding (FR-015).
+- The user later removes the script's approval in their Google account: the app detects that
+  automation is off and shows the reminder again.
 - Setup is interrupted midway (app closed, network lost): on the next launch the setup resumes,
   without creating a second spreadsheet or duplicate tabs.
 - Signing out while unsynced data exists (from later features): the user is warned that unsynced
@@ -127,7 +160,8 @@ chooser is shown.
 - **FR-001**: On first launch, the app MUST require the user to choose a Google account before
   showing the main screen.
 - **FR-002**: The app MUST request only the access needed to create and edit the app's own
-  spreadsheet and its attached automation, and MUST explain why access is needed before asking.
+  spreadsheet and its attached automation; it MUST NOT request access to the user's other Drive
+  files, and MUST explain why access is needed before asking.
 - **FR-003**: After an account is chosen, the app MUST show that account's profile picture (or
   its initials if none) in the top-right corner of the main screen.
 - **FR-004**: The app MUST remember the chosen account and MUST NOT ask again on later launches
@@ -136,28 +170,43 @@ chooser is shown.
   switch account and to sign out.
 - **FR-006**: After an account is chosen, the app MUST ensure the account has a spreadsheet named
   workout_rec_database_ containing the tabs log, drills, rec, money, workout, balance, in that
-  order.
+  order; the spreadsheet MUST use the dd.MM.yyyy date format regardless of the phone's language.
 - **FR-007**: Each tab MUST be created with the reference structure (columns, column types, and
   formatting) defined in [Reference Spreadsheet Structure](#reference-spreadsheet-structure),
   including the rec conditional formatting rules and the rec A1 drop-down.
-- **FR-013**: A newly created (or rewritten) spreadsheet MUST have the attached automation
-  described in [Attached automation](#attached-automation-spreadsheet-script), including both
-  scheduled behaviors (daily workouts and balance), so it works the same as the reference
-  spreadsheet without manual setup.
-- **FR-008**: If the chosen account already has a spreadsheet named workout_rec_database_, the app
-  MUST compare its structure (tabs, columns, column types) with the reference structure:
+- **FR-008**: The app MUST look only at spreadsheets it created itself in the chosen account;
+  spreadsheets created by hand or by other apps are never read, even if they have the same name.
+  If the chosen account already has an app-created spreadsheet named workout_rec_database_, the
+  app MUST compare its structure (tabs, columns, column types) with the reference structure:
   - if it matches, the app MUST use the existing spreadsheet without modifying it;
   - if it differs, the app MUST ask "Spreadsheet with name workout_rec_database_ already exists
-    in the account, want to rewrite it?"; on "Yes" it MUST recreate the spreadsheet with the
-    reference structure; on "No" it MUST return to the account chooser without changing anything.
+    in the account, want to rewrite it?"; on "Yes" it MUST rename the old spreadsheet to
+    workout_rec_database_backup_<date> (date as yyyy-MM-dd, without changing its contents) and
+    create a new workout_rec_database_ with the reference structure; on "No" it MUST return to
+    the account chooser without changing anything.
 - **FR-009**: Spreadsheet setup MUST be safe to repeat: re-running it MUST NOT create a second
   spreadsheet or duplicate tabs, and MUST NOT modify a matching spreadsheet's data.
-- **FR-010**: Apart from a rewrite the user confirmed (FR-008), the app MUST never delete,
-  rename, or reorder tabs or data in the spreadsheet.
+- **FR-010**: The app MUST never delete a spreadsheet, and MUST never delete, rename, or reorder
+  tabs or data in it; the only exception is renaming the old spreadsheet to a backup during a
+  rewrite the user confirmed (FR-008).
 - **FR-011**: If setup cannot complete (no network, access denied, Google service error), the app
   MUST show a clear message and a retry option.
 - **FR-012**: Signing out MUST require confirmation and MUST return the app to the first-launch
   account chooser.
+- **FR-013**: A newly created (or rewritten) spreadsheet MUST have the attached automation
+  described in [Attached automation](#attached-automation-spreadsheet-script), including both
+  scheduled behaviors (daily workouts and balance), so it works the same as the reference
+  spreadsheet. The app MUST attach the script when creating the spreadsheet. Approving the script
+  and turning on the daily schedule is a one-time manual step: the spreadsheet MUST offer an
+  "Enable automation" action, the app MUST open the spreadsheet in the browser and explain the
+  step, and the app MUST be able to tell whether the step has been done.
+- **FR-014**: All app screens and messages MUST be available in Russian and English; the app MUST
+  use Russian when the phone's language is Russian and English otherwise. Messages quoted in this
+  spec are the English versions. Spreadsheet names, tab names, and column headers are not
+  translated.
+- **FR-015**: Until automation is enabled, the app MUST show a visible reminder (e.g., on the
+  account menu) with a way to open the spreadsheet and finish the step; the rest of the app MUST
+  stay usable.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -215,19 +264,19 @@ same behavior.
 | Daily workouts | On a time-based schedule (about once a day) | For each day in log not yet in workout, adds a workout row with exactly three values: date, duration in minutes (last minus first logged time that day), and work alone 0. Nothing is written beyond column C |
 | Balance | On a time-based schedule (about once a day) | Sets balance A1 to the total of money "workouts" minus the number of workout rows whose "work alone" is not 1 |
 
-Structure check (FR-008) also covers the conditional formatting rules, the rec A1 drop-down, and
-the presence of the attached automation.
-
 Structure check (FR-008): the spreadsheet matches when all six tabs exist with the headers above
-in row 1 (log, drills, money, workout) and the rec formula in A2. Data rows and the values in rec
-A1 and balance A1 are not compared. In a new spreadsheet rec A1 is empty and balance A1 is 0.
+in row 1 (log, drills, money, workout), the rec formula in A2, the rec A1 drop-down, the two rec
+conditional formatting rules, and the attached script. Data rows and the values in rec A1 and
+balance A1 are not compared, and whether automation has been enabled is tracked separately
+(FR-015), not treated as a structure difference. In a new spreadsheet rec A1 is empty and
+balance A1 is 0.
 
 ## Success Criteria *(mandatory)*
 
 ### Measurable Outcomes
 
 - **SC-001**: A new user goes from first launch to the main screen with their account shown in
-  under 1 minute.
+  under 1 minute, and completes the "Enable automation" step in under 2 more minutes.
 - **SC-002**: After setup, 100% of tested accounts have exactly one workout spreadsheet with the
   six tabs in the specified order, the rec highlighting and drop-down, and working automation
   (editing log column B in the web UI auto-fills dates; balance and workout update within a day).
@@ -236,7 +285,7 @@ A1 and balance A1 are not compared. In a new spreadsheet rec A1 is empty and bal
 - **SC-004**: On later launches the main screen opens with the account shown without any account
   prompt, in 100% of launches while access remains granted.
 - **SC-005**: The user can open the created spreadsheet in the Google Sheets web UI and edit it
-  without any further setup.
+  without any setup beyond the one-time "Enable automation" step.
 
 ## Assumptions
 
@@ -251,7 +300,8 @@ A1 and balance A1 are not compared. In a new spreadsheet rec A1 is empty and bal
 - The "auto-fill log rows" and "follow selection" behaviors react only to edits made by a person
   in the web UI; data written by the app does not trigger them, so later features that write to
   log MUST fill the Date column with the date-time themselves.
-- "Rewrite" means the existing spreadsheet's contents are replaced with the empty reference
-  structure (same spreadsheet name, data lost).
+- "Rewrite" means the existing spreadsheet is kept as a renamed backup and a new, empty
+  spreadsheet with the reference structure takes the workout_rec_database_ name. Backups are
+  never read by the app.
 - Initial setup requires internet access; offline use of the app starts after setup completes.
 - The user's phone has Google account support available.
