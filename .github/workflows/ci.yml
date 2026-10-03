@@ -56,21 +56,29 @@ jobs:
     name: Compose UI tests (emulator)
     runs-on: ubuntu-latest
     needs: unit-tests
-    if: hashFiles('app/src/androidTest/**') != ''
     steps:
       - uses: actions/checkout@v4
+      - name: Check for instrumented tests
+        id: has-tests
+        run: |
+          if [ -d app/src/androidTest ]; then echo "present=true" >> "$GITHUB_OUTPUT"; else echo "present=false" >> "$GITHUB_OUTPUT"; fi
       - name: Enable KVM
+        if: steps.has-tests.outputs.present == 'true'
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
       - uses: actions/setup-java@v4
+        if: steps.has-tests.outputs.present == 'true'
         with:
           distribution: temurin
           java-version: 17
       - uses: gradle/actions/setup-gradle@v4
+        if: steps.has-tests.outputs.present == 'true'
       - run: chmod +x gradlew
+        if: steps.has-tests.outputs.present == 'true'
       - name: Run instrumented tests
+        if: steps.has-tests.outputs.present == 'true'
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
