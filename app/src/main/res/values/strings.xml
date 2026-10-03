@@ -1,4 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Workout Rec</string>
+
+    <!-- US1: account -->
+    <string name="setup_title">Welcome to Workout Rec</string>
+    <string name="setup_access_explanation">Workout Rec keeps your workouts in a Google Sheets spreadsheet in your own Google account. Choose the account to use; the app will ask for access to its own spreadsheet and its automation script only, never to your other files.</string>
+    <string name="setup_choose_account">Choose Google account</string>
+    <string name="setup_choose_again">Choose again</string>
+    <string name="setup_account_required">A Google account is required to use Workout Rec.</string>
+    <string name="setup_access_revoked">Access to your Google account was removed. Choose the account again.</string>
+    <string name="setup_working">Setting up…</string>
+    <string name="account_menu_description">Account menu</string>
+    <string name="account_switch">Switch account</string>
+    <string name="account_sign_out">Sign out</string>
 </resources>

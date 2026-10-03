@@ -1,4 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Workout Rec</string>
+
+    <!-- US1: account -->
+    <string name="setup_title">Добро пожаловать в Workout Rec</string>
+    <string name="setup_access_explanation">Workout Rec хранит ваши тренировки в таблице Google Sheets в вашем собственном аккаунте Google. Выберите аккаунт; приложение попросит доступ только к своей таблице и её скрипту автоматизации, но не к другим вашим файлам.</string>
+    <string name="setup_choose_account">Выбрать аккаунт Google</string>
+    <string name="setup_choose_again">Выбрать снова</string>
+    <string name="setup_account_required">Для работы Workout Rec нужен аккаунт Google.</string>
+    <string name="setup_access_revoked">Доступ к вашему аккаунту Google был отозван. Выберите аккаунт снова.</string>
+    <string name="setup_working">Настройка…</string>
+    <string name="account_menu_description">Меню аккаунта</string>
+    <string name="account_switch">Сменить аккаунт</string>
+    <string name="account_sign_out">Выйти</string>
 </resources>

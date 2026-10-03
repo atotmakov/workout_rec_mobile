@@ -56,6 +56,8 @@ jobs:
     name: Compose UI tests (emulator)
     runs-on: ubuntu-latest
     needs: unit-tests
+    # Run even when unit tests are red, so UI test results are visible too (test-first).
+    if: ${{ !cancelled() }}
     steps:
       - uses: actions/checkout@v4
       - name: Check for instrumented tests
