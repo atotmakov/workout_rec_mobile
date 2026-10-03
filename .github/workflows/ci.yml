@@ -23,6 +23,8 @@ jobs:
   unit-tests:
     name: Build, lint, unit tests
     runs-on: ubuntu-latest
+    env:
+      DEBUG_KEYSTORE_BASE64: ${{ secrets.DEBUG_KEYSTORE_BASE64 }}
     steps:
       - uses: actions/checkout@v7
       - uses: gradle/actions/wrapper-validation@v6
@@ -32,10 +34,15 @@ jobs:
           java-version: 17
       - uses: gradle/actions/setup-gradle@v6
       - run: chmod +x gradlew
+      - name: Use the shared debug signing key
+        if: env.DEBUG_KEYSTORE_BASE64 != ''
+        run: |
+          echo "$DEBUG_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/debug.keystore"
+          echo "DEBUG_KEYSTORE_FILE=$RUNNER_TEMP/debug.keystore" >> "$GITHUB_ENV"
       - name: Assemble, unit tests, lint
         env:
           GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
-        run: ./gradlew assembleDebug testDebugUnitTest lintDebug --stacktrace
+        run: ./gradlew assembleDebug testDebugUnitTest lintDebug -PversionCode=${{ github.run_number }} --stacktrace
       - name: Upload reports
         if: always()
         uses: actions/upload-artifact@v7
@@ -95,3 +102,33 @@ jobs:
           name: ui-test-reports
           path: app/build/reports/androidTests/
           if-no-files-found: ignore
+
+  publish:
+    name: Publish APK release
+    runs-on: ubuntu-latest
+    needs: [script-tests, unit-tests, ui-tests]
+    # Only green builds of master; ui-tests also runs on red unit tests, so check every result.
+    if: >-
+      github.event_name == 'push' && github.ref == 'refs/heads/master' &&
+      needs.script-tests.result == 'success' &&
+      needs.unit-tests.result == 'success' &&
+      needs.ui-tests.result == 'success'
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: app-debug-apk
+          path: apk
+      - name: Create GitHub Release with the APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUILD: ${{ github.run_number }}
+        run: |
+          apk="workout-rec-build-$BUILD.apk"
+          cp apk/*.apk "$apk"
+          gh release create "build-$BUILD" "$apk" \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "Workout Rec build $BUILD" \
+            --notes "Debug-signed APK from commit $GITHUB_SHA (all CI checks green). Install on Android 8.0+ by opening the APK on the phone and allowing installs from this source."

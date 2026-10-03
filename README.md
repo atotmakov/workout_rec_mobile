@@ -25,6 +25,14 @@ CI (GitHub Actions) runs everything on every push, so no local JDK or Android SD
 | Compose UI tests | `./gradlew connectedDebugAndroidTest` (device or emulator) | `ui-tests` (API 34 emulator) |
 
 The debug APK is attached to each successful `unit-tests` run as the `app-debug-apk` artifact.
+When every job is green on `master`, the `publish` job creates a GitHub Release `build-<run>` with
+`workout-rec-build-<run>.apk` attached (debug-signed; `versionCode` = run number, so newer builds
+install over older ones).
+
+Optional repository secret `DEBUG_KEYSTORE_BASE64` (a base64-encoded debug keystore, alias
+`androiddebugkey`, passwords `android`): CI then signs every build with the same key. Without it
+each run uses a fresh debug key, so an installed build must be uninstalled before installing the
+next one, and Google sign-in only works for the key whose SHA-1 is registered in Google Cloud.
 
 ## Google Cloud setup
 

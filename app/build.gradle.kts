@@ -35,10 +35,25 @@ android {
         applicationId = "com.workoutrec"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
+        // CI passes -PversionCode=<run number> so each published APK installs over the previous one.
+        versionCode = (project.findProperty("versionCode") as String?)?.toInt() ?: 1
         versionName = "0.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "WEB_CLIENT_ID", "\"$webClientId\"")
+    }
+
+    signingConfigs {
+        // CI signs with a shared debug key when DEBUG_KEYSTORE_FILE is set (from the
+        // DEBUG_KEYSTORE_BASE64 secret). A stable key lets published APKs update each other and
+        // keeps the SHA-1 registered for the Android OAuth client valid (research R12).
+        getByName("debug") {
+            System.getenv("DEBUG_KEYSTORE_FILE")?.takeIf { it.isNotBlank() }?.let { path ->
+                storeFile = file(path)
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
+            }
+        }
     }
 
     buildTypes {
