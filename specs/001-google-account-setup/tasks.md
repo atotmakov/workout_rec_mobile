@@ -168,15 +168,15 @@ new account) or sign out (back to the first-launch chooser).
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T062 [P] [US3] ViewModel tests in `app/src/test/java/com/workoutrec/setup/SetupViewModelAccountSwitchTest.kt`: switch clears `SpreadsheetBinding` and runs `Authorizing` → `FindingSpreadsheet` for the new account; sign out requires confirmation, clears credential state and `SettingsStore`, ends in `SignedOut`
-- [ ] T063 [P] [US3] Compose UI test in `app/src/androidTest/java/com/workoutrec/home/SignOutDialogTest.kt`: "Sign out" shows a confirmation dialog; Cancel keeps the account; Confirm returns to the account chooser
-- [ ] T064 [P] [US3] Add to `app/src/test/java/com/workoutrec/auth/AccountRepositoryTest.kt`: `signOut()` calls `clearCredentialState` and `SettingsStore.clear()`; `switchAccount()` clears `SpreadsheetBinding` and saves the new account
+- [X] T062 [P] [US3] ViewModel tests in `app/src/test/java/com/workoutrec/setup/SetupViewModelAccountSwitchTest.kt`: switch clears `SpreadsheetBinding` and runs `Authorizing` → `FindingSpreadsheet` for the new account; sign out requires confirmation, clears credential state and `SettingsStore`, ends in `SignedOut`
+- [X] T063 [P] [US3] Compose UI test in `app/src/androidTest/java/com/workoutrec/home/SignOutDialogTest.kt`: "Sign out" shows a confirmation dialog; Cancel keeps the account; Confirm returns to the account chooser
+- [X] T064 [P] [US3] Add to `app/src/test/java/com/workoutrec/auth/AccountRepositoryTest.kt`: `signOut()` calls `clearCredentialState` and `SettingsStore.clear()`; `switchAccount()` clears `SpreadsheetBinding` and saves the new account
 
 ### Implementation for User Story 3
 
-- [ ] T065 [US3] Add `switchAccount()` and `signOut()` to `app/src/main/java/com/workoutrec/auth/AccountRepository.kt` (`CredentialManager.clearCredentialState`, `SettingsStore.clear()`) and handle them in `SetupViewModel.kt` so T062 and T064 pass
-- [ ] T066 [US3] Implement `app/src/main/java/com/workoutrec/home/SignOutDialog.kt` and wire "Switch account" / "Sign out" in `app/src/main/java/com/workoutrec/home/AccountMenu.kt` so T063 passes
-- [ ] T067 [US3] Add US3 texts to `app/src/main/res/values/strings.xml` and `app/src/main/res/values-ru/strings.xml`
+- [X] T065 [US3] Add `switchAccount()` and `signOut()` to `app/src/main/java/com/workoutrec/auth/AccountRepository.kt` (`CredentialManager.clearCredentialState`, `SettingsStore.clear()`) and handle them in `SetupViewModel.kt` so T062 and T064 pass
+- [X] T066 [US3] Implement `app/src/main/java/com/workoutrec/home/SignOutDialog.kt` and wire "Switch account" / "Sign out" in `app/src/main/java/com/workoutrec/home/AccountMenu.kt` so T063 passes
+- [X] T067 [US3] Add US3 texts to `app/src/main/res/values/strings.xml` and `app/src/main/res/values-ru/strings.xml`
 
 **Checkpoint**: All user stories are independently functional.
 
@@ -186,10 +186,10 @@ new account) or sign out (back to the first-launch chooser).
 
 **Purpose**: Improvements that affect multiple user stories
 
-- [ ] T068 [P] Enable Android Lint `HardcodedText` and missing-translation checks as errors in `app/build.gradle.kts`, and fix any findings (FR-014)
-- [ ] T069 Run `./gradlew testDebugUnitTest`, `./gradlew connectedDebugAndroidTest`, and `node --test apps-script/tests`; all must pass
+- [X] T068 [P] Enable Android Lint `HardcodedText` and missing-translation checks as errors in `app/build.gradle.kts`, and fix any findings (FR-014)
+- [X] T069 Run `./gradlew testDebugUnitTest`, `./gradlew connectedDebugAndroidTest`, and `node --test apps-script/tests`; all must pass
 - [ ] T070 Run manual scenarios 1–13 and 6a from [quickstart.md](quickstart.md) on a device with a real account; record results and the SC-001 timings in `specs/001-google-account-setup/quickstart-results.md`
-- [ ] T071 [P] Update `README.md` with final setup, test commands, and how to inspect status markers with `logMetadata`
+- [X] T071 [P] Update `README.md` with final setup, test commands, and how to inspect status markers with `logMetadata`
 
 ---
 
