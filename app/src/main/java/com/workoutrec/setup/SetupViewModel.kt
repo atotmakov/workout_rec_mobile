@@ -61,6 +61,16 @@ class SetupViewModel(
         }
     }
 
+    private val _reminder = MutableStateFlow<Reminder?>(null)
+
+    /** Automation reminder for the main screen (FR-015). */
+    val reminder: StateFlow<Reminder?> = _reminder
+
+    fun onAction(action: SetupAction): Unit = TODO()
+
+    /** Background check on launch: spreadsheet still there? automation on? (data-model.md Ready) */
+    fun refreshStatus(): Unit = TODO()
+
     fun onConsentResult(data: Intent?) {
         viewModelScope.launch {
             val account = pendingAccount ?: accounts.currentAccount.first() ?: run {

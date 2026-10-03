@@ -13,4 +13,27 @@
     <string name="account_menu_description">Account menu</string>
     <string name="account_switch">Switch account</string>
     <string name="account_sign_out">Sign out</string>
+
+    <!-- US2: spreadsheet setup -->
+    <string name="setup_error_offline">Internet connection needed. Connect and try again.</string>
+    <string name="setup_error_service">Google services are not responding right now. Try again in a moment.</string>
+    <string name="setup_error_access">Google access was not granted.</string>
+    <string name="setup_error_other">Something went wrong while setting up your spreadsheet.</string>
+    <string name="setup_retry">Retry</string>
+    <string name="rewrite_title">Spreadsheet already exists</string>
+    <string name="rewrite_question">Spreadsheet with name workout_rec_database_ already exists in the account, want to rewrite it?</string>
+    <string name="rewrite_backup_note">Nothing is deleted: the current spreadsheet is kept as a backup named workout_rec_database_backup_ with today\'s date.</string>
+    <string name="rewrite_yes">Yes</string>
+    <string name="rewrite_no">No</string>
+    <string name="guide_step1_title">Step 1 of 2: allow scripts</string>
+    <string name="guide_step1_text">To add automation to your spreadsheet, turn on \"Google Apps Script API\" in your Apps Script settings. Tap Open, switch it on, then come back to the app.</string>
+    <string name="guide_step2_title">Step 2 of 2: enable automation</string>
+    <string name="guide_step2_text">Tap Open and approve access for your spreadsheet\'s script. Google will show \"Google hasn\'t verified this app\" because the script is yours: tap Advanced, then \"Go to workout_rec_automation\", then Allow. Then come back to the app.</string>
+    <string name="guide_open">Open</string>
+    <string name="guide_continue">Continue for now</string>
+    <string name="reminder_script_missing">Automation is not set up yet: allow scripts (step 1).</string>
+    <string name="reminder_not_enabled">Automation is not enabled yet: finish step 2.</string>
+    <string name="reminder_stopped">Automation has stopped: enable it again.</string>
+    <string name="reminder_fix">Fix</string>
+    <string name="automation_on">Automation is on.</string>
 </resources>

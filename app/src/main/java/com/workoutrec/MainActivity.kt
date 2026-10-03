@@ -92,6 +92,7 @@ private fun SetupRoute(viewModel: SetupViewModel, onReady: () -> Unit) {
             }
         }
         SetupState.Ready -> LaunchedEffect(Unit) { onReady() }
+        else -> Progress()
     }
 }
 
