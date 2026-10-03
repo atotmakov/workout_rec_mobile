@@ -39,3 +39,32 @@ Needed only to sign in on a real device (task T007; research R12 in
    **Web application**.
 4. Put the Web client ID in `local.properties` as `google.webClientId=...` (local builds) or in
    the repository secret `GOOGLE_WEB_CLIENT_ID` (CI builds).
+
+## First run on a phone
+
+1. Choose a Google account and allow access (the app only sees files it creates).
+2. The app creates `workout_rec_database_` with the tabs log, drills, rec, money, workout, balance.
+3. **Step 1 (once per Google account):** the app opens script.google.com/home/usersettings — turn
+   on **Google Apps Script API**, then return to the app.
+4. **Step 2 (once per spreadsheet):** the app opens the script's "Enable automation" page. Google
+   shows "Google hasn't verified this app" because the script is your own: tap **Advanced →
+   Go to workout_rec_automation → Allow**, then return to the app.
+
+Either step can be skipped for now; a reminder stays on the main screen until both are done.
+
+## Inspecting the automation status
+
+The app and the script keep small status markers (developer metadata) on the spreadsheet; they
+are not visible in the Sheets UI. To see them: open the spreadsheet → **Extensions → Apps
+Script** → select `logMetadata` → **Run** → open the **Execution log**. Example:
+
+```
+workout_rec.automation_enabled_at = 2026-10-03T09:12:44Z
+workout_rec.enable_url = https://script.google.com/macros/s/…/exec
+workout_rec.last_daily_run = 2026-10-04T00:03:10Z
+workout_rec.script_id = 1AbC…
+workout_rec.structure_version = 1
+```
+
+The daily job (`dailyJob`) runs at about 03:00 in the spreadsheet's time zone: it adds a row to
+`workout` for each new day in `log`, then recalculates `balance!A1`.

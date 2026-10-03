@@ -94,8 +94,13 @@ private fun AppNavHost(container: AppContainer) {
             val account by container.settingsStore.account.collectAsState(initial = null)
             val reminder by viewModel.reminder.collectAsState()
             LaunchedEffect(Unit) { viewModel.refreshStatus() }
+            val context = LocalContext.current
             account?.let {
-                MainScreen(account = it, onSwitchAccount = {}, onSignOut = {}) { modifier ->
+                MainScreen(
+                    account = it,
+                    onSwitchAccount = { viewModel.switchAccount(CredentialManagerAccountPicker(context, BuildConfig.WEB_CLIENT_ID)) },
+                    onSignOut = { viewModel.signOut() },
+                ) { modifier ->
                     reminder?.let { r ->
                         AutomationReminder(status = r.status, onFix = { viewModel.onAction(SetupAction.FixAutomation) }, modifier = modifier)
                     }

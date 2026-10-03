@@ -51,6 +51,7 @@ fun MainScreen(
                 title = { Text(stringResource(R.string.app_name)) },
                 actions = {
                     var menuOpen by remember { mutableStateOf(false) }
+                    var confirmSignOut by remember { mutableStateOf(false) }
                     Box(modifier = Modifier.padding(end = 8.dp)) {
                         AccountAvatar(account = account, onClick = { menuOpen = true })
                         AccountMenu(
@@ -58,7 +59,13 @@ fun MainScreen(
                             expanded = menuOpen,
                             onDismiss = { menuOpen = false },
                             onSwitchAccount = { menuOpen = false; onSwitchAccount() },
-                            onSignOut = { menuOpen = false; onSignOut() },
+                            onSignOut = { menuOpen = false; confirmSignOut = true },
+                        )
+                    }
+                    if (confirmSignOut) {
+                        SignOutDialog(
+                            onConfirm = { confirmSignOut = false; onSignOut() },
+                            onCancel = { confirmSignOut = false },
                         )
                     }
                 },

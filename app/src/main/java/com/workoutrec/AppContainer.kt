@@ -1,6 +1,8 @@
 package com.workoutrec
 
 import android.content.Context
+import androidx.credentials.ClearCredentialStateRequest
+import androidx.credentials.CredentialManager
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
@@ -32,7 +34,9 @@ class AppContainer(context: Context) {
 
     val apiAuthorizer: ApiAuthorizer = GoogleApiAuthorizer(appContext)
 
-    val accountRepository = AccountRepository(apiAuthorizer, settingsStore)
+    val accountRepository = AccountRepository(apiAuthorizer, settingsStore, clearCredentials = {
+        runCatching { CredentialManager.create(appContext).clearCredentialState(ClearCredentialStateRequest()) }
+    })
 
     val okHttpClient: OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(20, TimeUnit.SECONDS)

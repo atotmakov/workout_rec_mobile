@@ -70,6 +70,8 @@ android {
     lint {
         warningsAsErrors = false
         abortOnError = true
+        // FR-014: every user-visible text must come from resources and exist in English and Russian.
+        error += setOf("HardcodedText", "MissingTranslation", "ExtraTranslation")
     }
 }
 

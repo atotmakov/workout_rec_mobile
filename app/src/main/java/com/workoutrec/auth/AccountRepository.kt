@@ -49,9 +49,25 @@ class AccountRepository(
 
     fun resultFromConsent(data: Intent?): AuthOutcome = authorizer.resultFromConsent(data).also(::remember)
 
-    suspend fun switchAccount(picker: AccountPicker): PickResult = TODO()
+    /**
+     * US3: pick another account. The old binding is dropped even for the same account, so the
+     * spreadsheet check runs again (US3 #1). Cancel keeps everything as it was.
+     */
+    suspend fun switchAccount(picker: AccountPicker): PickResult {
+        val result = picker.pick()
+        if (result is PickResult.Picked) {
+            store.clearBinding()
+            store.saveAccount(result.account)
+            cachedToken = null
+        }
+        return result
+    }
 
-    suspend fun signOut(): Unit = TODO()
+    /** FR-012 (after confirmation): clear Credential Manager state and all local data. */
+    suspend fun signOut() {
+        clearCredentials()
+        forgetAccount()
+    }
 
     suspend fun forgetAccount() {
         cachedToken = null

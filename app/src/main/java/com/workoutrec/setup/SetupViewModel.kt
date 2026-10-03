@@ -95,9 +95,29 @@ class SetupViewModel(
         }
     }
 
-    fun switchAccount(picker: AccountPicker): Unit = TODO()
+    /** US3: switching runs authorization and the spreadsheet setup for the new account. */
+    fun switchAccount(picker: AccountPicker) {
+        viewModelScope.launch {
+            val previous = _state.value
+            _state.value = SetupState.Authorizing
+            when (val picked = accounts.switchAccount(picker)) {
+                is PickResult.Picked -> {
+                    _reminder.value = null
+                    handleAuthorization(picked.account, accounts.authorize(picked.account))
+                }
+                PickResult.Cancelled, is PickResult.Failed -> _state.value = previous
+            }
+        }
+    }
 
-    fun signOut(): Unit = TODO()
+    /** FR-012: called after the user confirmed; returns to the first-launch chooser. */
+    fun signOut() {
+        viewModelScope.launch {
+            accounts.signOut()
+            _reminder.value = null
+            _state.value = SetupState.SignedOut(message = null)
+        }
+    }
 
     fun onConsentResult(data: Intent?) {
         viewModelScope.launch {
