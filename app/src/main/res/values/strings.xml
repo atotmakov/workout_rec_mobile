@@ -36,4 +36,9 @@
     <string name="reminder_stopped">Automation has stopped: enable it again.</string>
     <string name="reminder_fix">Fix</string>
     <string name="automation_on">Automation is on.</string>
+
+    <!-- US3: sign out -->
+    <string name="sign_out_question">Sign out of Workout Rec? Your spreadsheet stays in your Google account.</string>
+    <string name="sign_out_confirm">Sign out</string>
+    <string name="sign_out_cancel">Cancel</string>
 </resources>

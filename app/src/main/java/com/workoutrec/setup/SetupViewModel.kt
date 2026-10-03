@@ -66,10 +66,38 @@ class SetupViewModel(
     /** Automation reminder for the main screen (FR-015). */
     val reminder: StateFlow<Reminder?> = _reminder
 
-    fun onAction(action: SetupAction): Unit = TODO()
+    fun onAction(action: SetupAction) {
+        viewModelScope.launch {
+            val account = accounts.currentAccount.first() ?: return@launch
+            val current = _state.value
+            _state.value = SetupState.Working
+            val next = postAuth.onAction(account, current, action)
+            // "No" to the rewrite question returns to the chooser without changing the sheet.
+            if (next is SetupState.SignedOut) accounts.forgetAccount()
+            if (next == SetupState.Ready) _reminder.value = null
+            _state.value = next
+        }
+    }
 
     /** Background check on launch: spreadsheet still there? automation on? (data-model.md Ready) */
-    fun refreshStatus(): Unit = TODO()
+    fun refreshStatus() {
+        viewModelScope.launch {
+            val account = accounts.currentAccount.first() ?: return@launch
+            when (val result = runCatching { postAuth.refresh(account) }.getOrElse { RefreshResult.NoChange }) {
+                RefreshResult.NoChange -> Unit
+                is RefreshResult.Status -> _reminder.value = result.reminder
+                RefreshResult.SpreadsheetGone -> {
+                    _reminder.value = null
+                    _state.value = SetupState.Working
+                    _state.value = postAuth.run(account)
+                }
+            }
+        }
+    }
+
+    fun switchAccount(picker: AccountPicker): Unit = TODO()
+
+    fun signOut(): Unit = TODO()
 
     fun onConsentResult(data: Intent?) {
         viewModelScope.launch {

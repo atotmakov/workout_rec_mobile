@@ -14,6 +14,8 @@ import kotlinx.coroutines.sync.withLock
 class AccountRepository(
     private val authorizer: ApiAuthorizer,
     private val store: SettingsStore,
+    /** Clears Credential Manager state on sign-out (US3). */
+    private val clearCredentials: suspend () -> Unit = {},
 ) : TokenProvider {
 
     private val tokenLock = Mutex()
@@ -46,6 +48,10 @@ class AccountRepository(
     }
 
     fun resultFromConsent(data: Intent?): AuthOutcome = authorizer.resultFromConsent(data).also(::remember)
+
+    suspend fun switchAccount(picker: AccountPicker): PickResult = TODO()
+
+    suspend fun signOut(): Unit = TODO()
 
     suspend fun forgetAccount() {
         cachedToken = null

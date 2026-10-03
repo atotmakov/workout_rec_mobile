@@ -36,4 +36,9 @@
     <string name="reminder_stopped">Автоматизация остановилась: включите её снова.</string>
     <string name="reminder_fix">Исправить</string>
     <string name="automation_on">Автоматизация включена.</string>
+
+    <!-- US3: sign out -->
+    <string name="sign_out_question">Выйти из Workout Rec? Ваша таблица останется в аккаунте Google.</string>
+    <string name="sign_out_confirm">Выйти</string>
+    <string name="sign_out_cancel">Отмена</string>
 </resources>

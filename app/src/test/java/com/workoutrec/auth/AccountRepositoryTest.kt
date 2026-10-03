@@ -66,6 +66,36 @@ class AccountRepositoryTest {
     }
 
     @Test
+    fun `signOut clears credential state and all local data`() = runTest {
+        var cleared = 0
+        val store = FakeSettingsStore(account, com.workoutrec.data.SpreadsheetBinding(account.email, "s", null, null))
+        val repo = AccountRepository(FakeApiAuthorizer(), store, clearCredentials = { cleared++ })
+        repo.signOut()
+        assertEquals(1, cleared)
+        assertEquals(1, store.clearCalls)
+        assertNull(store.account.first())
+        assertNull(store.binding.first())
+    }
+
+    @Test
+    fun `switchAccount saves the new account and drops the old binding`() = runTest {
+        val store = FakeSettingsStore(account, com.workoutrec.data.SpreadsheetBinding(account.email, "s", null, null))
+        val repo = AccountRepository(FakeApiAuthorizer(), store)
+        val other = SelectedAccount("b@example.com", null, null)
+        assertEquals(PickResult.Picked(other), repo.switchAccount(FakeAccountPicker(PickResult.Picked(other))))
+        assertEquals(other, store.account.first())
+        assertNull(store.binding.first())
+    }
+
+    @Test
+    fun `switching to the same account still drops the binding so the spreadsheet is checked again`() = runTest {
+        val store = FakeSettingsStore(account, com.workoutrec.data.SpreadsheetBinding(account.email, "s", null, null))
+        val repo = AccountRepository(FakeApiAuthorizer(), store)
+        repo.switchAccount(FakeAccountPicker(PickResult.Picked(account)))
+        assertNull(store.binding.first())
+    }
+
+    @Test
     fun `access token is cached and refreshed on demand`() = runTest {
         val store = FakeSettingsStore(account)
         val authorizer = FakeApiAuthorizer(AuthOutcome.Granted("t1"), AuthOutcome.Granted("t2"))
