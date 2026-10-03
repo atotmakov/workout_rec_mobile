@@ -21,6 +21,11 @@
 - Q: Is it acceptable for first-time setup to need one manual step outside the app to switch on
   the spreadsheet's automation? → A: Yes: the app opens the new spreadsheet in the browser and the
   user taps "Enable automation" once, which approves the script and turns on its daily schedule.
+  *(Revised during planning, 2026-10-03: Google only lets an app attach a script after the user
+  turns on "Google Apps Script API" in their Apps Script settings, and spreadsheet menus are not
+  shown on phones.)* → Revised A: two one-time browser steps: (1) the user turns on "Google Apps
+  Script API" at script.google.com/home/usersettings; (2) after the app attaches the script, the
+  user opens the script's "Enable automation" page and approves it.
 - Q: Which language should the app's screens and messages use? → A: Russian and English,
   following the phone's language setting; English for any other language.
 
@@ -88,14 +93,17 @@ exactly the six tabs in the listed order.
    spreadsheet is renamed to workout_rec_database_backup_<date> with its data untouched, and a
    new workout_rec_database_ is created with the reference structure; **When** the user answers
    "No", **Then** the app returns to the account chooser.
-6. **Given** a new spreadsheet was created, **When** the app finishes creating it, **Then** the
-   app explains the one-time "Enable automation" step and opens the spreadsheet in the browser.
-7. **Given** the user tapped "Enable automation" and approved the script, **When** they return to
-   the app, **Then** the app confirms that automation is on and opens the main screen.
-8. **Given** the user returns without enabling automation, **When** the app checks, **Then** it
-   shows that automation is not yet on, with options to open the spreadsheet again or continue
-   for now.
-9. **Given** setup of the spreadsheet is in progress, **When** it fails, **Then** the user sees
+6. **Given** a new spreadsheet was created and the user's "Google Apps Script API" setting is
+   off, **When** the app tries to attach the script, **Then** it explains the one-time setting and
+   opens script.google.com/home/usersettings in the browser; after the user turns it on and
+   returns, the app attaches the script.
+7. **Given** the script is attached, **When** the app finishes, **Then** it explains the one-time
+   "Enable automation" step and opens the script's "Enable automation" page in the browser.
+8. **Given** the user approved the script on the "Enable automation" page, **When** they return
+   to the app, **Then** the app confirms that automation is on and opens the main screen.
+9. **Given** the user returns without completing either step, **When** the app checks, **Then**
+   it shows which step is still missing, with options to open it again or continue for now.
+10. **Given** setup of the spreadsheet is in progress, **When** it fails, **Then** the user sees
    why and can retry.
 
 ---
@@ -143,6 +151,9 @@ chooser is shown.
   app uses the most recently modified one for the structure check.
 - The user made a spreadsheet named workout_rec_database_ by hand (or copied one): the app does
   not see it and creates its own spreadsheet, so the account ends up with two files of that name.
+- The user never turns on "Google Apps Script API": the spreadsheet is created without the
+  script; the in-sheet auto-fill and follow selection do not work, and the app keeps reminding
+  (FR-015). Once the setting is on, the app attaches the script without recreating the spreadsheet.
 - The user skips "Enable automation": the spreadsheet works, the in-sheet auto-fill and follow
   selection still work, but workout and balance are not updated until the step is done; the app
   keeps reminding (FR-015).
@@ -196,16 +207,17 @@ chooser is shown.
 - **FR-013**: A newly created (or rewritten) spreadsheet MUST have the attached automation
   described in [Attached automation](#attached-automation-spreadsheet-script), including both
   scheduled behaviors (daily workouts and balance), so it works the same as the reference
-  spreadsheet. The app MUST attach the script when creating the spreadsheet. Approving the script
-  and turning on the daily schedule is a one-time manual step: the spreadsheet MUST offer an
-  "Enable automation" action, the app MUST open the spreadsheet in the browser and explain the
-  step, and the app MUST be able to tell whether the step has been done.
+  spreadsheet. The app MUST attach the script to the spreadsheet. Two one-time manual steps are
+  allowed, each opened in the browser by the app with an explanation: (1) turning on the user's
+  "Google Apps Script API" setting, needed only before the app can attach the script; (2)
+  approving the script on its "Enable automation" page, which turns on the daily schedule. The
+  app MUST be able to tell whether each step has been done.
 - **FR-014**: All app screens and messages MUST be available in Russian and English; the app MUST
   use Russian when the phone's language is Russian and English otherwise. Messages quoted in this
   spec are the English versions. Spreadsheet names, tab names, and column headers are not
   translated.
-- **FR-015**: Until automation is enabled, the app MUST show a visible reminder (e.g., on the
-  account menu) with a way to open the spreadsheet and finish the step; the rest of the app MUST
+- **FR-015**: Until the script is attached and automation is enabled, the app MUST show a visible
+  reminder (e.g., on the account menu) naming the missing step, with a way to open it; the rest of the app MUST
   stay usable.
 
 ### Key Entities *(include if feature involves data)*
@@ -262,21 +274,22 @@ same behavior.
 | Auto-fill log rows | A user edits column B (Drill) of the log tab in the web UI | Fills the empty rows directly above with the same exercise, going up until a filled row is reached; fills column A of those rows and of the edited row (when empty) with the current date-time; sets rec A1 to the edited exercise |
 | Follow selection | A user selects a cell in column B of the log tab in the web UI | Sets rec A1 to the selected exercise, so rec shows its history |
 | Daily workouts | On a time-based schedule (about once a day) | For each day in log not yet in workout, adds a workout row with exactly three values: date, duration in minutes (last minus first logged time that day), and work alone 0. Nothing is written beyond column C |
+| Show status | The user runs it manually from the script editor (Extensions → Apps Script → select `logMetadata` → Run) | Prints the app's hidden status markers (structure version, script ID, Enable automation page, enabled time, last daily run) to the editor's Execution log; changes nothing |
 | Balance | On a time-based schedule (about once a day) | Sets balance A1 to the total of money "workouts" minus the number of workout rows whose "work alone" is not 1 |
 
 Structure check (FR-008): the spreadsheet matches when all six tabs exist with the headers above
-in row 1 (log, drills, money, workout), the rec formula in A2, the rec A1 drop-down, the two rec
-conditional formatting rules, and the attached script. Data rows and the values in rec A1 and
-balance A1 are not compared, and whether automation has been enabled is tracked separately
-(FR-015), not treated as a structure difference. In a new spreadsheet rec A1 is empty and
-balance A1 is 0.
+in row 1 (log, drills, money, workout), the rec formula in A2, the rec A1 drop-down, and the two
+rec conditional formatting rules. Data rows and the values in rec A1 and balance A1 are not
+compared. A missing script, or automation that is not yet enabled, is tracked separately
+(FR-015) and fixed by attaching the script, not treated as a structure difference. In a new
+spreadsheet rec A1 is empty and balance A1 is 0.
 
 ## Success Criteria *(mandatory)*
 
 ### Measurable Outcomes
 
 - **SC-001**: A new user goes from first launch to the main screen with their account shown in
-  under 1 minute, and completes the "Enable automation" step in under 2 more minutes.
+  under 1 minute, and completes both one-time automation steps in under 3 more minutes.
 - **SC-002**: After setup, 100% of tested accounts have exactly one workout spreadsheet with the
   six tabs in the specified order, the rec highlighting and drop-down, and working automation
   (editing log column B in the web UI auto-fills dates; balance and workout update within a day).
@@ -285,7 +298,7 @@ balance A1 is 0.
 - **SC-004**: On later launches the main screen opens with the account shown without any account
   prompt, in 100% of launches while access remains granted.
 - **SC-005**: The user can open the created spreadsheet in the Google Sheets web UI and edit it
-  without any setup beyond the one-time "Enable automation" step.
+  without any setup beyond the two one-time automation steps.
 
 ## Assumptions
 
