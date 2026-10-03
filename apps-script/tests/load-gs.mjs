@@ -17,6 +17,12 @@ export function loadGs(files, globals = {}) {
   return context;
 }
 
+// Arrays/objects created inside the vm context have that context's prototypes, which
+// assert.deepStrictEqual treats as different. Copy results into this realm before comparing.
+export function plain(value) {
+  return structuredClone(value);
+}
+
 // Function declarations become context properties, but top-level `const` does not.
 // Use this to read a value declared with const/let in the loaded files.
 export function evalIn(context, expression) {

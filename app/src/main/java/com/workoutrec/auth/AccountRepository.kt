@@ -1,19 +1,68 @@
 package com.workoutrec.auth
 
+import android.content.Intent
 import com.workoutrec.data.SelectedAccount
 import com.workoutrec.data.SettingsStore
+import com.workoutrec.google.ApiError
 import com.workoutrec.google.TokenProvider
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
+/** The selected account and its API access; also the token source for Google calls. */
 class AccountRepository(
     private val authorizer: ApiAuthorizer,
     private val store: SettingsStore,
 ) : TokenProvider {
-    val currentAccount: Flow<SelectedAccount?> get() = TODO()
-    suspend fun chooseAccount(picker: AccountPicker): PickResult = TODO()
-    suspend fun authorize(account: SelectedAccount): AuthOutcome = TODO()
-    suspend fun authorizeOnLaunch(): AuthOutcome? = TODO()
-    fun resultFromConsent(data: android.content.Intent?): AuthOutcome = TODO()
-    suspend fun forgetAccount(): Unit = TODO()
-    override suspend fun accessToken(forceRefresh: Boolean): String = TODO()
+
+    private val tokenLock = Mutex()
+    private var cachedToken: String? = null
+
+    val currentAccount: Flow<SelectedAccount?> = store.account
+
+    /** Shows the chooser; saves the picked account (FR-001). */
+    suspend fun chooseAccount(picker: AccountPicker): PickResult {
+        val result = picker.pick()
+        if (result is PickResult.Picked) {
+            store.saveAccount(result.account)
+            cachedToken = null
+        }
+        return result
+    }
+
+    suspend fun authorize(account: SelectedAccount): AuthOutcome =
+        authorizer.authorize(account.email).also(::remember)
+
+    /**
+     * Silent authorization for the stored account on launch (FR-004). Returns null when no account
+     * is stored. Denied means access was revoked, so the stored account is forgotten.
+     */
+    suspend fun authorizeOnLaunch(): AuthOutcome? {
+        val account = store.account.first() ?: return null
+        val outcome = authorize(account)
+        if (outcome is AuthOutcome.Denied) forgetAccount()
+        return outcome
+    }
+
+    fun resultFromConsent(data: Intent?): AuthOutcome = authorizer.resultFromConsent(data).also(::remember)
+
+    suspend fun forgetAccount() {
+        cachedToken = null
+        store.clear()
+    }
+
+    override suspend fun accessToken(forceRefresh: Boolean): String = tokenLock.withLock {
+        cachedToken?.takeIf { !forceRefresh }?.let { return@withLock it }
+        val account = store.account.first() ?: throw ApiError.AccessDenied("No Google account selected")
+        when (val outcome = authorize(account)) {
+            is AuthOutcome.Granted -> outcome.accessToken
+            AuthOutcome.Unavailable -> throw ApiError.Offline
+            else -> throw ApiError.AccessDenied("Google access was not granted")
+        }
+    }
+
+    private fun remember(outcome: AuthOutcome) {
+        if (outcome is AuthOutcome.Granted) cachedToken = outcome.accessToken
+    }
 }

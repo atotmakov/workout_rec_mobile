@@ -40,5 +40,32 @@ class GoogleHttp(
 ) {
 
     /** Returns the response body on 2xx; throws [ApiError] otherwise. */
-    suspend fun execute(request: Request): String = TODO()
+    suspend fun execute(request: Request): String {
+        var refreshedToken = false
+        var retries = 0
+        while (true) {
+            val token = tokens.accessToken(forceRefresh = refreshedToken)
+            val authorized = request.newBuilder().header("Authorization", "Bearer $token").build()
+            val (code, body) = try {
+                withContext(Dispatchers.IO) {
+                    client.newCall(authorized).execute().use { it.code to (it.body?.string() ?: "") }
+                }
+            } catch (e: IOException) {
+                throw ApiErrorMapper.fromException(e)
+            }
+            if (code in 200..299) return body
+            when (val error = ApiErrorMapper.fromResponse(code, body)) {
+                is ApiError.TokenExpired -> {
+                    if (refreshedToken) throw error
+                    refreshedToken = true
+                }
+                is ApiError.ServiceUnavailable -> {
+                    if (retries >= maxRetries) throw error
+                    sleep(backoffMillis(retries))
+                    retries++
+                }
+                else -> throw error
+            }
+        }
+    }
 }

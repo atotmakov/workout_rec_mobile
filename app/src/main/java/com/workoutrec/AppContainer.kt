@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
+import com.workoutrec.auth.AccountRepository
 import com.workoutrec.auth.ApiAuthorizer
 import com.workoutrec.auth.GoogleApiAuthorizer
 import com.workoutrec.data.DataStoreSettingsStore
@@ -20,6 +21,8 @@ class AppContainer(context: Context) {
     val settingsStore: SettingsStore = DataStoreSettingsStore(appContext.settingsDataStore)
 
     val apiAuthorizer: ApiAuthorizer = GoogleApiAuthorizer(appContext)
+
+    val accountRepository = AccountRepository(apiAuthorizer, settingsStore)
 
     val okHttpClient: OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(20, TimeUnit.SECONDS)
