@@ -1,0 +1,134 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  script-tests:
+    name: Apps Script tests (Node)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - run: node --test "apps-script/tests/*.test.mjs"
+
+  unit-tests:
+    name: Build, lint, unit tests
+    runs-on: ubuntu-latest
+    env:
+      DEBUG_KEYSTORE_BASE64: ${{ secrets.DEBUG_KEYSTORE_BASE64 }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: gradle/actions/wrapper-validation@v6
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v6
+      - run: chmod +x gradlew
+      - name: Use the shared debug signing key
+        if: env.DEBUG_KEYSTORE_BASE64 != ''
+        run: |
+          echo "$DEBUG_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/debug.keystore"
+          echo "DEBUG_KEYSTORE_FILE=$RUNNER_TEMP/debug.keystore" >> "$GITHUB_ENV"
+      - name: Assemble, unit tests, lint
+        env:
+          GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
+        run: ./gradlew assembleDebug testDebugUnitTest lintDebug -PversionCode=${{ github.run_number }} --stacktrace
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: unit-test-and-lint-reports
+          path: |
+            app/build/reports/
+            app/build/test-results/
+          if-no-files-found: ignore
+      - name: Upload debug APK
+        if: success()
+        uses: actions/upload-artifact@v7
+        with:
+          name: app-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
+
+  ui-tests:
+    name: Compose UI tests (emulator)
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    # Run even when unit tests are red, so UI test results are visible too (test-first).
+    if: ${{ !cancelled() }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check for instrumented tests
+        id: has-tests
+        run: |
+          if [ -d app/src/androidTest ]; then echo "present=true" >> "$GITHUB_OUTPUT"; else echo "present=false" >> "$GITHUB_OUTPUT"; fi
+      - name: Enable KVM
+        if: steps.has-tests.outputs.present == 'true'
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: actions/setup-java@v6
+        if: steps.has-tests.outputs.present == 'true'
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v6
+        if: steps.has-tests.outputs.present == 'true'
+      - run: chmod +x gradlew
+        if: steps.has-tests.outputs.present == 'true'
+      - name: Run instrumented tests
+        if: steps.has-tests.outputs.present == 'true'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          disable-animations: true
+          script: ./gradlew connectedDebugAndroidTest --stacktrace
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ui-test-reports
+          path: app/build/reports/androidTests/
+          if-no-files-found: ignore
+
+  publish:
+    name: Publish APK release
+    runs-on: ubuntu-latest
+    needs: [script-tests, unit-tests, ui-tests]
+    # Only green builds of master; ui-tests also runs on red unit tests, so check every result.
+    if: >-
+      github.event_name == 'push' && github.ref == 'refs/heads/master' &&
+      needs.script-tests.result == 'success' &&
+      needs.unit-tests.result == 'success' &&
+      needs.ui-tests.result == 'success'
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: app-debug-apk
+          path: apk
+      - name: Create GitHub Release with the APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUILD: ${{ github.run_number }}
+        run: |
+          apk="workout-rec-build-$BUILD.apk"
+          cp apk/*.apk "$apk"
+          gh release create "build-$BUILD" "$apk" \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "Workout Rec build $BUILD" \
+            --notes "Debug-signed APK from commit $GITHUB_SHA (all CI checks green). Install on Android 8.0+ by opening the APK on the phone and allowing installs from this source."
