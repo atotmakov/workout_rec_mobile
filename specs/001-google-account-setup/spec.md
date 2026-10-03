@@ -188,7 +188,8 @@ chooser is shown.
 - **FR-008**: The app MUST look only at spreadsheets it created itself in the chosen account;
   spreadsheets created by hand or by other apps are never read, even if they have the same name.
   If the chosen account already has an app-created spreadsheet named workout_rec_database_, the
-  app MUST compare its structure (tabs, columns, column types) with the reference structure:
+  app MUST compare its structure with the reference structure as defined in "Structure check"
+  (tabs, header rows, the rec formula, the rec drop-down, and the rec conditional formatting rules):
   - if it matches, the app MUST use the existing spreadsheet without modifying it;
   - if it differs, the app MUST ask "Spreadsheet with name workout_rec_database_ already exists
     in the account, want to rewrite it?"; on "Yes" it MUST rename the old spreadsheet to

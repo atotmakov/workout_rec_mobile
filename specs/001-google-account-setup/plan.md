@@ -52,7 +52,7 @@ with Google Play services
 | Principle | Check | Result |
 |-----------|-------|--------|
 | I. Native Android App | Kotlin + Jetpack Compose; no cross-platform UI; Android conventions (Credential Manager, Custom Tabs, system back, resources-based localization) | PASS |
-| II. Test-First | Unit and contract tests are written before each component (validator, state machine, API clients, naming, status); Compose UI tests for screens; `Logic.gs` covered by `node --test`; OAuth and real Google flows covered by the manual [quickstart](quickstart.md) | PASS |
+| II. Test-First | Unit and contract tests are written before each component (validator, state machine, API clients, naming, status); Compose UI tests for screens; `Logic.gs` and `Code.gs` covered by `node --test` (`Code.gs` with fake Google services). Google SDK calls are thin wrappers whose decisions live in unit-tested pure mappers (`AuthorizationMapper`, `GoogleCredentialMapper`, `StartDestinationResolver`); only the real Google round-trips are checked manually in the [quickstart](quickstart.md) | PASS |
 | III. Hybrid Data Architecture | Sheet is the source of truth; phone keeps only account + cache. Offline logging is not part of this feature (setup requires network, per spec). **Conflict resolution for this feature**: the app writes to the sheet only during setup (create, backup rename, developer metadata) and never edits user data; when the sheet and the phone cache disagree, the sheet wins and the cache is rebuilt | PASS |
 | IV. Maximize Use of Google Services | Only Google APIs (Drive, Sheets, Apps Script); backend logic is an Apps Script attached to the user's own spreadsheet; no custom server | PASS |
 | Technology Constraints | Kotlin; each new dependency justified below | PASS |
@@ -125,7 +125,11 @@ apps-script/
 ├── Code.gs
 ├── Logic.gs
 ├── Enable.html
-└── tests/logic.test.mjs                     # node --test
+└── tests/
+    ├── load-gs.mjs                          # loads .gs files + fake globals into node:vm
+    ├── fakes.mjs                            # fake SpreadsheetApp, ScriptApp, HtmlService
+    ├── logic.test.mjs                       # node --test
+    └── code.test.mjs                        # node --test
 ```
 
 **Structure Decision**: A single Android Gradle project at the repository root with one `app`

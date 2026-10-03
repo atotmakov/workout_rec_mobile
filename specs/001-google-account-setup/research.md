@@ -76,12 +76,16 @@ Each section records a decision, why it was chosen, and what else was considered
 
 ## R6. Checking the structure of an existing spreadsheet
 
-- **Decision**: One `spreadsheets.get` with a field mask that returns sheet titles, row 1 values
-  of log/drills/money/workout, `rec!A1:D2` with `dataValidation` and formulas
-  (`userEnteredValue`), `rec` conditional formats, and spreadsheet developer metadata. A pure
+- **Decision**: Two `spreadsheets.get` reads: (a) all tab titles and spreadsheet developer
+  metadata, without `ranges`; (b) only for the expected tabs that exist: row 1 values of
+  log/drills/money/workout, `rec!A1:D2` with `dataValidation` and formulas
+  (`userEnteredValue`), and `rec` conditional formats. Requesting a range on a missing or renamed
+  tab would fail the whole call ("Unable to parse range"); this way it is reported as
+  `MissingTab` and leads to the rewrite question. A pure
   Kotlin `StructureValidator` compares the result with `ReferenceStructure` and returns
   `Match` or `Mismatch(reasons)`. Extra tabs and columns after the expected ones are ignored.
-- **Rationale**: One read call; validator logic is fully unit-testable without the network.
+- **Rationale**: Two small reads that cannot fail on a changed structure; validator logic is fully
+  unit-testable without the network.
 - **Alternatives considered**: Comparing only tab names (too weak for the spec's definition).
 
 ## R7. Rewrite with backup

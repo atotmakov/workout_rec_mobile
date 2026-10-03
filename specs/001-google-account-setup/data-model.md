@@ -35,7 +35,7 @@ the selected account and setup progress. The spreadsheet layout is defined in
 
 ### SpreadsheetSnapshot
 
-Result of the single structure read (research R6): sheet titles in order, row 1 values per tab,
+Result of the two structure reads (research R6; calls 5a + 5b): sheet titles in order, row 1 values per tab,
 `rec!A1:D2` values, formulas, and drop-down, `rec` conditional format rules, and developer
 metadata (key → value).
 
@@ -52,7 +52,7 @@ metadata (key → value).
 
 | Status | Condition (developer metadata) | App shows |
 |--------|-------------------------------|-----------|
-| ScriptMissing | no `workout_rec.script_id` | Reminder: attach script (step 1 if the Apps Script API setting is off) |
+| ScriptMissing | no `workout_rec.script_id` | Reminder; tapping retries attaching the script, and shows step 1 if the Apps Script API setting is off |
 | NotEnabled | script id present, no `workout_rec.automation_enabled_at` | Reminder: open "Enable automation" (step 2) |
 | On | enabled, and the newer of `last_daily_run` / `automation_enabled_at` is ≤ 48 h old | No reminder |
 | Stopped | enabled, but both timestamps are > 48 h old | Reminder: automation stopped, open "Enable automation" again |
@@ -82,8 +82,10 @@ Any network step ──failure──▶ Error(step, reason) ──Retry──▶
 ```
 
 - **Ready** shows the main screen with the avatar; on later launches the app goes straight to
-  Ready using the stored account (FR-004), refreshes the token silently, and re-reads
-  `AutomationStatus` in the background when online.
+  Ready using the stored account (FR-004) and refreshes the token silently. When online it first
+  checks that the stored spreadsheet still exists (call 11); if it is trashed or gone, it runs
+  FindingSpreadsheet (spec edge case "user deletes the spreadsheet"); otherwise it re-reads
+  `AutomationStatus` in the background.
 - **Idempotence (FR-009)**: Creating is one all-or-nothing call; a crash before it finishes
   creates nothing. A crash after it is recovered by FindingSpreadsheet, which finds the new
   file, so no duplicate is made. AttachingScript first reads `workout_rec.script_id` and skips

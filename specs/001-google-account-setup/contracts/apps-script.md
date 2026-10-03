@@ -27,11 +27,26 @@ Source of truth: `apps-script/` in this repository; uploaded by the app (contrac
 
 | Entry point | Kind | Behavior |
 |-------------|------|----------|
-| `onEdit(e)` | simple trigger | log tab, column B edits only: apply `autoFillPlan` (fill B with the new value, A with now if empty), set A of the edited row if empty, set `rec!A1` to the value |
-| `onSelectionChange(e)` | simple trigger | log tab, column B: set `rec!A1` to the selected value |
+| `onEdit(e)` | simple trigger | log tab, column B edits only (spreadsheet from `e.source`): apply `autoFillPlan` (fill B with the new value, A with now if empty), set A of the edited row if empty, set `rec!A1` to the value |
+| `onSelectionChange(e)` | simple trigger | log tab, column B: set `rec!A1` to the selected value, via `e.source` |
 | `doGet(e)` | web app | install `dailyJob` time trigger (`everyDays(1).atHour(3)`) if none exists; write `workout_rec.automation_enabled_at`; render `Enable.html` in `e.parameter.lang` (`ru` or `en`, default `en`) |
 | `logMetadata()` | run manually from the script editor | reads the spreadsheet's developer metadata and prints `formatMetadata(...)` with `console.log`, so the status markers are visible in the editor's Execution log; read-only |
 | `dailyJob()` | time trigger | append `dailyWorkoutRows` to `workout` (three values per row), then write `balance` to `balance!A1`, then write `workout_rec.last_daily_run` |
+
+## Spreadsheet access
+
+- Simple triggers (`onEdit`, `onSelectionChange`) MUST use `e.source` and MUST NOT call services
+  that need authorization (e.g., `SpreadsheetApp.openById`). They therefore work before
+  "Enable automation" is approved.
+- `doGet`, `dailyJob`, and `logMetadata` open the spreadsheet with
+  `SpreadsheetApp.openById(SPREADSHEET_ID)` (no active spreadsheet exists in web apps and time
+  triggers are run after approval).
+
+## Tests
+
+`apps-script/tests/logic.test.mjs` covers `Logic.gs`; `apps-script/tests/code.test.mjs` covers
+`Code.gs` with fake `SpreadsheetApp`, `ScriptApp`, `HtmlService`, and event objects
+(`apps-script/tests/fakes.mjs`), including that simple triggers never call `openById`.
 
 ## Guarantees
 

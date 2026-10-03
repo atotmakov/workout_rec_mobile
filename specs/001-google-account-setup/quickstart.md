@@ -20,7 +20,7 @@
 ```bash
 ./gradlew testDebugUnitTest          # validator, state machine, naming, contract tests (MockWebServer)
 ./gradlew connectedDebugAndroidTest  # Compose UI tests (avatar, rewrite dialog, reminders, RU/EN)
-node --test apps-script/tests        # Logic.gs: autoFillPlan, dailyWorkoutRows, balance, formatMetadata
+node --test apps-script/tests        # Logic.gs + Code.gs (with fake Google services)
 ```
 
 All three must pass before merge (constitution, Development Workflow).
@@ -32,9 +32,9 @@ Run on a device. "Account X" has never used the app; delete any app-created
 
 | # | Steps | Expected (spec reference) |
 |---|-------|---------------------------|
-| 1 | Install, launch, pick account X, grant access | Account chooser first; main screen shows X's photo or initials top-right (US1, FR-001/003) |
+| 1 | Install, launch (start a stopwatch), pick account X, grant access | Account chooser first; main screen shows X's photo or initials top-right in under 1 min (US1, FR-001/003, SC-001) |
 | 2 | Continue setup with Apps Script API setting **off** for X | Step 1 guide; Custom Tab opens `script.google.com/home/usersettings`; switch it on, return → script gets attached (US2 #6) |
-| 3 | Step 2: "Enable automation" page opens; approve (Advanced → Go to workout_rec_automation) | Page says automation is on; back in app: confirmation, main screen, no reminder (US2 #7–8) |
+| 3 | Step 2: "Enable automation" page opens; approve (Advanced → Go to workout_rec_automation) | Page says automation is on; back in app: confirmation, main screen, no reminder; rows 2–3 together take under 3 min (US2 #7–8, SC-001) |
 | 4 | Open Drive on the web | Exactly one `workout_rec_database_`, six tabs in order, headers, `rec` drop-down, `rec!A2` formula, both highlight rules, dates `dd.MM.yyyy` ([contracts/spreadsheet.md](contracts/spreadsheet.md)) |
 | 5 | In the web UI, type an exercise in `log!B5` with B2:B4 empty | B2:B4 filled with it, A2:A5 get the date-time, `rec!A1` shows it (automation table) |
 | 6 | Wait for the daily run (or run `dailyJob` once from the script editor) | `workout` gets one 3-value row per new day; `balance!A1` = paid − counted workouts |
