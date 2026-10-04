@@ -58,10 +58,41 @@ class SetupScreensTest {
     }
 
     @Test
-    fun step2GuideExplainsTheUnverifiedAppScreen() {
-        compose.setContent { AutomationGuideScreen(step = GuideStep.Enable, onOpen = {}, onContinue = {}) }
+    fun step2WithPrivateTabExplainsSigningInAsTheAppAccount() {
+        var opened = 0
+        compose.setContent {
+            AutomationGuideScreen(
+                step = GuideStep.Enable,
+                onOpen = { opened++ },
+                onContinue = {},
+                accountEmail = "atotmakov@gmail.com",
+                privateTab = true,
+                onCopyLink = {},
+            )
+        }
         compose.onNodeWithText(s(R.string.guide_step2_title)).assertIsDisplayed()
-        compose.onNodeWithText(s(R.string.guide_step2_text)).assertIsDisplayed()
+        compose.onNodeWithText(context.getString(R.string.guide_step2_private_text, "atotmakov@gmail.com")).assertIsDisplayed()
+        compose.onNodeWithText(s(R.string.guide_copy_link)).assertDoesNotExist()
+        compose.onNodeWithText(s(R.string.guide_open)).performClick()
+        assertEquals(1, opened)
+    }
+
+    @Test
+    fun step2WithoutPrivateTabOffersCopyLinkForIncognito() {
+        var copied = 0
+        compose.setContent {
+            AutomationGuideScreen(
+                step = GuideStep.Enable,
+                onOpen = {},
+                onContinue = {},
+                accountEmail = "atotmakov@gmail.com",
+                privateTab = false,
+                onCopyLink = { copied++ },
+            )
+        }
+        compose.onNodeWithText(context.getString(R.string.guide_step2_copy_text, "atotmakov@gmail.com")).assertIsDisplayed()
+        compose.onNodeWithText(s(R.string.guide_copy_link)).performClick()
+        assertEquals(1, copied)
         compose.onNodeWithText(s(R.string.guide_continue)).assertIsDisplayed()
     }
 

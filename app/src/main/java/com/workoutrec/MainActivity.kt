@@ -155,7 +155,7 @@ private fun SetupRoute(viewModel: SetupViewModel, state: SetupState, accountEmai
         )
         is SetupState.NeedsEnable -> AutomationGuideScreen(
             step = GuideStep.Enable,
-            onOpen = { open(GuideLinks.enablePage(state.enableUrl, language, accountEmail)) },
+            onOpen = { open(GuideLinks.enablePage(state.enableUrl, language)) },
             onContinue = { viewModel.onAction(SetupAction.ContinueForNow) },
         )
         is SetupState.Error -> SetupProgressScreen(error = state.error, onRetry = { viewModel.onAction(SetupAction.Retry) })

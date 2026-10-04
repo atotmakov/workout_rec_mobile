@@ -67,7 +67,14 @@ fun RewriteDialog(onAnswer: (Boolean) -> Unit) {
 
 /** The two one-time browser steps (FR-013); each can be skipped for now (FR-015). */
 @Composable
-fun AutomationGuideScreen(step: GuideStep, onOpen: () -> Unit, onContinue: () -> Unit) {
+fun AutomationGuideScreen(
+    step: GuideStep,
+    onOpen: () -> Unit,
+    onContinue: () -> Unit,
+    accountEmail: String? = null,
+    privateTab: Boolean = true,
+    onCopyLink: (() -> Unit)? = null,
+) {
     val (title, text) = when (step) {
         GuideStep.ApiSetting -> R.string.guide_step1_title to R.string.guide_step1_text
         GuideStep.Enable -> R.string.guide_step2_title to R.string.guide_step2_text
