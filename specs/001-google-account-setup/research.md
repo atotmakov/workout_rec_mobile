@@ -189,3 +189,9 @@ Each section records a decision, why it was chosen, and what else was considered
   "Enable automation" page; on return (`onResume`) the app re-checks status.
 - **Rationale**: Custom Tabs share the browser's Google sign-in. A plain `ACTION_VIEW` link to a
   Google page may open a Google app instead of the browser.
+- **Multiple accounts (found on the first device test, 2026-10-04)**: when the browser is signed
+  into several Google accounts, script.google.com opens pages as the browser's default account;
+  for the "Enable automation" page of a script owned by another account this shows "Sorry, unable
+  to open the file at this time". Both step links therefore add `authuser=<app account email>`,
+  which script.google.com honors (verified: the owner's email shows the authorization screen,
+  another account's email reproduces the error). Implemented in `setup/GuideLinks.kt`.
