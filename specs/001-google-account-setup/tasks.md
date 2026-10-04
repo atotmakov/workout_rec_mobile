@@ -188,7 +188,7 @@ new account) or sign out (back to the first-launch chooser).
 
 - [X] T068 [P] Enable Android Lint `HardcodedText` and missing-translation checks as errors in `app/build.gradle.kts`, and fix any findings (FR-014)
 - [X] T069 Run `./gradlew testDebugUnitTest`, `./gradlew connectedDebugAndroidTest`, and `node --test apps-script/tests`; all must pass
-- [ ] T070 Run manual scenarios 1–13 and 6a from [quickstart.md](quickstart.md) on a device with a real account; record results and the SC-001 timings in `specs/001-google-account-setup/quickstart-results.md` — **In progress**: scenarios 1–3 pass (after two fixes), 4 partial (tables missing); see [quickstart-results.md](quickstart-results.md).
+- [X] T070 Run manual scenarios 1–13 and 6a from [quickstart.md](quickstart.md) on a device with a real account; record results and the SC-001 timings in `specs/001-google-account-setup/quickstart-results.md` — **Closed 2026-10-04** (feature accepted by the user): scenarios 1–4 and 9 pass after fixes; the rest not run; see [quickstart-results.md](quickstart-results.md).
 - [X] T071 [P] Update `README.md` with final setup, test commands, and how to inspect status markers with `logMetadata`
 
 ---
@@ -204,7 +204,7 @@ match rules 6–7, structure version 2).
 - [X] T074 [P] [US2] Extend `app/src/test/java/com/workoutrec/google/SheetsClientTest.kt` and `app/src/test/java/com/workoutrec/spreadsheet/SpreadsheetSetupServiceTest.kt` (failing first): call 5a `fields` include `tables(name,range,columnProperties(columnIndex,columnName,columnType))` and tables are parsed per tab; call 5b requests `log!1:2`
 - [X] T075 [US2] Implement tables, the `log` drop-down and structure version 2 in `app/src/main/java/com/workoutrec/spreadsheet/ReferenceStructure.kt` so T072 passes
 - [X] T076 [US2] Implement table reading in `app/src/main/java/com/workoutrec/google/SheetsClient.kt` and `app/src/main/java/com/workoutrec/spreadsheet/SpreadsheetSnapshot.kt`, and the new match rules in `app/src/main/java/com/workoutrec/spreadsheet/StructureValidator.kt`, so T073–T074 pass
-- [ ] T077 [US2] Device check (quickstart 9): with the existing version-1 spreadsheet, the app shows the rewrite question; "Yes" renames it to a dated backup and creates a new spreadsheet with the four tables; record in `quickstart-results.md`
+- [X] T077 [US2] Device check (quickstart 9): with the existing version-1 spreadsheet, the app shows the rewrite question; "Yes" renames it to a dated backup and creates a new spreadsheet with the four tables; record in `quickstart-results.md`
 
 ---
 

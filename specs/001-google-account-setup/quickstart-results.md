@@ -21,12 +21,13 @@ client (package `com.workoutrec`, SHA-1 of the shared CI debug key) and Web OAut
 | 3 | Step 2 (Enable automation) | 16, 20 | **Fail → fixed in build 24** – see issues 1–2 |
 | 3 | Step 2 (Enable automation) | 24 / incognito | **Pass** – page showed "automation is on"; app shows the main screen with avatar and no reminder |
 | 4 | Spreadsheet structure on the web | 16 | **Partial** – six tabs present; the reference's **Google Sheets tables** (typed columns) are missing – see issue 3 |
+| 4 | Spreadsheet structure on the web | 36 | **Pass** – tables log, drills, payments, workouts with typed columns; log!B drop-down |
 | 5 | Auto-fill on editing log column B | – | Not yet run |
 | 6 | Nightly job (workout rows, balance) | – | Pending (first run the night after setup) |
 | 6a | `logMetadata` in the script editor | – | Not yet run |
 | 7 | Relaunch opens the main screen directly | – | Not yet run |
 | 8 | Reinstall reuses the spreadsheet | – | Not yet run |
-| 9 | Rewrite question and backup | – | Not yet run |
+| 9 | Rewrite question and backup | 32, 36 | **Pass** – via Switch account → same account; old spreadsheet kept as `workout_rec_database_backup_2026-10-04` (and `_2`), new one created |
 | 10 | No network on first launch | – | Not yet run |
 | 11 | Russian UI | – | Not yet run |
 | 12 | Sign out | – | Not yet run |
@@ -43,7 +44,11 @@ client (package `com.workoutrec`, SHA-1 of the shared CI debug key) and Web OAut
    incognito tab (research R14).
 3. **Tables missing**: the reference spreadsheet uses Google Sheets tables with typed columns;
    the created spreadsheet only has header rows. Spec gap – to be added to the reference
-   structure and implemented.
+   structure (version 2, build 32). Build 32 still created none: `spreadsheets.create` silently
+   ignores `Sheet.tables`. Build 36 adds them with `addTable` right after create – **fixed**.
+
+**2026-10-04: the user accepted feature 001 as complete.** Scenarios still marked *Not yet run*
+were not executed before acceptance.
 
 ## Confirmed by the device test (T008)
 
