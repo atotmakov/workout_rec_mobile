@@ -66,6 +66,11 @@ Each section records a decision, why it was chosen, and what else was considered
   `rec` conditional formatting rules, and developer metadata
   `workout_rec.structure_version = 1`. If the create call rejects any part, the same requests are
   sent in one `spreadsheets.batchUpdate` right after creation (also all-or-nothing).
+- **Tables (2026-10-04)**: `spreadsheets.create` accepts but silently ignores `Sheet.tables`
+  (device test: spreadsheet created without tables, no error). Tables are therefore always added
+  right after create with one `batchUpdate` of `addTable` requests for the tables call 5a reports
+  missing (`ensureTables`, safe to repeat). If it fails, the spreadsheet is already bound and Retry
+  adds the missing tables to it instead of creating another spreadsheet.
 - **Rationale**: A single call means setup can never leave a half-built spreadsheet (FR-009).
   `ru_RU` reproduces the reference's decimal comma; the explicit date pattern guarantees
   `dd.MM.yyyy` whatever the phone language. Using the phone's time zone makes "Daily workouts"

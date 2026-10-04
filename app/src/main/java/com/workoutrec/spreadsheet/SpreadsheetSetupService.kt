@@ -15,6 +15,9 @@ interface SpreadsheetSetup {
     suspend fun check(spreadsheetId: String): SpreadsheetCheck
     suspend fun rewrite(oldSpreadsheetId: String, timeZone: String): String
     suspend fun exists(spreadsheetId: String): Boolean
+
+    /** Adds the reference tables that the spreadsheet does not have yet (safe to repeat). */
+    suspend fun ensureTables(spreadsheetId: String)
 }
 
 class SpreadsheetSetupService(
@@ -50,6 +53,15 @@ class SpreadsheetSetupService(
         val backupName = BackupNamer.choose(today()) { drive.isNameTaken(it) }
         drive.rename(oldSpreadsheetId, backupName)
         return create(timeZone)
+    }
+
+    /** Reads which tables exist (call 5a) and adds only the missing ones in one batchUpdate. */
+    override suspend fun ensureTables(spreadsheetId: String) {
+        val tabs = sheets.readTabsAndMetadata(spreadsheetId)
+        val missing = ReferenceStructure.TABLES
+            .filter { spec -> spec.tab in tabs.titles && tabs.tables[spec.tab].orEmpty().none { it.name == spec.name } }
+            .map { it.name }
+        if (missing.isNotEmpty()) sheets.batchUpdate(spreadsheetId, ReferenceStructure.addTableRequests(missing))
     }
 
     /** Call 11: false when the file is trashed or gone. */

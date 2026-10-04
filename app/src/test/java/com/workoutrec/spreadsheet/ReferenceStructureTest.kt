@@ -113,9 +113,22 @@ class ReferenceStructureTest {
     }
 
     // contracts/spreadsheet.md "Tables"
-    private fun table(tab: String): JsonObject = sheet(tab)["tables"]!!.jsonArray.single().jsonObject
+    // Tables are added by separate addTable requests: spreadsheets.create silently ignores
+    // Sheet.tables (found on the device test, 2026-10-04).
+    private val addTables = ReferenceStructure.addTableRequests().map { it.jsonObject["addTable"]!!.jsonObject["table"]!!.jsonObject }
+
+    private fun table(tab: String): JsonObject {
+        val sheetId = sheet(tab)["properties"]!!.jsonObject["sheetId"]!!.jsonPrimitive.content
+        return addTables.single { it["range"]!!.jsonObject["sheetId"]!!.jsonPrimitive.content == sheetId }
+    }
 
     private fun columns(tab: String) = table(tab)["columnProperties"]!!.jsonArray.map { it.jsonObject }
+
+    @Test
+    fun `create request has no tables, they are added separately`() {
+        assertTrue(sheets.none { it.containsKey("tables") })
+        assertEquals(4, ReferenceStructure.addTableRequests().size)
+    }
 
     @Test
     fun `four tables with names on their tabs`() {
@@ -123,8 +136,13 @@ class ReferenceStructureTest {
         assertEquals("drills", table("drills")["name"]!!.jsonPrimitive.content)
         assertEquals("payments", table("money")["name"]!!.jsonPrimitive.content)
         assertEquals("workouts", table("workout")["name"]!!.jsonPrimitive.content)
-        assertEquals("rec has no table", null, sheet("rec")["tables"])
-        assertEquals("balance has no table", null, sheet("balance")["tables"])
+    }
+
+    @Test
+    fun `only the requested tables are added`() {
+        val names = ReferenceStructure.addTableRequests(names = setOf("payments"))
+            .map { it.jsonObject["addTable"]!!.jsonObject["table"]!!.jsonObject["name"]!!.jsonPrimitive.content }
+        assertEquals(listOf("payments"), names)
     }
 
     @Test

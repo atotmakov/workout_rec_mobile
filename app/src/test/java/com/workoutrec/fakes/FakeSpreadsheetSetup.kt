@@ -58,7 +58,12 @@ class FakeSpreadsheetSetupService(
         return spreadsheetId in existing
     }
 
-    val writeCalls: List<String> get() = log.filter { it == "create" || it.startsWith("rename") }
+    override suspend fun ensureTables(spreadsheetId: String) {
+        log += "tables:$spreadsheetId"
+        maybeFail("ensureTables")
+    }
+
+    val writeCalls: List<String> get() = log.filter { it == "create" || it.startsWith("rename") || it.startsWith("tables") }
 }
 
 class FakeScriptInstaller(
