@@ -46,8 +46,19 @@ class SheetsClient(
     @Serializable
     private data class SheetProperties(val sheetId: Int = 0, val title: String = "")
 
+    /** Proto3 JSON omits defaults: a missing columnIndex is 0, a missing columnType is unspecified. */
     @Serializable
-    private data class Sheet(val properties: SheetProperties = SheetProperties())
+    private data class ColumnJson(
+        val columnIndex: Int = 0,
+        val columnName: String = "",
+        val columnType: String = "COLUMN_TYPE_UNSPECIFIED",
+    )
+
+    @Serializable
+    private data class TableJson(val name: String = "", val columnProperties: List<ColumnJson> = emptyList())
+
+    @Serializable
+    private data class Sheet(val properties: SheetProperties = SheetProperties(), val tables: List<TableJson> = emptyList())
 
     @Serializable
     private data class Metadata(val metadataId: Int = 0, val metadataKey: String = "", val metadataValue: String = "")
@@ -71,13 +82,23 @@ class SheetsClient(
     /** Call 5a: no ranges, so a renamed or missing tab can never fail the request. */
     override suspend fun readTabsAndMetadata(spreadsheetId: String): TabsAndMetadata {
         val url = spreadsheets().addPathSegment(spreadsheetId)
-            .addQueryParameter("fields", "sheets.properties(sheetId,title),developerMetadata")
+            .addQueryParameter(
+                "fields",
+                "sheets(properties(sheetId,title),tables(name,range,columnProperties(columnIndex,columnName,columnType))),developerMetadata",
+            )
             .build()
         val response = GoogleJson.decodeFromString<TabsResponse>(http.execute(Request.Builder().url(url).build()))
         return TabsAndMetadata(
             titles = response.sheets.map { it.properties.title },
             metadata = response.developerMetadata.associate { it.metadataKey to it.metadataValue },
             metadataIds = response.developerMetadata.associate { it.metadataKey to it.metadataId },
+            tables = response.sheets
+                .filter { it.tables.isNotEmpty() }
+                .associate { sheet ->
+                    sheet.properties.title to sheet.tables.map { table ->
+                        SheetTable(table.name, table.columnProperties.map { TableColumn(it.columnIndex, it.columnName, it.columnType) })
+                    }
+                },
         )
     }
 

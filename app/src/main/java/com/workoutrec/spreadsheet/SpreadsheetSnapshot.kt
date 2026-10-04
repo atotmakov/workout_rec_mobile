@@ -43,6 +43,8 @@ data class SpreadsheetSnapshot(
                 recRules = rec?.let(::conditionalRules).orEmpty(),
                 metadata = tabs.metadata,
                 metadataIds = tabs.metadataIds,
+                tables = tabs.tables,
+                logDropDownRange = byTitle["log"]?.let(::rows)?.getOrNull(1)?.getOrNull(1)?.let(::dropDownRange),
             )
         }
 

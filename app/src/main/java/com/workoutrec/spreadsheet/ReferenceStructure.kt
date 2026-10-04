@@ -14,7 +14,7 @@ import kotlinx.serialization.json.putJsonObject
 object ReferenceStructure {
     const val TITLE = "workout_rec_database_"
     const val LOCALE = "ru_RU"
-    const val STRUCTURE_VERSION = "1"
+    const val STRUCTURE_VERSION = "2"
     const val STRUCTURE_VERSION_KEY = "workout_rec.structure_version"
     val TABS = listOf("log", "drills", "rec", "money", "workout", "balance")
     val HEADERS: Map<String, List<String>> = mapOf(
@@ -33,6 +33,22 @@ object ReferenceStructure {
     const val DATE_PATTERN = "dd.MM.yyyy"
     val DATE_COLUMN_TABS = listOf("log", "money", "workout")
 
+    /** Drop-down of `log` column B (Drill): the exercises listed in `drills`. */
+    const val LOG_DROPDOWN_RANGE = "=drills!\$B\$2:\$B"
+
+    const val UNSET = "COLUMN_TYPE_UNSPECIFIED"
+
+    /** A Google Sheets table on [tab]: column types by position, header colour (RGB). */
+    data class TableSpec(val tab: String, val name: String, val columnTypes: List<String>, val headerColor: Triple<Int, Int, Int>)
+
+    /** contracts/spreadsheet.md "Tables". */
+    val TABLES = listOf(
+        TableSpec("log", "log", listOf("DATE", UNSET, "DOUBLE", "DOUBLE"), Triple(0x2E, 0x5E, 0x4E)),
+        TableSpec("drills", "drills", listOf(UNSET, UNSET), Triple(0x5C, 0x6B, 0xC0)),
+        TableSpec("money", "payments", listOf("DATE", "DOUBLE", "DOUBLE"), Triple(0xF6, 0xB0, 0x26)),
+        TableSpec("workout", "workouts", listOf("DATE", UNSET, UNSET), Triple(0x2E, 0x7D, 0x5B)),
+    )
+
     /** Default grid size of a new sheet; date format and highlight rules cover rows 2..1000. */
     private const val ROWS = 1000
 
@@ -41,7 +57,7 @@ object ReferenceStructure {
 
     /** Call 5b ranges per tab, in request order. */
     val STRUCTURE_RANGES: Map<String, String> = linkedMapOf(
-        "log" to "log!1:1",
+        "log" to "log!1:2",
         "drills" to "drills!1:1",
         "money" to "money!1:1",
         "workout" to "workout!1:1",
@@ -61,6 +77,9 @@ object ReferenceStructure {
                         putJsonArray("data") { add(gridData(fullRows(tab))) }
                         if (tab == "rec") {
                             putJsonArray("conditionalFormats") { REC_RULES.forEach { add(conditionalRule(it)) } }
+                        }
+                        TABLES.filter { it.tab == tab }.takeIf { it.isNotEmpty() }?.let { specs ->
+                            putJsonArray("tables") { specs.forEach { add(table(it)) } }
                         }
                     },
                 )
@@ -121,11 +140,47 @@ object ReferenceStructure {
         }
         add(
             buildJsonObject {
+                putJsonObject("setDataValidation") {
+                    put("range", gridRange(sheetId("log"), 1, ROWS, 1, 2))
+                    put("rule", dropDownRule(LOG_DROPDOWN_RANGE))
+                }
+            },
+        )
+        TABLES.forEach { spec -> add(buildJsonObject { putJsonObject("addTable") { put("table", table(spec)) } }) }
+        add(
+            buildJsonObject {
                 putJsonObject("createDeveloperMetadata") {
                     put("developerMetadata", SheetsClient.documentMetadata(STRUCTURE_VERSION_KEY, STRUCTURE_VERSION))
                 }
             },
         )
+    }
+
+    /** A table covering rows 1..1000 from A1; column names are the header row (research R5). */
+    private fun table(spec: TableSpec) = buildJsonObject {
+        put("name", spec.name)
+        put("range", gridRange(sheetId(spec.tab), 0, ROWS, 0, spec.columnTypes.size))
+        putJsonObject("rowsProperties") {
+            putJsonObject("headerColorStyle") { put("rgbColor", rgb(spec.headerColor)) }
+        }
+        putJsonArray("columnProperties") {
+            val headers = HEADERS.getValue(spec.tab)
+            spec.columnTypes.forEachIndexed { index, type ->
+                add(
+                    buildJsonObject {
+                        put("columnIndex", index)
+                        put("columnName", headers[index])
+                        put("columnType", type)
+                    },
+                )
+            }
+        }
+    }
+
+    private fun rgb(color: Triple<Int, Int, Int>) = buildJsonObject {
+        put("red", color.first / 255.0)
+        put("green", color.second / 255.0)
+        put("blue", color.third / 255.0)
     }
 
     private fun properties(timeZone: String) = buildJsonObject {
@@ -147,6 +202,9 @@ object ReferenceStructure {
             row(listOf(formulaCell(REC_FORMULA))),
         )
         "balance" -> listOf(row(listOf(numberCell(0))))
+        // log rows 2..1000: date format in A and the exercise drop-down in B (contracts "Tabs").
+        "log" -> listOf(row(HEADERS.getValue(tab).map(::stringCell))) +
+            List(ROWS - 1) { row(listOf(dateFormatCell(), buildJsonObject { put("dataValidation", dropDownRule(LOG_DROPDOWN_RANGE)) })) }
         else -> {
             val header = row(HEADERS.getValue(tab).map(::stringCell))
             if (tab in DATE_COLUMN_TABS) listOf(header) + List(ROWS - 1) { row(listOf(dateFormatCell())) } else listOf(header)
@@ -176,10 +234,10 @@ object ReferenceStructure {
         }
     }
 
-    private fun dropDownRule() = buildJsonObject {
+    private fun dropDownRule(range: String = REC_DROPDOWN_RANGE) = buildJsonObject {
         putJsonObject("condition") {
             put("type", "ONE_OF_RANGE")
-            putJsonArray("values") { add(buildJsonObject { put("userEnteredValue", REC_DROPDOWN_RANGE) }) }
+            putJsonArray("values") { add(buildJsonObject { put("userEnteredValue", range) }) }
         }
         put("strict", false)
         put("showCustomUi", true)

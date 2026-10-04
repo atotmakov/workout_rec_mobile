@@ -47,6 +47,25 @@ object StructureValidator {
             }
         }
 
+        // Rule 6: tables by name, column types by position (colours and size are not compared).
+        ReferenceStructure.TABLES.forEach { spec ->
+            if (spec.tab !in present) return@forEach
+            val table = snapshot.tables[spec.tab].orEmpty().firstOrNull { it.name == spec.name }
+            if (table == null) {
+                reasons += MismatchReason.MissingTable(spec.tab, spec.name)
+                return@forEach
+            }
+            spec.columnTypes.forEachIndexed { column, expected ->
+                val actual = table.columns.firstOrNull { it.index == column }?.type
+                if (actual != expected) reasons += MismatchReason.WrongColumnType(spec.name, column, expected, actual)
+            }
+        }
+
+        // Rule 7: the exercise drop-down in log column B.
+        if ("log" in present && !sameFormula(snapshot.logDropDownRange, ReferenceStructure.LOG_DROPDOWN_RANGE)) {
+            reasons += MismatchReason.MissingLogDropDown
+        }
+
         return if (reasons.isEmpty()) StructureCheckResult.Match else StructureCheckResult.Mismatch(reasons)
     }
 
