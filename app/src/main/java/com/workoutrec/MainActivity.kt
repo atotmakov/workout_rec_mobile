@@ -37,6 +37,7 @@ import com.workoutrec.home.AutomationReminder
 import com.workoutrec.home.MainScreen
 import com.workoutrec.setup.AutomationGuideScreen
 import com.workoutrec.setup.ChooseAccountScreen
+import com.workoutrec.setup.GuideLinks
 import com.workoutrec.setup.GuideStep
 import com.workoutrec.setup.RewriteDialog
 import com.workoutrec.setup.SetupAction
@@ -49,8 +50,6 @@ object Routes {
     const val SETUP = "setup"
     const val HOME = "home"
 }
-
-private const val APPS_SCRIPT_SETTINGS_URL = "https://script.google.com/home/usersettings"
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -86,7 +85,8 @@ private fun AppNavHost(container: AppContainer) {
 
     NavHost(navController = navController, startDestination = Routes.SETUP) {
         composable(Routes.SETUP) {
-            SetupRoute(viewModel, state, onReady = {
+            val setupAccount by container.settingsStore.account.collectAsState(initial = null)
+            SetupRoute(viewModel, state, accountEmail = setupAccount?.email, onReady = {
                 navController.navigate(Routes.HOME) { popUpTo(Routes.SETUP) { inclusive = true } }
             })
         }
@@ -111,7 +111,7 @@ private fun AppNavHost(container: AppContainer) {
 }
 
 @Composable
-private fun SetupRoute(viewModel: SetupViewModel, state: SetupState, onReady: () -> Unit) {
+private fun SetupRoute(viewModel: SetupViewModel, state: SetupState, accountEmail: String?, onReady: () -> Unit) {
     val context = LocalContext.current
     val language = LocalConfiguration.current.locales[0].language
     val consentLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result ->
@@ -150,22 +150,18 @@ private fun SetupRoute(viewModel: SetupViewModel, state: SetupState, onReady: ()
         }
         SetupState.NeedsApiSetting -> AutomationGuideScreen(
             step = GuideStep.ApiSetting,
-            onOpen = { open(APPS_SCRIPT_SETTINGS_URL) },
+            onOpen = { open(GuideLinks.appsScriptSettings(accountEmail)) },
             onContinue = { viewModel.onAction(SetupAction.ContinueForNow) },
         )
         is SetupState.NeedsEnable -> AutomationGuideScreen(
             step = GuideStep.Enable,
-            onOpen = { open(enablePageUrl(state.enableUrl, language)) },
+            onOpen = { open(GuideLinks.enablePage(state.enableUrl, language, accountEmail)) },
             onContinue = { viewModel.onAction(SetupAction.ContinueForNow) },
         )
         is SetupState.Error -> SetupProgressScreen(error = state.error, onRetry = { viewModel.onAction(SetupAction.Retry) })
         SetupState.Ready -> LaunchedEffect(Unit) { onReady() }
     }
 }
-
-/** The Enable page is localized by `lang` (contracts/apps-script.md). */
-private fun enablePageUrl(url: String, language: String): String =
-    Uri.parse(url).buildUpon().appendQueryParameter("lang", if (language == "ru") "ru" else "en").build().toString()
 
 /** Custom Tabs share the browser's Google sign-in (research R14). */
 private fun openInBrowser(context: Context, url: String) {
