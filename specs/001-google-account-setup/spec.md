@@ -184,7 +184,8 @@ chooser is shown.
   order; the spreadsheet MUST use the dd.MM.yyyy date format regardless of the phone's language.
 - **FR-007**: Each tab MUST be created with the reference structure (columns, column types, and
   formatting) defined in [Reference Spreadsheet Structure](#reference-spreadsheet-structure),
-  including the rec conditional formatting rules and the rec A1 drop-down.
+  including the rec conditional formatting rules, the rec A1 drop-down, and the log, drills,
+  payments and workouts tables.
 - **FR-008**: The app MUST look only at spreadsheets it created itself in the chosen account;
   spreadsheets created by hand or by other apps are never read, even if they have the same name.
   If the chosen account already has an app-created spreadsheet named workout_rec_database_, the
@@ -265,6 +266,21 @@ format `dd.MM.yyyy`.
 | C2:C1000 | `=C2=MAX($C$2:$C)` | light green fill | Highlights the heaviest weight logged for the exercise |
 | D2:D1000 | `=AND($C2=MAX($C:$C), $D2=MAXIFS($D:$D, $C:$C, MAX($C:$C)))` | light green fill | Highlights the most reps at that heaviest weight (the personal record) |
 
+#### Tables (added 2026-10-04 after the first device test)
+
+The data tabs are Google Sheets **tables** (Format → Convert to table): a named range starting at
+A1 whose header row is row 1, with typed columns and table colours. A new spreadsheet MUST have
+these tables (empty, covering rows 1–1000).
+
+| Tab | Table name | Column types | Header colour |
+|-----|-----------|--------------|---------------|
+| log | log | Date: Date · Drill: none (cells keep a drop-down of the exercises in `drills!B`) · W: Number · R: Number | dark green |
+| drills | drills | mscl: none · drill: none | indigo |
+| money | payments | date: Date · workouts: Number · sum: Number | amber |
+| workout | workouts | date: Date · duration, min: none · work alone: none | green |
+
+rec and balance have no table.
+
 #### Attached automation (spreadsheet script)
 
 The spreadsheet has an attached script that behaves as follows. A new spreadsheet MUST have the
@@ -279,8 +295,9 @@ same behavior.
 | Balance | On a time-based schedule (about once a day) | Sets balance A1 to the total of money "workouts" minus the number of workout rows whose "work alone" is not 1 |
 
 Structure check (FR-008): the spreadsheet matches when all six tabs exist with the headers above
-in row 1 (log, drills, money, workout), the rec formula in A2, the rec A1 drop-down, and the two
-rec conditional formatting rules. Data rows and the values in rec A1 and balance A1 are not
+in row 1 (log, drills, money, workout), the rec formula in A2, the rec A1 drop-down, the two
+rec conditional formatting rules, and the four tables above (name, and the column types;
+colours and table size are not compared). Data rows and the values in rec A1 and balance A1 are not
 compared. A missing script, or automation that is not yet enabled, is tracked separately
 (FR-015) and fixed by attaching the script, not treated as a structure difference. In a new
 spreadsheet rec A1 is empty and balance A1 is 0.

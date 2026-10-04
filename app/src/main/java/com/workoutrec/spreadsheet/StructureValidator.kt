@@ -6,6 +6,9 @@ sealed interface MismatchReason {
     data object MissingRecFormula : MismatchReason
     data object MissingRecDropDown : MismatchReason
     data class MissingConditionalRule(val index: Int) : MismatchReason
+    data class MissingTable(val tab: String, val name: String) : MismatchReason
+    data class WrongColumnType(val table: String, val column: Int, val expected: String, val actual: String?) : MismatchReason
+    data object MissingLogDropDown : MismatchReason
 }
 
 sealed interface StructureCheckResult {

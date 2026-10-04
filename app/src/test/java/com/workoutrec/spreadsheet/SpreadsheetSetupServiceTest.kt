@@ -80,7 +80,7 @@ class SpreadsheetSetupServiceTest {
         )
         val check = service.check("id1")
         assertEquals(listOf("readTabs:id1", "readCells:id1"), log)
-        assertEquals(listOf("log!1:1", "drills!1:1", "workout!1:1", "rec!A1:D2"), sheets.requestedRanges.single())
+        assertEquals(listOf("log!1:2", "drills!1:1", "workout!1:1", "rec!A1:D2"), sheets.requestedRanges.single())
         assertTrue(check.result is StructureCheckResult.Mismatch)
         assertTrue(MismatchReason.MissingTab("money") in (check.result as StructureCheckResult.Mismatch).reasons)
         assertEquals(mapOf("workout_rec.script_id" to "s1"), check.snapshot.metadata)

@@ -12,11 +12,18 @@ import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.Request
 
-/** Result of call 5a. */
+/** A column of a Google Sheets table; [type] is a Sheets API `ColumnType` name. */
+data class TableColumn(val index: Int, val name: String, val type: String)
+
+/** A Google Sheets table (contracts/spreadsheet.md "Tables"). */
+data class SheetTable(val name: String, val columns: List<TableColumn>)
+
+/** Result of call 5a. [tables] maps tab title to the tables on that tab. */
 data class TabsAndMetadata(
     val titles: List<String>,
     val metadata: Map<String, String>,
     val metadataIds: Map<String, Int>,
+    val tables: Map<String, List<SheetTable>> = emptyMap(),
 )
 
 /** Sheets calls 4, 4b, 5a, 5b, 6 (contracts/google-apis.md). */

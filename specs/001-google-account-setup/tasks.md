@@ -193,6 +193,21 @@ new account) or sign out (back to the first-launch chooser).
 
 ---
 
+## Phase 7: Reference tables (device test follow-up, US2)
+
+**Purpose**: The device test showed the reference spreadsheet uses Google Sheets tables with typed
+columns, which the created spreadsheet lacked (spec "Tables", contracts/spreadsheet.md "Tables",
+match rules 6–7, structure version 2).
+
+- [ ] T072 [P] [US2] Extend `app/src/test/java/com/workoutrec/spreadsheet/ReferenceStructureTest.kt` (failing first): the create request has tables `log`, `drills`, `payments`, `workouts` on their tabs with ranges rows 0–1000 from column A, column names = headers, column types per contracts/spreadsheet.md "Tables" (`DATE`, `DOUBLE`, `COLUMN_TYPE_UNSPECIFIED`), header colours; `log!B2:B1000` drop-down `ONE_OF_RANGE` `=drills!$B$2:$B`; structure version `2`; `completionRequests()` also contains `addTable` (×4) and the `log` drop-down
+- [ ] T073 [P] [US2] Extend `app/src/test/java/com/workoutrec/spreadsheet/StructureValidatorTest.kt` and `Snapshots.kt` (failing first): reference with tables matches; missing table → `MissingTable(tab, name)`; wrong column type → `WrongColumnType(table, column, expected, actual)`; missing `log!B2` drop-down → `MissingLogDropDown`; a version-1 snapshot without tables mismatches; table colours and size ignored
+- [ ] T074 [P] [US2] Extend `app/src/test/java/com/workoutrec/google/SheetsClientTest.kt` and `app/src/test/java/com/workoutrec/spreadsheet/SpreadsheetSetupServiceTest.kt` (failing first): call 5a `fields` include `tables(name,range,columnProperties(columnIndex,columnName,columnType))` and tables are parsed per tab; call 5b requests `log!1:2`
+- [ ] T075 [US2] Implement tables, the `log` drop-down and structure version 2 in `app/src/main/java/com/workoutrec/spreadsheet/ReferenceStructure.kt` so T072 passes
+- [ ] T076 [US2] Implement table reading in `app/src/main/java/com/workoutrec/google/SheetsClient.kt` and `app/src/main/java/com/workoutrec/spreadsheet/SpreadsheetSnapshot.kt`, and the new match rules in `app/src/main/java/com/workoutrec/spreadsheet/StructureValidator.kt`, so T073–T074 pass
+- [ ] T077 [US2] Device check (quickstart 9): with the existing version-1 spreadsheet, the app shows the rewrite question; "Yes" renames it to a dated backup and creates a new spreadsheet with the four tables; record in `quickstart-results.md`
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies

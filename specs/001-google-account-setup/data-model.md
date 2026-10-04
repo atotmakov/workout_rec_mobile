@@ -44,7 +44,8 @@ metadata (key → value).
 - `Match`
 - `Mismatch(reasons: List<MismatchReason>)`: for example `MissingTab("money")`,
   `WrongHeader(tab, column, expected, actual)`, `MissingRecFormula`, `MissingRecDropDown`,
-  `MissingConditionalRule(index)`.
+  `MissingConditionalRule(index)`, `MissingTable(tab, name)`,
+  `WrongColumnType(table, column, expected, actual)`, `MissingLogDropDown`.
 - Ignored: data rows, extra tabs, extra columns after the expected ones, values of `rec!A1` and
   `balance!A1`, and anything about the script (that is `AutomationStatus`).
 
