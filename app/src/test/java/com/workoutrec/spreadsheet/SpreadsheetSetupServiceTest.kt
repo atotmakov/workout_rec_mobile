@@ -7,6 +7,8 @@ import com.workoutrec.google.DriveFile
 import com.workoutrec.google.TabsAndMetadata
 import java.time.LocalDate
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -84,6 +86,37 @@ class SpreadsheetSetupServiceTest {
         assertTrue(check.result is StructureCheckResult.Mismatch)
         assertTrue(MismatchReason.MissingTab("money") in (check.result as StructureCheckResult.Mismatch).reasons)
         assertEquals(mapOf("workout_rec.script_id" to "s1"), check.snapshot.metadata)
+    }
+
+    private fun addedTableNames(requests: kotlinx.serialization.json.JsonArray) = requests.map {
+        it.jsonObject["addTable"]!!.jsonObject["table"]!!.jsonObject["name"]!!.jsonPrimitive.content
+    }
+
+    @Test
+    fun `ensureTables adds all four tables to a new spreadsheet in one batchUpdate`() = runTest {
+        sheets.tabs = TabsAndMetadata(ReferenceStructure.TABS, emptyMap(), emptyMap())
+        service.ensureTables("new-sheet")
+        assertEquals(listOf("readTabs:new-sheet", "batchUpdate:new-sheet"), log)
+        assertEquals(listOf("log", "drills", "payments", "workouts"), addedTableNames(sheets.batchUpdates.single()))
+    }
+
+    @Test
+    fun `ensureTables adds only the missing tables`() = runTest {
+        sheets.tabs = TabsAndMetadata(
+            ReferenceStructure.TABS,
+            emptyMap(),
+            emptyMap(),
+            tables = mapOf("log" to Snapshots.referenceTables.getValue("log"), "drills" to Snapshots.referenceTables.getValue("drills")),
+        )
+        service.ensureTables("id1")
+        assertEquals(listOf("payments", "workouts"), addedTableNames(sheets.batchUpdates.single()))
+    }
+
+    @Test
+    fun `ensureTables does nothing when all tables exist`() = runTest {
+        sheets.tabs = TabsAndMetadata(ReferenceStructure.TABS, emptyMap(), emptyMap(), tables = Snapshots.referenceTables)
+        service.ensureTables("id1")
+        assertEquals(listOf("readTabs:id1"), log)
     }
 
     @Test

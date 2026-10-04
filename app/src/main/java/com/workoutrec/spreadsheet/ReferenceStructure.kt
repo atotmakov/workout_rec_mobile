@@ -156,6 +156,8 @@ object ReferenceStructure {
         )
     }
 
+    fun addTableRequests(names: Collection<String> = TABLES.map { it.name }): JsonArray = TODO()
+
     /** A table covering rows 1..1000 from A1; column names are the header row (research R5). */
     private fun table(spec: TableSpec) = buildJsonObject {
         put("name", spec.name)

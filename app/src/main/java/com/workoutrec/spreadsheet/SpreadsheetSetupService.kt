@@ -15,6 +15,9 @@ interface SpreadsheetSetup {
     suspend fun check(spreadsheetId: String): SpreadsheetCheck
     suspend fun rewrite(oldSpreadsheetId: String, timeZone: String): String
     suspend fun exists(spreadsheetId: String): Boolean
+
+    /** Adds the reference tables that the spreadsheet does not have yet (safe to repeat). */
+    suspend fun ensureTables(spreadsheetId: String)
 }
 
 class SpreadsheetSetupService(
@@ -51,6 +54,8 @@ class SpreadsheetSetupService(
         drive.rename(oldSpreadsheetId, backupName)
         return create(timeZone)
     }
+
+    override suspend fun ensureTables(spreadsheetId: String): Unit = TODO()
 
     /** Call 11: false when the file is trashed or gone. */
     override suspend fun exists(spreadsheetId: String): Boolean = try {
