@@ -189,9 +189,15 @@ Each section records a decision, why it was chosen, and what else was considered
   "Enable automation" page; on return (`onResume`) the app re-checks status.
 - **Rationale**: Custom Tabs share the browser's Google sign-in. A plain `ACTION_VIEW` link to a
   Google page may open a Google app instead of the browser.
-- **Multiple accounts (found on the first device test, 2026-10-04)**: when the browser is signed
-  into several Google accounts, script.google.com opens pages as the browser's default account;
-  for the "Enable automation" page of a script owned by another account this shows "Sorry, unable
-  to open the file at this time". Both step links therefore add `authuser=<app account email>`,
-  which script.google.com honors (verified: the owner's email shows the authorization screen,
-  another account's email reproduces the error). Implemented in `setup/GuideLinks.kt`.
+- **Multiple accounts (found on the first device test, 2026-10-04)**: an Apps Script web app
+  (the "Enable automation" page) only works for the browser's **first** signed-in account. For
+  any other account, even the script's owner, it shows "Sorry, unable to open the file at this
+  time". `authuser=<email>` does not help: it selects the right account (e.g. `authuser=1`) and
+  the page still fails (verified on the user's phone, Brave with two accounts). Opening the plain
+  link in an incognito tab signed in only as the owner works (verified).
+- **Decision for step 2**: open the page in a **private (ephemeral) Custom Tab** when the browser
+  supports it (intent extra `androidx.browser.customtabs.extra.ENABLE_EPHEMERAL_BROWSING`,
+  capability category `androidx.browser.customtabs.category.EphemeralBrowsing`); the user signs
+  in there once as the app account. Otherwise the guide offers **Copy link** with instructions to
+  paste it into an incognito tab. Step 1 (Apps Script settings) is a normal page and keeps
+  `authuser=<email>`. Implemented in `setup/GuideLinks.kt` and `setup/Browser.kt`.

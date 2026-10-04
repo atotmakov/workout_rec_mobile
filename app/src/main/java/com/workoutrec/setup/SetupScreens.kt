@@ -65,17 +65,37 @@ fun RewriteDialog(onAnswer: (Boolean) -> Unit) {
     )
 }
 
-/** The two one-time browser steps (FR-013); each can be skipped for now (FR-015). */
+/**
+ * The two one-time browser steps (FR-013); each can be skipped for now (FR-015).
+ *
+ * Step 2 must run as the browser's only/first account (see [GuideLinks]): with [privateTab] the
+ * page opens in a private in-app tab; otherwise the user copies the link into an incognito tab.
+ */
 @Composable
-fun AutomationGuideScreen(step: GuideStep, onOpen: () -> Unit, onContinue: () -> Unit) {
-    val (title, text) = when (step) {
-        GuideStep.ApiSetting -> R.string.guide_step1_title to R.string.guide_step1_text
-        GuideStep.Enable -> R.string.guide_step2_title to R.string.guide_step2_text
+fun AutomationGuideScreen(
+    step: GuideStep,
+    onOpen: () -> Unit,
+    onContinue: () -> Unit,
+    accountEmail: String? = null,
+    privateTab: Boolean = true,
+    onCopyLink: (() -> Unit)? = null,
+) {
+    val account = accountEmail.orEmpty()
+    val copyMode = step == GuideStep.Enable && !privateTab && onCopyLink != null
+    val title = if (step == GuideStep.ApiSetting) R.string.guide_step1_title else R.string.guide_step2_title
+    val text = when {
+        step == GuideStep.ApiSetting -> stringResource(R.string.guide_step1_text)
+        copyMode -> stringResource(R.string.guide_step2_copy_text, account)
+        else -> stringResource(R.string.guide_step2_private_text, account)
     }
     CenteredColumn {
         Text(stringResource(title), style = MaterialTheme.typography.headlineSmall)
-        Text(stringResource(text), style = MaterialTheme.typography.bodyMedium)
-        Button(onClick = onOpen) { Text(stringResource(R.string.guide_open)) }
+        Text(text, style = MaterialTheme.typography.bodyMedium)
+        if (copyMode) {
+            Button(onClick = { onCopyLink?.invoke() }) { Text(stringResource(R.string.guide_copy_link)) }
+        } else {
+            Button(onClick = onOpen) { Text(stringResource(R.string.guide_open)) }
+        }
         TextButton(onClick = onContinue) { Text(stringResource(R.string.guide_continue)) }
     }
 }
