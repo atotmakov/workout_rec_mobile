@@ -55,7 +55,14 @@ class SpreadsheetSetupService(
         return create(timeZone)
     }
 
-    override suspend fun ensureTables(spreadsheetId: String): Unit = TODO()
+    /** Reads which tables exist (call 5a) and adds only the missing ones in one batchUpdate. */
+    override suspend fun ensureTables(spreadsheetId: String) {
+        val tabs = sheets.readTabsAndMetadata(spreadsheetId)
+        val missing = ReferenceStructure.TABLES
+            .filter { spec -> spec.tab in tabs.titles && tabs.tables[spec.tab].orEmpty().none { it.name == spec.name } }
+            .map { it.name }
+        if (missing.isNotEmpty()) sheets.batchUpdate(spreadsheetId, ReferenceStructure.addTableRequests(missing))
+    }
 
     /** Call 11: false when the file is trashed or gone. */
     override suspend fun exists(spreadsheetId: String): Boolean = try {

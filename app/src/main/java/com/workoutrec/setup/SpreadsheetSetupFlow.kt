@@ -91,13 +91,32 @@ class SpreadsheetSetupFlow(
     private suspend fun createNew(account: SelectedAccount): SetupState = guarded(SetupStep.Creating) {
         val id = setup.create(timeZone())
         bind(account, id, emptyMap())
-        attach(account, id, emptyMap(), emptyMap())
+        addTablesThenAttach(account, id)
     }
 
     private suspend fun rewrite(account: SelectedAccount, oldId: String): SetupState = guarded(SetupStep.Renaming, oldId) {
         val id = setup.rewrite(oldId, timeZone())
         bind(account, id, emptyMap())
-        attach(account, id, emptyMap(), emptyMap())
+        addTablesThenAttach(account, id)
+    }
+
+    /**
+     * Tables need their own request after create (spreadsheets.create ignores them). The
+     * spreadsheet is already bound, so a failure here is a Creating error whose Retry repairs this
+     * spreadsheet instead of creating another one.
+     */
+    private suspend fun addTablesThenAttach(account: SelectedAccount, spreadsheetId: String): SetupState =
+        guarded(SetupStep.Creating) {
+            setup.ensureTables(spreadsheetId)
+            attach(account, spreadsheetId, emptyMap(), emptyMap())
+        }
+
+    private suspend fun retryCreating(account: SelectedAccount): SetupState {
+        val binding = store.binding.first() ?: return createNew(account)
+        return guarded(SetupStep.Creating) {
+            setup.ensureTables(binding.spreadsheetId)
+            attachToBound(account)
+        }
     }
 
     private suspend fun attach(
@@ -154,7 +173,7 @@ class SpreadsheetSetupFlow(
 
     private suspend fun retry(account: SelectedAccount, step: SetupStep): SetupState = when (step) {
         SetupStep.Finding, SetupStep.Checking -> findSpreadsheet(account)
-        SetupStep.Creating -> createNew(account)
+        SetupStep.Creating -> retryCreating(account)
         SetupStep.Renaming -> failedRewriteId?.let { rewrite(account, it) } ?: findSpreadsheet(account)
         SetupStep.AttachingScript -> attachToBound(account)
     }

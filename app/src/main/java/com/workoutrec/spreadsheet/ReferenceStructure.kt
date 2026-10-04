@@ -78,9 +78,6 @@ object ReferenceStructure {
                         if (tab == "rec") {
                             putJsonArray("conditionalFormats") { REC_RULES.forEach { add(conditionalRule(it)) } }
                         }
-                        TABLES.filter { it.tab == tab }.takeIf { it.isNotEmpty() }?.let { specs ->
-                            putJsonArray("tables") { specs.forEach { add(table(it)) } }
-                        }
                     },
                 )
             }
@@ -146,7 +143,7 @@ object ReferenceStructure {
                 }
             },
         )
-        TABLES.forEach { spec -> add(buildJsonObject { putJsonObject("addTable") { put("table", table(spec)) } }) }
+        addTableRequests().forEach { add(it) }
         add(
             buildJsonObject {
                 putJsonObject("createDeveloperMetadata") {
@@ -156,7 +153,15 @@ object ReferenceStructure {
         )
     }
 
-    fun addTableRequests(names: Collection<String> = TABLES.map { it.name }): JsonArray = TODO()
+    /**
+     * `addTable` requests for the tables named in [names]. Tables are always added this way:
+     * spreadsheets.create silently ignores `Sheet.tables` (found on the device test, 2026-10-04).
+     */
+    fun addTableRequests(names: Collection<String> = TABLES.map { it.name }): JsonArray = buildJsonArray {
+        TABLES.filter { it.name in names }.forEach { spec ->
+            add(buildJsonObject { putJsonObject("addTable") { put("table", table(spec)) } })
+        }
+    }
 
     /** A table covering rows 1..1000 from A1; column names are the header row (research R5). */
     private fun table(spec: TableSpec) = buildJsonObject {
