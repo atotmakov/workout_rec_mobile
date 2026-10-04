@@ -1,5 +1,6 @@
 package com.workoutrec.spreadsheet
 
+import com.workoutrec.google.SheetTable
 import com.workoutrec.google.TabsAndMetadata
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -19,6 +20,10 @@ data class SpreadsheetSnapshot(
     val recRules: List<ConditionalRule>,
     val metadata: Map<String, String>,
     val metadataIds: Map<String, Int>,
+    /** Tab title → tables on that tab. */
+    val tables: Map<String, List<SheetTable>> = emptyMap(),
+    /** Drop-down range of `log!B2`. */
+    val logDropDownRange: String? = null,
 ) {
     companion object {
         /** Builds a snapshot from call 5a ([tabs]) and call 5b ([cells]). */
@@ -38,6 +43,8 @@ data class SpreadsheetSnapshot(
                 recRules = rec?.let(::conditionalRules).orEmpty(),
                 metadata = tabs.metadata,
                 metadataIds = tabs.metadataIds,
+                tables = tabs.tables,
+                logDropDownRange = byTitle["log"]?.let(::rows)?.getOrNull(1)?.getOrNull(1)?.let(::dropDownRange),
             )
         }
 

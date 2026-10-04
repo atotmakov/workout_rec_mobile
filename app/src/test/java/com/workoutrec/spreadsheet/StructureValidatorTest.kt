@@ -85,6 +85,68 @@ class StructureValidatorTest {
         assertEquals(StructureCheckResult.Match, StructureValidator.check(snapshot))
     }
 
+    // Match rules 6-7 (tables, log drop-down), structure version 2
+
+    @Test
+    fun `missing table`() {
+        val snapshot = reference.copy(tables = reference.tables - "money")
+        assertEquals(listOf(MismatchReason.MissingTable("money", "payments")), mismatch(snapshot))
+    }
+
+    @Test
+    fun `table with another name counts as missing`() {
+        val renamed = reference.tables + ("workout" to listOf(reference.tables.getValue("workout").single().copy(name = "Table1")))
+        assertEquals(listOf(MismatchReason.MissingTable("workout", "workouts")), mismatch(reference.copy(tables = renamed)))
+    }
+
+    @Test
+    fun `wrong column type`() {
+        val log = reference.tables.getValue("log").single()
+        val changed = log.copy(columns = log.columns.map { if (it.index == 2) it.copy(type = "TEXT") else it })
+        assertEquals(
+            listOf(MismatchReason.WrongColumnType("log", 2, expected = "DOUBLE", actual = "TEXT")),
+            mismatch(reference.copy(tables = reference.tables + ("log" to listOf(changed)))),
+        )
+    }
+
+    @Test
+    fun `missing column counts as a wrong type`() {
+        val drills = reference.tables.getValue("drills").single()
+        val shorter = drills.copy(columns = drills.columns.take(1))
+        assertEquals(
+            listOf(MismatchReason.WrongColumnType("drills", 1, expected = "COLUMN_TYPE_UNSPECIFIED", actual = null)),
+            mismatch(reference.copy(tables = reference.tables + ("drills" to listOf(shorter)))),
+        )
+    }
+
+    @Test
+    fun `missing log drop-down`() {
+        assertEquals(listOf(MismatchReason.MissingLogDropDown), mismatch(reference.copy(logDropDownRange = null)))
+    }
+
+    @Test
+    fun `version 1 spreadsheet without tables mismatches`() {
+        val v1 = reference.copy(tables = emptyMap(), logDropDownRange = null)
+        assertEquals(
+            listOf(
+                MismatchReason.MissingTable("log", "log"),
+                MismatchReason.MissingTable("drills", "drills"),
+                MismatchReason.MissingTable("money", "payments"),
+                MismatchReason.MissingTable("workout", "workouts"),
+                MismatchReason.MissingLogDropDown,
+            ),
+            mismatch(v1),
+        )
+    }
+
+    @Test
+    fun `extra tables and extra table columns are ignored`() {
+        val log = reference.tables.getValue("log").single()
+        val wider = log.copy(columns = log.columns + com.workoutrec.google.TableColumn(4, "note", "TEXT"))
+        val tables = reference.tables + ("log" to listOf(wider)) + ("rec" to listOf(com.workoutrec.google.SheetTable("extra", emptyList())))
+        assertEquals(StructureCheckResult.Match, StructureValidator.check(reference.copy(tables = tables)))
+    }
+
     @Test
     fun `missing rec tab reports only the tab`() {
         val snapshot = reference.copy(

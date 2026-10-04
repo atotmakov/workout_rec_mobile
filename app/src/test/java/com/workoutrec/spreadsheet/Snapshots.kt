@@ -1,7 +1,22 @@
 package com.workoutrec.spreadsheet
 
+import com.workoutrec.google.SheetTable
+import com.workoutrec.google.TableColumn
+
 /** Test fixtures: a snapshot that exactly matches contracts/spreadsheet.md. */
 object Snapshots {
+    private const val UNSET = "COLUMN_TYPE_UNSPECIFIED"
+
+    private fun table(name: String, vararg columns: Pair<String, String>) =
+        SheetTable(name, columns.mapIndexed { index, (column, type) -> TableColumn(index, column, type) })
+
+    val referenceTables: Map<String, List<SheetTable>> = mapOf(
+        "log" to listOf(table("log", "Date" to "DATE", "Drill" to UNSET, "W" to "DOUBLE", "R" to "DOUBLE")),
+        "drills" to listOf(table("drills", "mscl" to UNSET, "drill" to UNSET)),
+        "money" to listOf(table("payments", "date" to "DATE", "workouts" to "DOUBLE", "sum" to "DOUBLE")),
+        "workout" to listOf(table("workouts", "date" to "DATE", "duration, min" to UNSET, "work alone" to UNSET)),
+    )
+
     fun reference(): SpreadsheetSnapshot = SpreadsheetSnapshot(
         tabTitles = listOf("log", "drills", "rec", "money", "workout", "balance"),
         headerRows = mapOf(
@@ -18,5 +33,7 @@ object Snapshots {
         ),
         metadata = emptyMap(),
         metadataIds = emptyMap(),
+        tables = referenceTables,
+        logDropDownRange = "=drills!\$B\$2:\$B",
     )
 }

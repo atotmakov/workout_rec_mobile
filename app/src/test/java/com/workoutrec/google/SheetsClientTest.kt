@@ -52,10 +52,15 @@ class SheetsClientTest {
     }
 
     @Test
-    fun `call 5a reads tab titles and metadata without ranges`() = runTest {
+    fun `call 5a reads tab titles, tables and metadata without ranges`() = runTest {
         server.enqueue(
             MockResponse().setBody(
-                """{"sheets":[{"properties":{"sheetId":0,"title":"log"}},{"properties":{"sheetId":5,"title":"pay"}}],
+                """{"sheets":[{"properties":{"sheetId":0,"title":"log"},
+                               "tables":[{"name":"log","range":{"sheetId":0,"startRowIndex":0,"endRowIndex":1000,"startColumnIndex":0,"endColumnIndex":4},
+                                          "columnProperties":[{"columnName":"Date","columnType":"DATE"},
+                                                              {"columnIndex":1,"columnName":"Drill"},
+                                                              {"columnIndex":2,"columnName":"W","columnType":"DOUBLE"}]}]},
+                              {"properties":{"sheetId":5,"title":"pay"}}],
                    "developerMetadata":[{"metadataId":11,"metadataKey":"workout_rec.script_id","metadataValue":"s1"},
                                         {"metadataId":12,"metadataKey":"workout_rec.structure_version","metadataValue":"1"}]}""",
             ),
@@ -64,10 +69,29 @@ class SheetsClientTest {
         assertEquals(listOf("log", "pay"), result.titles)
         assertEquals(mapOf("workout_rec.script_id" to "s1", "workout_rec.structure_version" to "1"), result.metadata)
         assertEquals(mapOf("workout_rec.script_id" to 11, "workout_rec.structure_version" to 12), result.metadataIds)
+        // Omitted columnIndex means 0 and omitted columnType means unspecified (proto3 JSON defaults).
+        assertEquals(
+            mapOf(
+                "log" to listOf(
+                    SheetTable(
+                        "log",
+                        listOf(
+                            TableColumn(0, "Date", "DATE"),
+                            TableColumn(1, "Drill", "COLUMN_TYPE_UNSPECIFIED"),
+                            TableColumn(2, "W", "DOUBLE"),
+                        ),
+                    ),
+                ),
+            ),
+            result.tables,
+        )
         val request = server.takeRequest()
         assertEquals("/v4/spreadsheets/id1", request.requestUrl!!.encodedPath)
         assertEquals(null, request.requestUrl!!.queryParameter("ranges"))
-        assertEquals("sheets.properties(sheetId,title),developerMetadata", request.requestUrl!!.queryParameter("fields"))
+        assertEquals(
+            "sheets(properties(sheetId,title),tables(name,range,columnProperties(columnIndex,columnName,columnType))),developerMetadata",
+            request.requestUrl!!.queryParameter("fields"),
+        )
     }
 
     @Test
