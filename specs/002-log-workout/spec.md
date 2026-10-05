@@ -215,8 +215,9 @@ the last at 19:00, and that the next daily run adds a 60-minute workout row.
   Adding exercises in the app comes with the later "Exercises library" feature.
 - **Correcting a day the script already counted**: the daily script adds a workout row once per
   day and does not update it. Editing or deleting sets of such a day changes the log only; if
-  the change affects the first or last set of the day, or removes all sets of the day, the app
-  says the workout row of that day is not updated and can be fixed in the web UI.
+  a deletion removes the first or last set of the day (changing its duration) or all sets of the
+  day, the app says the workout row of that day is not updated and can be fixed in the web UI.
+  Edits never change set times, so they do not affect the workout row.
 - **Several pending changes to one set** (e.g. edited twice offline, then deleted): only the
   final state is applied at sync.
 - **Edits on two devices or in the web UI at the same time**: the change that reaches the
