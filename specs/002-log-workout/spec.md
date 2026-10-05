@@ -31,6 +31,20 @@ day. The set times the app records therefore directly determine the workout dura
   from any day (C).
 - Q: Can the user add a new exercise from the app? → A: Yes, but in a separate later feature
   "Exercises library"; out of scope here.
+- Q: Does the user start and finish a workout explicitly, or is a day's sets the workout? → A: No
+  start/finish; the main screen shows today's workout with "Add exercise", and the first set of
+  the day starts the day's workout (A).
+- Q: Should the app show an exercise's full history, or only last time and the record? → A: Only
+  last time and the record in this feature; the full history of an exercise comes in a separate
+  later feature, "History of the exercise".
+- Q: How does the user change weight and reps when a set differs from the pre-filled values? →
+  A: − / + buttons (weight ±0.5 kg, reps ±1), and tapping the number to type it. Also confirmed:
+  the number of sets is chosen when an exercise is added, suggested from the previous workout
+  with this exercise and changeable; each set's weight and reps are pre-filled from the previous
+  workout; pre-filled (suggested) values look different from values entered or confirmed in the
+  current workout (e.g. gray vs black); the exercise's maximum weight and reps are shown.
+- Q: Which maximum is shown for the selected exercise? → A: One record, as in the rec tab: the
+  heaviest weight and the most reps done at that weight (e.g. 40 kg × 8) (A).
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -49,8 +63,7 @@ reps and the set times.
 
 **Acceptance Scenarios**:
 
-1. **Given** the main screen of a set-up account, **When** the user starts logging and opens the
-   exercise list, **Then** the list shows the exercises of the drills tab grouped by muscle group,
+1. **Given** the main screen of a set-up account, **When** the user taps "Add exercise", **Then** the list shows the exercises of the drills tab grouped by muscle group,
    with a search field.
 2. **Given** an exercise is picked, **When** the user chooses 3 sets, **Then** the app shows 3
    set rows to fill, each with weight and reps fields.
@@ -117,6 +130,12 @@ pre-filled from the last workout.
 3. **Given** last time had 3 sets, **When** the user plans sets, **Then** the planned number
    defaults to 3 and set N is pre-filled with last time's set N (or the last one if there were
    fewer), and the user can change any value.
+6. **Given** a set row is pre-filled, **When** it is shown, **Then** its values look like
+   suggestions (e.g. gray); a value the user changes, and all values of a confirmed set, look
+   like entered values (e.g. black).
+7. **Given** a set row, **When** the user taps − or + next to the weight or reps, **Then** the
+   weight changes by 0.5 kg (not below 0) or the reps by 1 (not below 1); tapping the number
+   opens the number keyboard to type it.
 4. **Given** the exercise has no history, **When** it is picked, **Then** the app says this is
    the first time and the set rows are empty.
 5. **Given** the phone is offline, **When** an exercise is picked, **Then** history from the last
@@ -226,6 +245,9 @@ the last at 19:00, and that the next daily run adds a 60-minute workout row.
 
 ### Functional Requirements
 
+- **FR-000**: The main screen MUST show today's workout (FR-013) with an "Add exercise" action;
+  there is no start or finish step — the first set of a day starts that day's workout and the
+  day ends it.
 - **FR-001**: The app MUST let the user pick an exercise from the exercise list taken from the
   drills tab (exercise = column B, muscle group = column A), grouped by muscle group, with
   search by part of the name, and with exercises used recently shown first.
@@ -236,7 +258,8 @@ the last at 19:00, and that the next daily run adds a 60-minute workout row.
   planned sets unfilled (unfilled sets are not logged).
 - **FR-004**: Each set MUST have a weight (decimal ≥ 0, up to 2 decimal places, comma or dot
   accepted; 0 = bodyweight) and reps (whole number 1–999); a set with invalid or empty values
-  MUST NOT be confirmable.
+  MUST NOT be confirmable. Weight and reps MUST each have − / + buttons (weight ±0.5 kg, not
+  below 0; reps ±1, not below 1), and tapping the number MUST allow typing it.
 - **FR-005**: A confirmed set MUST be saved on the phone immediately, before any network
   activity, and MUST survive app close, phone restart and app update.
 - **FR-006**: In a live workout, each set's date-time MUST be the moment the user confirms the
@@ -257,11 +280,13 @@ the last at 19:00, and that the next daily run adds a 60-minute workout row.
 - **FR-010**: The app MUST show each set's sync state (synced / not synced yet) and, on the main
   screen, the number of sets waiting to be synced and whether sync is failing.
 - **FR-011**: When an exercise is picked, the app MUST show the most recent earlier day's sets for
-  it and its record (heaviest weight; most reps at that weight), based on the log tab plus sets
+  it and its record — one value, as highlighted in the rec tab: the heaviest weight and the most
+  reps done at that weight (e.g. 40 kg × 8) — based on the log tab plus sets
   logged on the phone, and MUST keep this history on the phone for offline use.
 - **FR-012**: New set rows MUST be pre-filled from the most recent earlier day's sets of the same
   exercise (planned count defaults to that day's set count); with no history they are empty and
-  the planned count defaults to 3.
+  the planned count defaults to 3. Pre-filled values MUST look visibly different from values the
+  user changed or confirmed in the current workout (e.g. gray vs black).
 - **FR-013**: The app MUST show today's workout (exercises in start order, each with its sets)
   and a list of past workout days from the log tab (newest first), and MUST let the user change
   the exercise, weight and reps of any set and delete any set (after confirmation) — whether it
@@ -341,6 +366,8 @@ the last at 19:00, and that the next daily run adds a 60-minute workout row.
 - Rest timers, supersets, notes per set, units other than the spreadsheet's (kg), cardio or
   time-based exercises, charts, and changing a set's date-time after it is saved are out of
   scope.
+- An exercise's full history (all past days, like the rec tab) is out of scope; it is the later
+  feature "History of the exercise". This feature shows only last time and the record.
 - Adding, renaming or removing exercises in the app is out of scope; it is the next feature,
   "Exercises library". Until then exercises are managed in the drills tab of the web UI.
 - The app does not update the workout or balance tabs when past days are corrected (see Edge
