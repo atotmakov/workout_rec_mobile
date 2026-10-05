@@ -72,9 +72,20 @@ abstract class WorkoutDao {
 
     /** Replaces the drills and log caches in one transaction (research R7). */
     @Transaction
-    open suspend fun replaceCaches(exercises: List<ExerciseEntity>, rows: List<LogRowEntity>): Unit = TODO()
+    open suspend fun replaceCaches(exercises: List<ExerciseEntity>, rows: List<LogRowEntity>) {
+        clearExercises()
+        clearLogRows()
+        insertExercises(exercises)
+        insertLogRows(rows)
+    }
 
     /** Sign out or account switch (research R13). */
     @Transaction
-    open suspend fun clearAll(): Unit = TODO()
+    open suspend fun clearAll() {
+        clearExercises()
+        clearLogRows()
+        clearPending()
+        clearNotices()
+        clearDrafts()
+    }
 }

@@ -17,14 +17,20 @@ import com.workoutrec.google.DriveClient
 import com.workoutrec.google.GoogleHttp
 import com.workoutrec.google.ScriptClient
 import com.workoutrec.google.SheetsClient
+import com.workoutrec.google.SheetsLogClient
 import com.workoutrec.setup.SpreadsheetSetupFlow
 import com.workoutrec.spreadsheet.SpreadsheetSetupService
+import com.workoutrec.sync.DataStoreSyncStatusStore
+import com.workoutrec.sync.SyncStatusStore
+import com.workoutrec.workout.data.WorkoutDatabase
+import com.workoutrec.workout.data.WorkoutRepository
 import java.time.Instant
 import java.time.ZoneId
 import java.util.concurrent.TimeUnit
 import okhttp3.OkHttpClient
 
 private val Context.settingsDataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
+private val Context.syncDataStore: DataStore<Preferences> by preferencesDataStore(name = "sync")
 
 /** Manual dependency injection (research R1). */
 class AppContainer(context: Context) {
@@ -53,4 +59,9 @@ class AppContainer(context: Context) {
         timeZone = { ZoneId.systemDefault().id },
         now = { Instant.now() },
     )
+
+    // Feature 002: workout logging (plan.md).
+    val workoutRepository = WorkoutRepository(WorkoutDatabase.create(appContext).dao())
+    val syncStatusStore: SyncStatusStore = DataStoreSyncStatusStore(appContext.syncDataStore)
+    val sheetsLogClient = SheetsLogClient(googleHttp)
 }
