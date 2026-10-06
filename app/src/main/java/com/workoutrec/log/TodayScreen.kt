@@ -57,7 +57,7 @@ fun TodayScreen(
                 ) {
                     Column(Modifier.padding(12.dp)) {
                         Text(group.exercise, style = MaterialTheme.typography.titleMedium)
-                        Text(group.sets.joinToString("   ") { setText(it.key, locale) })
+                        Text(group.sets.map { setText(it.key, locale) }.joinToString("   "))
                     }
                 }
             }
