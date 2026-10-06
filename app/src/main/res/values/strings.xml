@@ -76,4 +76,21 @@
     <string name="error_too_large">Too large</string>
     <string name="error_reps_not_whole">Reps must be a whole number</string>
     <string name="error_reps_too_small">At least 1 rep</string>
+    <!-- 002 US2: offline sync -->
+    <plurals name="sync_pending">
+        <item quantity="one">%d set not in the spreadsheet yet</item>
+        <item quantity="other">%d sets not in the spreadsheet yet</item>
+    </plurals>
+    <string name="sync_failing_network">Can’t sync: no connection. Your sets are saved on the phone.</string>
+    <string name="sync_failing_spreadsheet">Can’t sync: the spreadsheet was not found.</string>
+    <string name="sync_failing_structure">Can’t sync: the log or drills tab of the spreadsheet is missing.</string>
+    <string name="sync_failing_other">Can’t sync right now. Will try again.</string>
+    <string name="sync_sign_in">Sign in again to sync</string>
+    <plurals name="unsynced_warning">
+        <item quantity="one">%d set is not in the spreadsheet yet and will be lost.</item>
+        <item quantity="other">%d sets are not in the spreadsheet yet and will be lost.</item>
+    </plurals>
+    <string name="switch_question">Switch account?</string>
+    <string name="switch_confirm">Switch</string>
+    <string name="switch_cancel">Cancel</string>
 </resources>

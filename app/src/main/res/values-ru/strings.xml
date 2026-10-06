@@ -76,4 +76,25 @@
     <string name="error_too_large">Слишком много</string>
     <string name="error_reps_not_whole">Повторения — целое число</string>
     <string name="error_reps_too_small">Минимум 1 повторение</string>
+    <!-- 002 US2: offline sync -->
+    <plurals name="sync_pending">
+        <item quantity="one">%d подход ещё не в таблице</item>
+        <item quantity="few">%d подхода ещё не в таблице</item>
+        <item quantity="many">%d подходов ещё не в таблице</item>
+        <item quantity="other">%d подхода ещё не в таблице</item>
+    </plurals>
+    <string name="sync_failing_network">Нет связи — синхронизация отложена. Подходы сохранены в телефоне.</string>
+    <string name="sync_failing_spreadsheet">Не удаётся синхронизировать: таблица не найдена.</string>
+    <string name="sync_failing_structure">Не удаётся синхронизировать: в таблице нет вкладки log или drills.</string>
+    <string name="sync_failing_other">Сейчас не удаётся синхронизировать. Попробуем ещё раз.</string>
+    <string name="sync_sign_in">Войдите снова, чтобы синхронизировать</string>
+    <plurals name="unsynced_warning">
+        <item quantity="one">%d подход ещё не в таблице и будет потерян.</item>
+        <item quantity="few">%d подхода ещё не в таблице и будут потеряны.</item>
+        <item quantity="many">%d подходов ещё не в таблице и будут потеряны.</item>
+        <item quantity="other">%d подхода ещё не в таблице и будут потеряны.</item>
+    </plurals>
+    <string name="switch_question">Сменить аккаунт?</string>
+    <string name="switch_confirm">Сменить</string>
+    <string name="switch_cancel">Отмена</string>
 </resources>

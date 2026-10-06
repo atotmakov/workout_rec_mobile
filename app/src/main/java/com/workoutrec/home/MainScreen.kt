@@ -34,6 +34,7 @@ import com.workoutrec.data.SelectedAccount
 
 const val MainScreenTag = "main_screen"
 const val AccountAvatarTag = "account_avatar"
+const val UnsyncedWarningTag = "unsynced_warning"
 
 /** Main screen with the selected account in the top-right corner (FR-003). */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -42,6 +43,7 @@ fun MainScreen(
     account: SelectedAccount,
     onSwitchAccount: () -> Unit,
     onSignOut: () -> Unit,
+    unsyncedCount: Int = 0,
     content: @Composable (Modifier) -> Unit = {},
 ) {
     Scaffold(

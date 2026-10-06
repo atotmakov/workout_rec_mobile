@@ -38,7 +38,7 @@ independently.
 **Purpose**: New dependencies and the spike that decides how rows are written
 
 - [X] T001 Add to `gradle/libs.versions.toml`: `room = "2.6.1"` (`androidx.room:room-runtime`, `room-ktx`, `room-compiler`, `room-testing`), `ksp = "2.1.0-1.0.29"` plugin `com.google.devtools.ksp`, `work = "2.10.0"` (`androidx.work:work-runtime-ktx`, `work-testing`) per research R14; apply the KSP plugin in root `build.gradle.kts` (apply false) and `app/build.gradle.kts`; add `ksp { arg("room.schemaLocation", "$projectDir/schemas") }`, the runtime deps, `androidTestImplementation` of `room-testing`, `work-testing`, and add `app/schemas/` to the androidTest assets source set; push and confirm the CI build is green
-- [ ] T002 Spike R4 (manual, blocks T021): on a throw-away spreadsheet with the reference structure (rename one of the `workout_rec_database_backup_*` files), use the Sheets API Explorer `spreadsheets.batchUpdate` with one `appendCells` row (per [contracts/sheets-log.md](contracts/sheets-log.md) call 22) and check the three cases in [quickstart.md](quickstart.md) "Spike"; ask the user before running it in their browser; record requests, responses and screenshots of the result in `specs/002-log-workout/spike-results.md`; **if case 1 or 2 fails, update research R4 and contracts/sheets-log.md to the `updateCells` fallback before T021**
+- [X] T002 Spike R4 (manual, blocks T021): on a throw-away spreadsheet with the reference structure (rename one of the `workout_rec_database_backup_*` files), use the Sheets API Explorer `spreadsheets.batchUpdate` with one `appendCells` row (per [contracts/sheets-log.md](contracts/sheets-log.md) call 22) and check the three cases in [quickstart.md](quickstart.md) "Spike"; ask the user before running it in their browser; record requests, responses and screenshots of the result in `specs/002-log-workout/spike-results.md`; — **Done 2026-10-06: all three cases pass, see [spike-results.md](spike-results.md)**
 
 ---
 
@@ -89,13 +89,13 @@ the log tab gets exactly 3 rows with exercise, weights, reps and confirm times (
 
 ### Implementation for User Story 1
 
-- [ ] T020 [P] [US1] Implement live set timing in `main/workout/LiveSetTime.kt` so T015 passes
-- [ ] T021 [US1] Implement `main/sync/LogSync.kt` steps 1–6 for `NEW` sets (authorize via `ApiAuthorizer`, call 20 cache, call 21, key matching, call 22 `appendCells`, re-read, one-transaction commit) so T016 passes; `EDIT`/`DELETE` handling is added in US4
-- [ ] T022 [US1] Implement `main/sync/SyncScheduler.kt` in-process part: process-wide `Mutex`, `requestSync()` runs `LogSync` in the app scope when online (no WorkManager yet); call it after each confirmed set and on app start
-- [ ] T023 [P] [US1] Implement `main/log/TodayViewModel.kt` and `main/log/TodayScreen.kt` (today's exercises from the display model, empty state, `add_exercise`), and show it as the content of `main/home/MainScreen.kt` (FR-000); keep the account avatar and automation reminder
-- [ ] T024 [P] [US1] Implement `main/log/ExercisePicker.kt` (grouped by muscle group, "Other" for empty groups, search, recent, empty state opening the spreadsheet URL `https://docs.google.com/spreadsheets/d/{id}/edit` via `Browser.open`)
-- [ ] T025 [US1] Implement `main/log/PlanSetsDialog.kt`, `main/log/SetRow.kt`, `main/log/ExerciseLoggingViewModel.kt`, `main/log/ExerciseLoggingScreen.kt` (planned rows, steppers, number tap → numeric keyboard, validation messages, confirm, add set) so T017 passes; planned count defaults to 3 here (pre-fill comes in US3)
-- [ ] T026 [US1] Add navigation routes Today → picker → plan dialog → logging in `main/MainActivity.kt`; add all US1 strings (EN + RU); push and confirm T018 and the whole suite are green
+- [X] T020 [P] [US1] Implement live set timing in `main/workout/LiveSetTime.kt` so T015 passes
+- [X] T021 [US1] Implement `main/sync/LogSync.kt` steps 1–6 for `NEW` sets (authorize via `ApiAuthorizer`, call 20 cache, call 21, key matching, call 22 `appendCells`, re-read, one-transaction commit) so T016 passes; `EDIT`/`DELETE` handling is added in US4
+- [X] T022 [US1] Implement `main/sync/SyncScheduler.kt` in-process part: process-wide `Mutex`, `requestSync()` runs `LogSync` in the app scope when online (no WorkManager yet); call it after each confirmed set and on app start
+- [X] T023 [P] [US1] Implement `main/log/TodayViewModel.kt` and `main/log/TodayScreen.kt` (today's exercises from the display model, empty state, `add_exercise`), and show it as the content of `main/home/MainScreen.kt` (FR-000); keep the account avatar and automation reminder
+- [X] T024 [P] [US1] Implement `main/log/ExercisePicker.kt` (grouped by muscle group, "Other" for empty groups, search, recent, empty state opening the spreadsheet URL `https://docs.google.com/spreadsheets/d/{id}/edit` via `Browser.open`)
+- [X] T025 [US1] Implement `main/log/PlanSetsDialog.kt`, `main/log/SetRow.kt`, `main/log/ExerciseLoggingViewModel.kt`, `main/log/ExerciseLoggingScreen.kt` (planned rows, steppers, number tap → numeric keyboard, validation messages, confirm, add set) so T017 passes; planned count defaults to 3 here (pre-fill comes in US3)
+- [X] T026 [US1] Add navigation routes Today → picker → plan dialog → logging in `main/MainActivity.kt`; add all US1 strings (EN + RU); push and confirm T018 and the whole suite are green
 
 **Checkpoint**: US1 works online end-to-end — MVP
 
@@ -111,11 +111,11 @@ appear once, in order, with original times, without opening the app (spec US2)
 
 ### Tests for User Story 2 (write first, push red)
 
-- [ ] T027 [P] [US2] Write failing tests in `test/sync/LogSyncErrorsTest.kt` per contracts/sheets-log.md "Errors": `Offline`/`ServiceUnavailable` → `Failing(network)` and retry requested, pending kept; `TokenExpired` → one re-authorize and repeat; consent needed / `AccessDenied` → `NeedsSignIn`; `NotFound` → `Failing(spreadsheet)`; `Structure` → `Failing(structure)`; `Unexpected` → `Failing(other)`; failure after call 22 succeeded but before commit (simulated crash) → next run finds the keys and writes nothing twice (FR-009, SC-004); success sets `Idle` and `lastSuccessAt`
-- [ ] T028 [P] [US2] Write failing tests in `test/sync/SpreadsheetChangeTest.kt` (research R13): when the bound spreadsheet ID differs from `sync.spreadsheetId`, caches, `EDIT`/`DELETE` pending changes and notices are cleared, `NEW` pending sets are kept and written to the new spreadsheet; sign-out `clearAll()` empties the database
-- [ ] T029 [P] [US2] Write failing instrumented test `androidTest/sync/SyncWorkerTest.kt` with `work-testing`: enqueued unique work `log-sync` has the `CONNECTED` constraint and `KEEP` policy; the worker returns `retry` on `Failing(network)` and `success` otherwise; work survives re-enqueue without duplicates
-- [ ] T030 [P] [US2] Write failing Compose UI tests in `androidTest/log/SyncStatusTest.kt` and extend `androidTest/home/SignOutDialogTest.kt`: `sync_status` shows "N sets not synced", "Sync failing: <reason>", "Sign in again" (tap requests consent) and is hidden when all synced; `unsynced_warning` appears in the sign-out and switch-account confirmation with the count when N > 0 (FR-014)
-- [ ] T031 [US2] Add compiling stubs for T027–T030, push, and record the red run ID in this task
+- [X] T027 [P] [US2] Write failing tests in `test/sync/LogSyncErrorsTest.kt` per contracts/sheets-log.md "Errors": `Offline`/`ServiceUnavailable` → `Failing(network)` and retry requested, pending kept; `TokenExpired` → one re-authorize and repeat; consent needed / `AccessDenied` → `NeedsSignIn`; `NotFound` → `Failing(spreadsheet)`; `Structure` → `Failing(structure)`; `Unexpected` → `Failing(other)`; failure after call 22 succeeded but before commit (simulated crash) → next run finds the keys and writes nothing twice (FR-009, SC-004); success sets `Idle` and `lastSuccessAt`
+- [X] T028 [P] [US2] Write failing tests in `test/sync/SpreadsheetChangeTest.kt` (research R13): when the bound spreadsheet ID differs from `sync.spreadsheetId`, caches, `EDIT`/`DELETE` pending changes and notices are cleared, `NEW` pending sets are kept and written to the new spreadsheet; sign-out `clearAll()` empties the database
+- [X] T029 [P] [US2] Write failing instrumented test `androidTest/sync/SyncWorkerTest.kt` with `work-testing`: enqueued unique work `log-sync` has the `CONNECTED` constraint and `KEEP` policy; the worker returns `retry` on `Failing(network)` and `success` otherwise; work survives re-enqueue without duplicates
+- [X] T030 [P] [US2] Write failing Compose UI tests in `androidTest/log/SyncStatusTest.kt` and extend `androidTest/home/SignOutDialogTest.kt`: `sync_status` shows "N sets not synced", "Sync failing: <reason>", "Sign in again" (tap requests consent) and is hidden when all synced; `unsynced_warning` appears in the sign-out and switch-account confirmation with the count when N > 0 (FR-014)
+- [X] T031 [US2] Add compiling stubs for T027–T030, push, and record the red run ID in this task — RUN_PLACEHOLDER
 
 ### Implementation for User Story 2
 
