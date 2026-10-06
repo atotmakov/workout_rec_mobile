@@ -6,6 +6,7 @@ import androidx.credentials.CredentialManager
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
+import androidx.work.WorkManager
 import com.workoutrec.auth.AccountRepository
 import com.workoutrec.auth.ApiAuthorizer
 import com.workoutrec.auth.GoogleApiAuthorizer
@@ -23,6 +24,7 @@ import com.workoutrec.spreadsheet.SpreadsheetSetupService
 import com.workoutrec.sync.DataStoreSyncStatusStore
 import com.workoutrec.sync.LogSync
 import com.workoutrec.sync.SyncScheduler
+import com.workoutrec.sync.SyncWork
 import com.workoutrec.sync.SyncStatusStore
 import com.workoutrec.workout.data.WorkoutDatabase
 import com.workoutrec.workout.data.WorkoutRepository
@@ -82,5 +84,6 @@ class AppContainer(context: Context) {
             spreadsheetId = { settingsStore.binding.first()?.spreadsheetId },
         ),
         appScope,
+        enqueueBackground = { SyncWork.enqueue(WorkManager.getInstance(appContext)) },
     )
 }

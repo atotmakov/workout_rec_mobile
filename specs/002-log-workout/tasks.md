@@ -115,7 +115,7 @@ appear once, in order, with original times, without opening the app (spec US2)
 - [X] T028 [P] [US2] Write failing tests in `test/sync/SpreadsheetChangeTest.kt` (research R13): when the bound spreadsheet ID differs from `sync.spreadsheetId`, caches, `EDIT`/`DELETE` pending changes and notices are cleared, `NEW` pending sets are kept and written to the new spreadsheet; sign-out `clearAll()` empties the database
 - [X] T029 [P] [US2] Write failing instrumented test `androidTest/sync/SyncWorkerTest.kt` with `work-testing`: enqueued unique work `log-sync` has the `CONNECTED` constraint and `KEEP` policy; the worker returns `retry` on `Failing(network)` and `success` otherwise; work survives re-enqueue without duplicates
 - [X] T030 [P] [US2] Write failing Compose UI tests in `androidTest/log/SyncStatusTest.kt` and extend `androidTest/home/SignOutDialogTest.kt`: `sync_status` shows "N sets not synced", "Sync failing: <reason>", "Sign in again" (tap requests consent) and is hidden when all synced; `unsynced_warning` appears in the sign-out and switch-account confirmation with the count when N > 0 (FR-014)
-- [X] T031 [US2] Add compiling stubs for T027–T030, push, and record the red run ID in this task — RUN_PLACEHOLDER
+- [X] T031 [US2] Add compiling stubs for T027–T030, push, and record the red run ID in this task — **red run 37527415315** (9 unit + 11 UI tests failing)
 
 ### Implementation for User Story 2
 

@@ -17,6 +17,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -40,7 +41,10 @@ import com.workoutrec.home.MainScreen
 import com.workoutrec.log.LogRoutes
 import com.workoutrec.log.LoggingRoute
 import com.workoutrec.log.PickerRoute
+import com.workoutrec.log.SyncStatusLine
 import com.workoutrec.log.TodayRoute
+import com.workoutrec.sync.SyncStatus
+import com.workoutrec.workout.DisplayModel
 import com.workoutrec.setup.AutomationGuideScreen
 import com.workoutrec.setup.Browser
 import com.workoutrec.setup.ChooseAccountScreen
@@ -52,6 +56,7 @@ import com.workoutrec.setup.SetupProgressScreen
 import com.workoutrec.setup.SetupState
 import com.workoutrec.setup.SetupViewModel
 import com.workoutrec.ui.theme.WorkoutRecTheme
+import kotlinx.coroutines.launch
 
 object Routes {
     const val SETUP = "setup"
@@ -103,10 +108,26 @@ private fun AppNavHost(container: AppContainer) {
             LaunchedEffect(Unit) { viewModel.refreshStatus() }
             val context = LocalContext.current
             account?.let {
+                val pending by container.workoutRepository.pending.collectAsState(initial = emptyList())
+                val syncStatus by container.syncStatusStore.status.collectAsState(initial = SyncStatus())
+                val scope = rememberCoroutineScope()
+                // The phone's sets belong to this account's spreadsheet; they go when the account does.
+                val clearWorkoutData: suspend () -> Unit = {
+                    container.workoutRepository.clearAll()
+                    container.syncStatusStore.clear()
+                }
                 MainScreen(
                     account = it,
-                    onSwitchAccount = { viewModel.switchAccount(CredentialManagerAccountPicker(context, BuildConfig.WEB_CLIENT_ID)) },
-                    onSignOut = { viewModel.signOut() },
+                    onSwitchAccount = {
+                        scope.launch {
+                            clearWorkoutData()
+                            viewModel.switchAccount(CredentialManagerAccountPicker(context, BuildConfig.WEB_CLIENT_ID))
+                        }
+                    },
+                    onSignOut = { scope.launch { clearWorkoutData(); viewModel.signOut() } },
+                    unsyncedCount = DisplayModel.pendingCount(pending),
+                    // Research R13: try to sync first, so the warning counts only what is really left.
+                    onMenuOpened = container.syncScheduler::requestSync,
                 ) { modifier ->
                     TodayRoute(
                         container = container,
@@ -117,6 +138,11 @@ private fun AppNavHost(container: AppContainer) {
                             reminder?.let { r ->
                                 AutomationReminder(status = r.status, onFix = { viewModel.onAction(SetupAction.FixAutomation) })
                             }
+                            SyncStatusLine(
+                                pendingCount = DisplayModel.pendingCount(pending),
+                                phase = syncStatus.phase,
+                                onSignIn = { viewModel.start() },
+                            )
                         },
                     )
                 }

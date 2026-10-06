@@ -7,15 +7,18 @@ import kotlinx.coroutines.sync.withLock
 
 /**
  * Runs [LogSync] one run at a time (research R2). `requestSync` is called after every local change
- * and on app start; the background WorkManager part comes with US2.
+ * and on app start: it queues background work (runs when connected, even after the app is closed)
+ * and also syncs right away in the app process.
  */
 class SyncScheduler(
     private val sync: LogSync,
     private val scope: CoroutineScope,
+    private val enqueueBackground: () -> Unit = {},
 ) {
     private val mutex = Mutex()
 
     fun requestSync() {
+        enqueueBackground()
         scope.launch { runNow() }
     }
 

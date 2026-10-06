@@ -1,7 +1,9 @@
 package com.workoutrec.sync
 
+import com.workoutrec.google.ApiError
 import com.workoutrec.google.LogAndDrills
 import com.workoutrec.google.LogAppend
+import com.workoutrec.google.MissingTabException
 import com.workoutrec.google.SheetsLogApi
 import com.workoutrec.workout.ChangeKind
 import com.workoutrec.workout.Exercise
@@ -14,6 +16,7 @@ import com.workoutrec.workout.Weight
 import java.time.DateTimeException
 import java.time.ZoneId
 import java.time.ZoneOffset
+import kotlinx.coroutines.CancellationException
 
 enum class NoticeKind { CONFLICT_DROPPED, WORKOUT_ROW_NOT_UPDATED }
 
@@ -46,8 +49,24 @@ class LogSync(
     private val now: () -> Long = System::currentTimeMillis,
 ) {
 
+    /** Never throws for Google or network errors; they become [SyncOutcome.Failed] (contracts "Errors"). */
     suspend fun run(): SyncOutcome {
         val id = spreadsheetId() ?: return SyncOutcome.NoSpreadsheet
+        status.setPhase(SyncPhase.Running)
+        return try {
+            runFor(id)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            val phase = phaseOf(e)
+            status.setPhase(phase)
+            SyncOutcome.Failed(phase)
+        }
+    }
+
+    private suspend fun runFor(id: String): SyncOutcome {
+        // Research R13: the spreadsheet was rewritten or re-created; only new sets still apply.
+        status.current().sheet?.let { cached -> if (cached.spreadsheetId != id) store.keepOnlyNewSets() }
         val sheet = sheetInfo(id)
         val zone = zoneOf(sheet.timeZone)
 
@@ -82,6 +101,14 @@ class LogSync(
         store.commit(read.drills.map { Exercise(it.name, it.muscleGroup) }, rows, done, emptyList())
         status.markSuccess(now())
         return SyncOutcome.Synced(wrote)
+    }
+
+    private fun phaseOf(e: Exception): SyncPhase = when (e) {
+        is ApiError.Offline, is ApiError.ServiceUnavailable -> SyncPhase.Failing(FailReason.NETWORK)
+        is ApiError.AccessDenied, is ApiError.TokenExpired -> SyncPhase.NeedsSignIn
+        is ApiError.NotFound -> SyncPhase.Failing(FailReason.SPREADSHEET)
+        is MissingTabException -> SyncPhase.Failing(FailReason.STRUCTURE)
+        else -> SyncPhase.Failing(FailReason.OTHER)
     }
 
     /** Call 20, once per spreadsheet (research R8). */
