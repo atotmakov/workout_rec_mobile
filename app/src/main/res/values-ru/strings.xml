@@ -44,4 +44,36 @@
     <string name="sign_out_question">Выйти из Workout Rec? Ваша таблица останется в аккаунте Google.</string>
     <string name="sign_out_confirm">Выйти</string>
     <string name="sign_out_cancel">Отмена</string>
+    <!-- 002 US1: logging sets -->
+    <string name="today_empty">Сегодня подходов ещё нет. Нажмите «Добавить упражнение».</string>
+    <string name="today_add_exercise">Добавить упражнение</string>
+    <string name="set_weight_reps">%1$s × %2$d</string>
+    <string name="picker_title">Выберите упражнение</string>
+    <string name="picker_search">Поиск</string>
+    <string name="picker_recent">Недавние</string>
+    <string name="picker_other_group">Другое</string>
+    <string name="picker_empty">Упражнений пока нет. Добавьте их на вкладку drills в таблице: группа мышц в столбце A, упражнение в столбце B.</string>
+    <string name="picker_open_drills">Открыть вкладку drills</string>
+    <string name="plan_title">Сколько подходов?</string>
+    <string name="plan_ok">Начать</string>
+    <string name="plan_cancel">Отмена</string>
+    <string name="plan_minus">Меньше подходов</string>
+    <string name="plan_plus">Больше подходов</string>
+    <string name="logging_weight">кг</string>
+    <string name="logging_reps">повт.</string>
+    <string name="logging_confirm">Готово</string>
+    <string name="logging_add_set">Добавить подход</string>
+    <string name="weight_minus">Меньше вес</string>
+    <string name="weight_plus">Больше вес</string>
+    <string name="reps_minus">Меньше повторений</string>
+    <string name="reps_plus">Больше повторений</string>
+    <string name="set_not_synced">Ещё не в таблице</string>
+    <string name="set_synced">В таблице</string>
+    <string name="error_empty">Введите значение</string>
+    <string name="error_not_a_number">Это не число</string>
+    <string name="error_weight_negative">Вес не может быть отрицательным</string>
+    <string name="error_too_many_decimals">Не больше 2 знаков после запятой</string>
+    <string name="error_too_large">Слишком много</string>
+    <string name="error_reps_not_whole">Повторения — целое число</string>
+    <string name="error_reps_too_small">Минимум 1 повторение</string>
 </resources>

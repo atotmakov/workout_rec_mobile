@@ -44,4 +44,36 @@
     <string name="sign_out_question">Sign out of Workout Rec? Your spreadsheet stays in your Google account.</string>
     <string name="sign_out_confirm">Sign out</string>
     <string name="sign_out_cancel">Cancel</string>
+    <!-- 002 US1: logging sets -->
+    <string name="today_empty">No sets today yet. Tap “Add exercise” to start.</string>
+    <string name="today_add_exercise">Add exercise</string>
+    <string name="set_weight_reps">%1$s × %2$d</string>
+    <string name="picker_title">Choose exercise</string>
+    <string name="picker_search">Search</string>
+    <string name="picker_recent">Recent</string>
+    <string name="picker_other_group">Other</string>
+    <string name="picker_empty">No exercises yet. Add them to the drills tab of your spreadsheet: muscle group in column A, exercise in column B.</string>
+    <string name="picker_open_drills">Open drills tab</string>
+    <string name="plan_title">How many sets?</string>
+    <string name="plan_ok">Start</string>
+    <string name="plan_cancel">Cancel</string>
+    <string name="plan_minus">Fewer sets</string>
+    <string name="plan_plus">More sets</string>
+    <string name="logging_weight">kg</string>
+    <string name="logging_reps">reps</string>
+    <string name="logging_confirm">Done</string>
+    <string name="logging_add_set">Add set</string>
+    <string name="weight_minus">Less weight</string>
+    <string name="weight_plus">More weight</string>
+    <string name="reps_minus">Fewer reps</string>
+    <string name="reps_plus">More reps</string>
+    <string name="set_not_synced">Not synced yet</string>
+    <string name="set_synced">In the spreadsheet</string>
+    <string name="error_empty">Enter a value</string>
+    <string name="error_not_a_number">Not a number</string>
+    <string name="error_weight_negative">Weight can’t be negative</string>
+    <string name="error_too_many_decimals">At most 2 decimals</string>
+    <string name="error_too_large">Too large</string>
+    <string name="error_reps_not_whole">Reps must be a whole number</string>
+    <string name="error_reps_too_small">At least 1 rep</string>
 </resources>
