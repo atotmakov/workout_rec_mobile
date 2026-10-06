@@ -79,5 +79,7 @@ times; Save (`past_workout_save`) makes the sets pending; Cancel discards the dr
 
 ## Sign out / switch account (FR-014)
 
-Feature 001's `SignOutDialog` (and the switch confirmation) gets a line "N sets are not synced
-and will be lost" (`unsynced_warning`) when N > 0 after the sync attempt (R13).
+Opening the account menu starts a sync attempt (R13). Feature 001's `SignOutDialog` gets a line
+"N sets are not in the spreadsheet yet and will be lost" (`unsynced_warning`) when N > 0. Switch
+account asks for confirmation with the same line only when N > 0, otherwise it switches directly
+(analysis fix U3). Signing out or switching clears the phone's workout data.

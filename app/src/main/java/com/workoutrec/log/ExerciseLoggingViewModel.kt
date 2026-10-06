@@ -4,8 +4,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.workoutrec.workout.DisplaySet
 import com.workoutrec.workout.InvalidReason
+import com.workoutrec.workout.LastTime
 import com.workoutrec.workout.LiveSetTime
 import com.workoutrec.workout.Parsed
+import com.workoutrec.workout.Record
 import com.workoutrec.workout.Reps
 import com.workoutrec.workout.SetKey
 import com.workoutrec.workout.SetRef
@@ -36,6 +38,9 @@ data class SetRowState(
     val weightError: InvalidReason?,
     val repsError: InvalidReason?,
     val canConfirm: Boolean,
+    /** Pre-filled from last time and not changed yet; shown in the "suggested" style (FR-012). */
+    val weightSuggested: Boolean = false,
+    val repsSuggested: Boolean = false,
 )
 
 /** A set of this exercise already logged today. */
@@ -45,6 +50,10 @@ data class LoggingState(
     val exercise: String,
     val done: List<DoneSet>,
     val rows: List<SetRowState>,
+    val lastTime: LastTime? = null,
+    val record: Record? = null,
+    /** Default for the plan dialog: last time's set count, or 3 (FR-012). */
+    val suggestedSetCount: Int = 3,
 )
 
 /** Logging sets of one exercise (US1; FR-003–FR-006). Unconfirmed rows live only here (FR-003). */

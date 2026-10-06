@@ -119,10 +119,10 @@ appear once, in order, with original times, without opening the app (spec US2)
 
 ### Implementation for User Story 2
 
-- [ ] T032 [US2] Add error handling and status updates to `main/sync/LogSync.kt` (states via `SyncStatusStore`, token retry, crash-safe ordering) so T027 passes
-- [ ] T033 [US2] Implement the spreadsheet-change rule and `clearAll()` in `main/workout/data/WorkoutRepository.kt` / `main/sync/LogSync.kt` so T028 passes
-- [ ] T034 [US2] Implement `main/sync/SyncWorker.kt` (`CoroutineWorker` → `LogSync`, result mapping) and the WorkManager part of `main/sync/SyncScheduler.kt` (enqueue unique `log-sync` with `CONNECTED`, exponential backoff, `KEEP`, after every local change and on app start; same mutex as the in-process run), WorkManager initialization in `main/WorkoutRecApplication.kt`, so T029 passes
-- [ ] T035 [US2] Implement the sync status line in `main/log/TodayScreen.kt` (pending count from the display model, state from `SyncStatusStore`, "Sign in again" → existing consent flow in `main/setup/SetupViewModel.kt`), the unsynced warning in `main/home/SignOutDialog.kt` and the switch-account path (one sync attempt up to 10 s first, research R13), and US2 strings, so T030 passes; push and confirm green
+- [X] T032 [US2] Add error handling and status updates to `main/sync/LogSync.kt` (states via `SyncStatusStore`, token retry, crash-safe ordering) so T027 passes
+- [X] T033 [US2] Implement the spreadsheet-change rule and `clearAll()` in `main/workout/data/WorkoutRepository.kt` / `main/sync/LogSync.kt` so T028 passes
+- [X] T034 [US2] Implement `main/sync/SyncWorker.kt` (`CoroutineWorker` → `LogSync`, result mapping) and the WorkManager part of `main/sync/SyncScheduler.kt` (enqueue unique `log-sync` with `CONNECTED`, exponential backoff, `KEEP`, after every local change and on app start; same mutex as the in-process run), WorkManager initialization in `main/WorkoutRecApplication.kt`, so T029 passes
+- [X] T035 [US2] Implement the sync status line in `main/log/TodayScreen.kt` (pending count from the display model, state from `SyncStatusStore`, "Sign in again" → existing consent flow in `main/setup/SetupViewModel.kt`), the unsynced warning in `main/home/SignOutDialog.kt` and the switch-account path (one sync attempt up to 10 s first, research R13), and US2 strings, so T030 passes; push and confirm green
 
 **Checkpoint**: US1 + US2 — offline logging with background sync
 
@@ -137,9 +137,9 @@ tab, and set rows are pre-filled from the last workout (spec US3)
 
 ### Tests for User Story 3 (write first, push red)
 
-- [ ] T036 [P] [US3] Write failing tests in `test/workout/HistoryTest.kt` (research R11, FR-011, FR-012): last time = sets of the newest day before today with the exercise, time order; record = max weight and max reps among sets with that weight (e.g. 40 × 8 when 40 × 6, 40 × 8, 35 × 12); no history → none; planned count = last time's set count, default 3; set *i* pre-filled from last time's set *i* or its last set; today's sets of the same exercise do not count as "last time"; pending sets on the phone count for history
-- [ ] T037 [P] [US3] Write failing Compose UI tests in `androidTest/log/PrefillTest.kt`: `last_time` shows date and sets or "First time"; `record` shown as "40 kg × 8" or hidden; pre-filled values have semantics `suggested=true` (gray); after a stepper tap or typing, or after confirm, `suggested=false`
-- [ ] T038 [US3] Add compiling stubs for T036–T037, push, and record the red run ID in this task
+- [X] T036 [P] [US3] Write failing tests in `test/workout/HistoryTest.kt` (research R11, FR-011, FR-012): last time = sets of the newest day before today with the exercise, time order; record = max weight and max reps among sets with that weight (e.g. 40 × 8 when 40 × 6, 40 × 8, 35 × 12); no history → none; planned count = last time's set count, default 3; set *i* pre-filled from last time's set *i* or its last set; today's sets of the same exercise do not count as "last time"; pending sets on the phone count for history
+- [X] T037 [P] [US3] Write failing Compose UI tests in `androidTest/log/PrefillTest.kt`: `last_time` shows date and sets or "First time"; `record` shown as "40 kg × 8" or hidden; pre-filled values have semantics `suggested=true` (gray); after a stepper tap or typing, or after confirm, `suggested=false`
+- [X] T038 [US3] Add compiling stubs for T036–T037, push, and record the red run ID in this task — RUN_PLACEHOLDER
 
 ### Implementation for User Story 3
 

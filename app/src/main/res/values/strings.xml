@@ -93,4 +93,8 @@
     <string name="switch_question">Switch account?</string>
     <string name="switch_confirm">Switch</string>
     <string name="switch_cancel">Cancel</string>
+    <!-- 002 US3: last time and record -->
+    <string name="logging_first_time">First time with this exercise</string>
+    <string name="logging_last_time">Last time, %1$s: %2$s</string>
+    <string name="logging_record">Record: %1$s kg × %2$d</string>
 </resources>

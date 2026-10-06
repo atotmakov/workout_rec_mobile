@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.SemanticsPropertyKey
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
@@ -34,6 +35,11 @@ object LoggingTags {
     const val SCREEN = "exercise_logging"
     const val TITLE = "logging_title"
     const val ADD_SET = "add_set"
+    const val LAST_TIME = "last_time"
+    const val RECORD = "record"
+
+    /** True on a weight or reps field whose value is a suggestion from last time. */
+    val Suggested = SemanticsPropertyKey<Boolean>("suggested")
     fun row(i: Int) = "set_row_$i"
     fun weight(i: Int) = "set_weight_$i"
     fun reps(i: Int) = "set_reps_$i"

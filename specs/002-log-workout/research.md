@@ -19,9 +19,10 @@ Kotlin + Compose, manual DI (`AppContainer`), OkHttp + kotlinx.serialization RES
 ## R2. Background sync
 
 - **Decision**: WorkManager unique one-time work `log-sync` with a `CONNECTED` network
-  constraint and exponential backoff, enqueued with `ExistingWorkPolicy.KEEP` after every local
-  change and on app start (one pending request is enough, because each run syncs everything that
-  is pending). When online, the app also runs the same sync in-process right after a set is
+  constraint, enqueued with `ExistingWorkPolicy.APPEND_OR_REPLACE` after every local change and on
+  app start, so a set saved while a run is in progress always gets another run (analysis fix I1).
+  The worker always finishes as success; after a network failure it queues a fresh run one minute
+  later instead of using WorkManager backoff, which can grow to hours (analysis fix U1, SC-003). When online, the app also runs the same sync in-process right after a set is
   confirmed, so SC-003's "within 1 minute" holds. A process-wide mutex serializes runs, so the
   in-process and WorkManager runs never overlap.
 - **Rationale**: Enqueued work persists across app close and reboot and runs when the network

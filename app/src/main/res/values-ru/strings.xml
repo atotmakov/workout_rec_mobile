@@ -97,4 +97,8 @@
     <string name="switch_question">Сменить аккаунт?</string>
     <string name="switch_confirm">Сменить</string>
     <string name="switch_cancel">Отмена</string>
+    <!-- 002 US3: last time and record -->
+    <string name="logging_first_time">Это упражнение впервые</string>
+    <string name="logging_last_time">В прошлый раз, %1$s: %2$s</string>
+    <string name="logging_record">Рекорд: %1$s кг × %2$d</string>
 </resources>
