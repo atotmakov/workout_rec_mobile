@@ -21,12 +21,18 @@ import com.workoutrec.google.SheetsLogClient
 import com.workoutrec.setup.SpreadsheetSetupFlow
 import com.workoutrec.spreadsheet.SpreadsheetSetupService
 import com.workoutrec.sync.DataStoreSyncStatusStore
+import com.workoutrec.sync.LogSync
+import com.workoutrec.sync.SyncScheduler
 import com.workoutrec.sync.SyncStatusStore
 import com.workoutrec.workout.data.WorkoutDatabase
 import com.workoutrec.workout.data.WorkoutRepository
 import java.time.Instant
 import java.time.ZoneId
 import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.first
 import okhttp3.OkHttpClient
 
 private val Context.settingsDataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
@@ -64,4 +70,17 @@ class AppContainer(context: Context) {
     val workoutRepository = WorkoutRepository(WorkoutDatabase.create(appContext).dao())
     val syncStatusStore: SyncStatusStore = DataStoreSyncStatusStore(appContext.syncDataStore)
     val sheetsLogClient = SheetsLogClient(googleHttp)
+
+    /** Lives as long as the process; sync runs outlive screens (research R2). */
+    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    val syncScheduler = SyncScheduler(
+        LogSync(
+            store = workoutRepository,
+            sheets = sheetsLogClient,
+            status = syncStatusStore,
+            spreadsheetId = { settingsStore.binding.first()?.spreadsheetId },
+        ),
+        appScope,
+    )
 }

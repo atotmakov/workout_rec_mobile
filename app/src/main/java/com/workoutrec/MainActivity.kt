@@ -28,13 +28,19 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.workoutrec.auth.CredentialManagerAccountPicker
 import com.workoutrec.home.AutomationReminder
 import com.workoutrec.home.MainScreen
+import com.workoutrec.log.LogRoutes
+import com.workoutrec.log.LoggingRoute
+import com.workoutrec.log.PickerRoute
+import com.workoutrec.log.TodayRoute
 import com.workoutrec.setup.AutomationGuideScreen
 import com.workoutrec.setup.Browser
 import com.workoutrec.setup.ChooseAccountScreen
@@ -102,11 +108,38 @@ private fun AppNavHost(container: AppContainer) {
                     onSwitchAccount = { viewModel.switchAccount(CredentialManagerAccountPicker(context, BuildConfig.WEB_CLIENT_ID)) },
                     onSignOut = { viewModel.signOut() },
                 ) { modifier ->
-                    reminder?.let { r ->
-                        AutomationReminder(status = r.status, onFix = { viewModel.onAction(SetupAction.FixAutomation) }, modifier = modifier)
-                    }
+                    TodayRoute(
+                        container = container,
+                        onAddExercise = { navController.navigate(LogRoutes.PICKER) },
+                        onOpenExercise = { navController.navigate(LogRoutes.logging(it, sets = 0)) },
+                        modifier = modifier,
+                        header = {
+                            reminder?.let { r ->
+                                AutomationReminder(status = r.status, onFix = { viewModel.onAction(SetupAction.FixAutomation) })
+                            }
+                        },
+                    )
                 }
             }
+        }
+        composable(LogRoutes.PICKER) {
+            PickerRoute(container, onBack = { navController.popBackStack() }, onStart = { exercise, sets ->
+                navController.navigate(LogRoutes.logging(exercise, sets)) { popUpTo(Routes.HOME) }
+            })
+        }
+        composable(
+            LogRoutes.LOGGING,
+            arguments = listOf(
+                navArgument("exercise") { type = NavType.StringType },
+                navArgument("sets") { type = NavType.IntType; defaultValue = 0 },
+            ),
+        ) { entry ->
+            LoggingRoute(
+                container = container,
+                exercise = entry.arguments?.getString("exercise").orEmpty(),
+                plannedSets = entry.arguments?.getInt("sets") ?: 0,
+                onBack = { navController.popBackStack() },
+            )
         }
     }
 }

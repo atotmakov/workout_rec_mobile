@@ -1,5 +1,8 @@
 package com.workoutrec.workout.data
 
+import com.workoutrec.log.LoggingStore
+import com.workoutrec.sync.LogSyncStore
+import com.workoutrec.sync.SyncNotice
 import com.workoutrec.workout.ChangeKind
 import com.workoutrec.workout.DisplayModel
 import com.workoutrec.workout.DisplaySet
@@ -19,18 +22,18 @@ class WorkoutRepository(
     private val dao: WorkoutDao,
     private val clock: () -> Long = System::currentTimeMillis,
     private val newId: () -> String = { UUID.randomUUID().toString() },
-) {
+) : LoggingStore, LogSyncStore {
 
     val exercises: Flow<List<Exercise>> = dao.exercises().map { list -> list.map { Exercise(it.name, it.muscleGroup) } }
 
     val pending: Flow<List<PendingChange>> = dao.pending().map { list -> list.map { it.toDomain() } }
 
     /** Cached log with pending changes applied (research R9). */
-    val displaySets: Flow<List<DisplaySet>> =
+    override val displaySets: Flow<List<DisplaySet>> =
         combine(dao.logRows(), pending) { rows, changes -> DisplayModel.sets(rows.map { it.toDomain() }, changes) }
 
     /** Saves a confirmed set before any network activity (FR-005). Returns its pending ID. */
-    suspend fun confirmSet(key: SetKey): String {
+    override suspend fun confirmSet(key: SetKey): String {
         val id = newId()
         dao.upsertPending(PendingChange(id, ChangeKind.NEW, key, createdAt = clock()).toEntity())
         return id
@@ -40,6 +43,22 @@ class WorkoutRepository(
         dao.replaceCaches(exercises.toEntities(), rows.map { it.toEntity() })
 
     suspend fun clearAll() = dao.clearAll()
+
+    override suspend fun pendingNow(): List<PendingChange> = dao.pendingNow().map { it.toDomain() }
+
+    override suspend fun commit(exercises: List<Exercise>, rows: List<LogRow>, doneIds: Collection<String>, notices: List<SyncNotice>) {
+        val created = clock()
+        dao.commitSync(
+            exercises.toEntities(),
+            rows.map { it.toEntity() },
+            doneIds.toList(),
+            notices.map {
+                SyncNoticeEntity(0, it.kind.name, it.key.time, it.key.exercise, it.key.weight.hundredths, it.key.reps.value, created)
+            },
+        )
+    }
+
+    override suspend fun keepOnlyNewSets() = dao.keepOnlyNewSets()
 }
 
 internal fun List<Exercise>.toEntities(): List<ExerciseEntity> =

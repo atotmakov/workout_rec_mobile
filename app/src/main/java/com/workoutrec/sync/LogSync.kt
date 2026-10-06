@@ -1,10 +1,19 @@
 package com.workoutrec.sync
 
+import com.workoutrec.google.LogAndDrills
+import com.workoutrec.google.LogAppend
 import com.workoutrec.google.SheetsLogApi
+import com.workoutrec.workout.ChangeKind
 import com.workoutrec.workout.Exercise
 import com.workoutrec.workout.LogRow
 import com.workoutrec.workout.PendingChange
+import com.workoutrec.workout.Reps
 import com.workoutrec.workout.SetKey
+import com.workoutrec.workout.SheetTime
+import com.workoutrec.workout.Weight
+import java.time.DateTimeException
+import java.time.ZoneId
+import java.time.ZoneOffset
 
 enum class NoticeKind { CONFLICT_DROPPED, WORKOUT_ROW_NOT_UPDATED }
 
@@ -36,5 +45,63 @@ class LogSync(
     private val spreadsheetId: suspend () -> String?,
     private val now: () -> Long = System::currentTimeMillis,
 ) {
-    suspend fun run(): SyncOutcome = TODO()
+
+    suspend fun run(): SyncOutcome {
+        val id = spreadsheetId() ?: return SyncOutcome.NoSpreadsheet
+        val sheet = sheetInfo(id)
+        val zone = zoneOf(sheet.timeZone)
+
+        var read = sheets.readLogAndDrills(id)
+        var rows = rowsOf(read, zone)
+        val pending = store.pendingNow().filter { it.draftId == null }
+
+        // Step 4 (research R5): a new set already in the log was written by an earlier run.
+        val unmatched = rows.map { it.key }.toMutableList()
+        val done = mutableListOf<String>()
+        val appends = mutableListOf<PendingChange>()
+        pending.filter { it.kind == ChangeKind.NEW }.sortedBy { it.createdAt }.forEach { change ->
+            if (unmatched.remove(change.key)) done += change.id else appends += change
+        }
+
+        // Step 5: one atomic write, then a fresh read for the caches.
+        val wrote = appends.isNotEmpty()
+        if (wrote) {
+            sheets.writeLog(
+                spreadsheetId = id,
+                logSheetId = sheet.logSheetId,
+                deletes = emptyList(),
+                edits = emptyList(),
+                appends = appends.map { it.key.toAppend(zone) },
+            )
+            done += appends.map { it.id }
+            read = sheets.readLogAndDrills(id)
+            rows = rowsOf(read, zone)
+        }
+
+        // Step 6.
+        store.commit(read.drills.map { Exercise(it.name, it.muscleGroup) }, rows, done, emptyList())
+        status.markSuccess(now())
+        return SyncOutcome.Synced(wrote)
+    }
+
+    /** Call 20, once per spreadsheet (research R8). */
+    private suspend fun sheetInfo(id: String): SheetInfoCache {
+        status.current().sheet?.takeIf { it.spreadsheetId == id }?.let { return it }
+        val info = sheets.logSheetInfo(id)
+        return SheetInfoCache(id, info.timeZone, info.logSheetId).also { status.setSheet(it) }
+    }
+
+    private fun zoneOf(timeZone: String): ZoneId =
+        try {
+            ZoneId.of(timeZone)
+        } catch (e: DateTimeException) {
+            ZoneOffset.UTC
+        }
+
+    private fun rowsOf(read: LogAndDrills, zone: ZoneId): List<LogRow> = read.log.map {
+        LogRow(it.rowIndex, SetKey(SheetTime.toEpochSeconds(it.serial, zone), it.exercise, Weight.fromSheet(it.weight), Reps(it.reps)))
+    }
+
+    private fun SetKey.toAppend(zone: ZoneId) =
+        LogAppend(SheetTime.toSerial(time, zone), exercise, weight.toDouble(), reps.value)
 }

@@ -88,4 +88,29 @@ abstract class WorkoutDao {
         clearNotices()
         clearDrafts()
     }
+
+    /** One sync result (data-model.md "Sync run"): new caches, handled changes gone, notices added. */
+    @Transaction
+    open suspend fun commitSync(
+        exercises: List<ExerciseEntity>,
+        rows: List<LogRowEntity>,
+        doneIds: List<String>,
+        notices: List<SyncNoticeEntity>,
+    ) {
+        replaceCaches(exercises, rows)
+        if (doneIds.isNotEmpty()) deletePending(doneIds)
+        if (notices.isNotEmpty()) insertNotices(notices)
+    }
+
+    @Query("DELETE FROM pending_change WHERE kind != 'NEW'")
+    protected abstract suspend fun clearEditsAndDeletes()
+
+    /** The bound spreadsheet changed (research R13): keep only new sets. */
+    @Transaction
+    open suspend fun keepOnlyNewSets() {
+        clearExercises()
+        clearLogRows()
+        clearNotices()
+        clearEditsAndDeletes()
+    }
 }
