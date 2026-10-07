@@ -163,13 +163,13 @@ log tab; a set changed on the web first keeps the web value and shows a notice (
 - [X] T041 [P] [US4] Write failing tests in `test/workout/CoalescerTest.kt` for every row of the data-model "Coalescing" table (synced row edit → `EDIT` with `lastSeen` = row key and `rowHint`; synced delete → `DELETE`; `NEW`+edit → `NEW` with new values; `NEW`+delete → removed; `EDIT`+edit → same `EDIT`, `lastSeen` kept; `EDIT`+delete → `DELETE` with the same `lastSeen`); the time is never changed by an edit (FR-006)
 - [X] T042 [P] [US4] Write failing tests in `test/sync/LogSyncEditsTest.kt` against `FakeSheetsLogApi`: `EDIT` updates only columns B–D of the row found by `lastSeen`; `DELETE` removes exactly that row; several edits/deletes are sent in descending row order before `appendCells` in one call 22; duplicate keys → the row closest to `rowHint`; row changed or removed in the web UI (key not found) → change dropped and a `CONFLICT_DROPPED` notice added (FR-015, SC-008); rows inserted above the target in the web UI do not break targeting; deleting the first, last or only set of a day before today adds `WORKOUT_ROW_NOT_UPDATED`, edits never do
 - [X] T043 [P] [US4] Write failing Compose UI tests in `androidTest/log/PastDaysTest.kt` and `androidTest/log/EditSetTest.kt`: `past_day_<date>` list newest first with counts; `day_detail` shows sets and sync state; `edit_set` changes exercise (picker), weight and reps with steppers, shows the date-time read-only; delete asks `delete_set_confirm`; `sync_notice_<id>` shows the conflict / workout-row notices and can be dismissed
-- [X] T044 [US4] Add compiling stubs for T041–T043, push, and record the red run ID in this task — RUN_PLACEHOLDER
+- [X] T044 [US4] Add compiling stubs for T041–T043, push, and record the red run ID in this task — **red run 37550637870** (16 unit + 5 UI tests failing)
 
 ### Implementation for User Story 4
 
-- [ ] T045 [P] [US4] Implement `main/workout/Coalescer.kt` and the edit/delete transactions in `main/workout/data/WorkoutRepository.kt` so T041 passes
-- [ ] T046 [US4] Extend `main/sync/LogSync.kt` with `EDIT`/`DELETE` matching, descending-order requests, conflicts and notices so T042 passes
-- [ ] T047 [US4] Implement `main/log/PastDaysScreen.kt`, `main/log/DayDetailScreen.kt`, `main/log/EditSetDialog.kt`, notices on `main/log/TodayScreen.kt`, the `menu_workouts` entry and navigation in `main/MainActivity.kt`; edit/delete also from today's list and the logging screen's done rows; add strings; push and confirm T043 green
+- [X] T045 [P] [US4] Implement `main/workout/Coalescer.kt` and the edit/delete transactions in `main/workout/data/WorkoutRepository.kt` so T041 passes
+- [X] T046 [US4] Extend `main/sync/LogSync.kt` with `EDIT`/`DELETE` matching, descending-order requests, conflicts and notices so T042 passes
+- [X] T047 [US4] Implement `main/log/PastDaysScreen.kt`, `main/log/DayDetailScreen.kt`, `main/log/EditSetDialog.kt`, notices on `main/log/TodayScreen.kt`, the `menu_workouts` entry and navigation in `main/MainActivity.kt`; edit/delete also from today's list and the logging screen's done rows; add strings; push and confirm T043 green
 
 **Checkpoint**: US1–US4 work independently
 

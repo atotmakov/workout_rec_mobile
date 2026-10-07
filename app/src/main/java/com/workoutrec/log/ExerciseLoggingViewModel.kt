@@ -45,7 +45,7 @@ data class SetRowState(
 )
 
 /** A set of this exercise already logged today. */
-data class DoneSet(val key: SetKey, val syncState: SyncState)
+data class DoneSet(val key: SetKey, val syncState: SyncState, val set: DisplaySet? = null)
 
 data class LoggingState(
     val exercise: String,
@@ -163,7 +163,7 @@ class ExerciseLoggingViewModel(
         val today = today()
         return sets.filter { it.key.exercise == exercise && SheetTime.workoutDay(it.key.time, zone()) == today }
             .sortedBy { it.key.time }
-            .map { DoneSet(it.key, it.syncState) }
+            .map { DoneSet(it.key, it.syncState, it) }
     }
 
     private fun Draft.toRow(): SetRowState {

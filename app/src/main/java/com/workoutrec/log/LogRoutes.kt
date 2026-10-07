@@ -29,10 +29,24 @@ import com.workoutrec.workout.History
 import java.time.DateTimeException
 import java.time.LocalDate
 import java.time.ZoneId
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.testTag
+import com.workoutrec.workout.DisplaySet
+import com.workoutrec.workout.Parsed
+import com.workoutrec.workout.Reps
+import com.workoutrec.workout.SetValues
+import com.workoutrec.workout.Weight
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
+import kotlinx.coroutines.launch
 
 /** Navigation routes of the logging screens (contracts/screens.md "Navigation"). */
 object LogRoutes {
     const val PICKER = "picker"
+    const val WORKOUTS = "workouts"
+    const val DAY = "day/{date}"
+    fun day(date: LocalDate) = "day/$date"
     const val LOGGING = "log/{exercise}?sets={sets}"
     fun logging(exercise: String, sets: Int) = "log/${android.net.Uri.encode(exercise)}?sets=$sets"
 }
@@ -48,6 +62,7 @@ fun TodayRoute(
     onAddExercise: () -> Unit,
     onOpenExercise: (String) -> Unit,
     modifier: Modifier = Modifier,
+    onOpenWorkouts: () -> Unit = {},
     header: @Composable () -> Unit = {},
 ) {
     val sets by container.workoutRepository.displaySets.collectAsState(initial = emptyList())
@@ -55,7 +70,71 @@ fun TodayRoute(
     val zone = status.zone()
     val groups = remember(sets, zone) { DisplayModel.today(sets, LocalDate.now(zone), zone) }
     LaunchedEffect(Unit) { container.syncScheduler.requestSync() }
-    TodayScreen(groups, onAddExercise, onOpenExercise, modifier, header)
+    val notices by container.workoutRepository.notices.collectAsState(initial = emptyList())
+    val scope = rememberCoroutineScope()
+    TodayScreen(groups, onAddExercise, onOpenExercise, modifier) {
+        header()
+        SyncNoticeList(notices, onDismiss = { id -> scope.launch { container.workoutRepository.dismissNotice(id) } })
+        TextButton(onClick = onOpenWorkouts, modifier = Modifier.testTag(TodayTags.WORKOUTS)) { Text(stringResource(R.string.menu_workouts)) }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun WorkoutsRoute(container: AppContainer, onBack: () -> Unit, onOpenDay: (LocalDate) -> Unit) {
+    val sets by container.workoutRepository.displaySets.collectAsState(initial = emptyList())
+    val status by container.syncStatusStore.status.collectAsState(initial = SyncStatus())
+    val zone = status.zone()
+    val days = remember(sets, zone) { DisplayModel.pastDays(sets, LocalDate.now(zone), zone) }
+    Scaffold(topBar = { TopAppBar(title = { Text(stringResource(R.string.past_days_title)) }, navigationIcon = { TextButton(onClick = onBack) { Text("←") } }) }) { padding ->
+        PastDaysScreen(days, onOpenDay, Modifier.padding(padding))
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DayRoute(container: AppContainer, date: LocalDate, onBack: () -> Unit) {
+    val sets by container.workoutRepository.displaySets.collectAsState(initial = emptyList())
+    val status by container.syncStatusStore.status.collectAsState(initial = SyncStatus())
+    val zone = status.zone()
+    val groups = remember(sets, date, zone) { DisplayModel.day(sets, date, zone) }
+    var editing by remember { mutableStateOf<DisplaySet?>(null) }
+    val locale = LocalConfiguration.current.locales[0]
+    Scaffold(topBar = { TopAppBar(title = { Text(date.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale))) }, navigationIcon = { TextButton(onClick = onBack) { Text("←") } }) }) { padding ->
+        DayDetailScreen(groups, onEditSet = { editing = it }, modifier = Modifier.padding(padding))
+    }
+    editing?.let { set -> EditSetRoute(container, set, zone, onDone = { editing = null }) }
+}
+
+/** The edit dialog wired to the repository; invalid values keep the dialog open (FR-004). */
+@Composable
+fun EditSetRoute(container: AppContainer, set: DisplaySet, zone: ZoneId, onDone: () -> Unit) {
+    val exercises by container.workoutRepository.exercises.collectAsState(initial = emptyList())
+    val scope = rememberCoroutineScope()
+    EditSetDialog(
+        set = set,
+        exercises = exercises,
+        zone = zone,
+        onSave = { exercise, weightText, repsText ->
+            val weight = (Weight.parse(weightText) as? Parsed.Ok)?.value
+            val reps = (Reps.parse(repsText) as? Parsed.Ok)?.value
+            if (weight != null && reps != null) {
+                scope.launch {
+                    container.workoutRepository.editSet(set.ref, SetValues(exercise, weight, reps))
+                    container.syncScheduler.requestSync()
+                }
+                onDone()
+            }
+        },
+        onDelete = {
+            scope.launch {
+                container.workoutRepository.deleteSet(set.ref)
+                container.syncScheduler.requestSync()
+            }
+            onDone()
+        },
+        onDismiss = onDone,
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -115,6 +194,9 @@ fun LoggingRoute(container: AppContainer, exercise: String, plannedSets: Int, on
         planned = true
     }
     val state by viewModel.state.collectAsState()
+    var editing by remember { mutableStateOf<DisplaySet?>(null) }
+    val syncStatus by container.syncStatusStore.status.collectAsState(initial = SyncStatus())
+    editing?.let { set -> EditSetRoute(container, set, syncStatus.zone(), onDone = { editing = null }) }
     Scaffold(
         topBar = { TopAppBar(title = { Text(exercise) }, navigationIcon = { TextButton(onClick = onBack) { Text("←") } }) },
     ) { padding ->
@@ -127,6 +209,7 @@ fun LoggingRoute(container: AppContainer, exercise: String, plannedSets: Int, on
                 override fun onStepReps(index: Int, direction: Int) = viewModel.stepReps(index, direction)
                 override fun onConfirm(index: Int) = viewModel.confirm(index)
                 override fun onAddSet() = viewModel.addSet()
+                override fun onEditDone(index: Int) { editing = state.done.getOrNull(index)?.set }
             },
             modifier = Modifier.padding(padding),
         )

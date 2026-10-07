@@ -43,6 +43,9 @@ import com.workoutrec.log.LoggingRoute
 import com.workoutrec.log.PickerRoute
 import com.workoutrec.log.SyncStatusLine
 import com.workoutrec.log.TodayRoute
+import com.workoutrec.log.DayRoute
+import com.workoutrec.log.WorkoutsRoute
+import java.time.LocalDate
 import com.workoutrec.sync.SyncStatus
 import com.workoutrec.workout.DisplayModel
 import com.workoutrec.setup.AutomationGuideScreen
@@ -133,6 +136,7 @@ private fun AppNavHost(container: AppContainer) {
                         container = container,
                         onAddExercise = { navController.navigate(LogRoutes.PICKER) },
                         onOpenExercise = { navController.navigate(LogRoutes.logging(it, sets = 0)) },
+                        onOpenWorkouts = { navController.navigate(LogRoutes.WORKOUTS) },
                         modifier = modifier,
                         header = {
                             reminder?.let { r ->
@@ -147,6 +151,12 @@ private fun AppNavHost(container: AppContainer) {
                     )
                 }
             }
+        }
+        composable(LogRoutes.WORKOUTS) {
+            WorkoutsRoute(container, onBack = { navController.popBackStack() }, onOpenDay = { navController.navigate(LogRoutes.day(it)) })
+        }
+        composable(LogRoutes.DAY, arguments = listOf(navArgument("date") { type = NavType.StringType })) { entry ->
+            DayRoute(container, LocalDate.parse(entry.arguments?.getString("date")), onBack = { navController.popBackStack() })
         }
         composable(LogRoutes.PICKER) {
             PickerRoute(container, onBack = { navController.popBackStack() }, onStart = { exercise, sets ->

@@ -1,5 +1,6 @@
 package com.workoutrec.log
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -62,6 +63,7 @@ interface LoggingActions {
     fun onStepReps(index: Int, direction: Int)
     fun onConfirm(index: Int)
     fun onAddSet()
+    fun onEditDone(index: Int) {}
 }
 
 /** Done sets and set rows of one exercise (FR-003–FR-005). */
@@ -83,7 +85,10 @@ fun ExerciseLoggingScreen(
             header()
         }
         itemsIndexed(state.done) { i, done ->
-            Row(Modifier.fillMaxWidth().testTag(LoggingTags.done(i)).semantics(mergeDescendants = true) {}, horizontalArrangement = Arrangement.SpaceBetween) {
+            Row(
+                Modifier.fillMaxWidth().testTag(LoggingTags.done(i)).semantics(mergeDescendants = true) {}.clickable { actions.onEditDone(i) },
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
                 Text(setText(done.key, locale), style = MaterialTheme.typography.bodyLarge)
                 Text(
                     stringResource(if (done.syncState == SyncState.SYNCED) R.string.set_synced else R.string.set_not_synced),

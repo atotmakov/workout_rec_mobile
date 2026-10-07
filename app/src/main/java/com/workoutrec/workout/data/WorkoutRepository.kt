@@ -2,15 +2,20 @@ package com.workoutrec.workout.data
 
 import com.workoutrec.log.LoggingStore
 import com.workoutrec.sync.LogSyncStore
+import com.workoutrec.sync.NoticeKind
 import com.workoutrec.sync.SyncNotice
 import com.workoutrec.workout.ChangeKind
+import com.workoutrec.workout.Coalescer
 import com.workoutrec.workout.DisplayModel
 import com.workoutrec.workout.DisplaySet
 import com.workoutrec.workout.Exercise
 import com.workoutrec.workout.LogRow
 import com.workoutrec.workout.PendingChange
+import com.workoutrec.workout.PendingUpdate
 import com.workoutrec.workout.Reps
 import com.workoutrec.workout.SetKey
+import com.workoutrec.workout.SetRef
+import com.workoutrec.workout.SetValues
 import com.workoutrec.workout.Weight
 import java.util.UUID
 import kotlinx.coroutines.flow.Flow
@@ -43,6 +48,26 @@ class WorkoutRepository(
         dao.replaceCaches(exercises.toEntities(), rows.map { it.toEntity() })
 
     suspend fun clearAll() = dao.clearAll()
+
+    /** Sync notices with their IDs, oldest first (FR-015). */
+    val notices: Flow<List<Pair<Long, SyncNotice>>> = dao.notices().map { list ->
+        list.map { it.id to SyncNotice(NoticeKind.valueOf(it.kind), SetKey(it.time, it.exercise, Weight.ofHundredths(it.weightHundredths), Reps(it.reps))) }
+    }
+
+    suspend fun dismissNotice(id: Long) = dao.deleteNotice(id)
+
+    /** Edit any set; coalesced with its pending change (FR-013, FR-013a). */
+    suspend fun editSet(target: SetRef, values: SetValues) =
+        apply(Coalescer.edit(target, dao.pendingNow().map { it.toDomain() }, values, newId(), clock()))
+
+    /** Delete any set; coalesced with its pending change (FR-013, FR-013a). */
+    suspend fun deleteSet(target: SetRef) =
+        apply(Coalescer.delete(target, dao.pendingNow().map { it.toDomain() }, newId(), clock()))
+
+    private suspend fun apply(update: PendingUpdate) = when (update) {
+        is PendingUpdate.Upsert -> dao.upsertPending(update.change.toEntity())
+        is PendingUpdate.Remove -> dao.deletePending(listOf(update.id))
+    }
 
     override suspend fun pendingNow(): List<PendingChange> = dao.pendingNow().map { it.toDomain() }
 
