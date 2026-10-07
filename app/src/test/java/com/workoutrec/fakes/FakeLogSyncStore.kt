@@ -1,5 +1,6 @@
 package com.workoutrec.fakes
 
+import com.workoutrec.sync.BackgroundRun
 import com.workoutrec.sync.FailReason
 import com.workoutrec.sync.LogSyncStore
 import com.workoutrec.sync.SheetInfoCache
@@ -63,6 +64,10 @@ class FakeSyncStatusStore(initial: SyncStatus = SyncStatus()) : SyncStatusStore 
 
     override suspend fun clear() {
         flow.value = SyncStatus()
+    }
+
+    override suspend fun recordBackground(run: BackgroundRun) {
+        flow.value = flow.value.copy(background = run)
     }
 
     fun failing(reason: FailReason) = SyncPhase.Failing(reason)

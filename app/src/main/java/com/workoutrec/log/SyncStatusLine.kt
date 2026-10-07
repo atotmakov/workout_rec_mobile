@@ -17,6 +17,7 @@ import com.workoutrec.sync.SyncPhase
 
 object SyncTags {
     const val STATUS = "sync_status"
+    const val DETAILS = "sync_details"
 }
 
 /** "N sets not synced", why sync is failing, or "Sign in again" (FR-010). Hidden when all is synced. */
@@ -46,4 +47,20 @@ fun SyncStatusLine(pendingCount: Int, phase: SyncPhase, onSignIn: () -> Unit, mo
             TextButton(onClick = onSignIn) { Text(stringResource(R.string.sync_sign_in)) }
         }
     }
+}
+
+/** "Background sync: ENQUEUED · last run 18:00 → failed: NETWORK" (quickstart-results.md issue 1). */
+@Composable
+fun SyncDiagnosticsLine(workStates: List<String>, lastRun: com.workoutrec.sync.BackgroundRun?, zone: java.time.ZoneId, modifier: Modifier = Modifier) {
+    val queued = workStates.joinToString(", ").ifEmpty { "—" }
+    val last = lastRun?.let {
+        val time = java.time.Instant.ofEpochMilli(it.at).atZone(zone).toLocalTime().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))
+        "$time → ${it.result}"
+    } ?: "—"
+    Text(
+        stringResource(R.string.sync_background_details, queued, last),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = modifier.testTag(SyncTags.DETAILS),
+    )
 }

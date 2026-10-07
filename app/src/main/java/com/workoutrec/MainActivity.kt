@@ -41,7 +41,11 @@ import com.workoutrec.home.MainScreen
 import com.workoutrec.log.LogRoutes
 import com.workoutrec.log.LoggingRoute
 import com.workoutrec.log.PickerRoute
+import com.workoutrec.log.SyncDiagnosticsLine
 import com.workoutrec.log.SyncStatusLine
+import com.workoutrec.log.zone
+import com.workoutrec.sync.SyncWork
+import androidx.work.WorkManager
 import com.workoutrec.log.TodayRoute
 import com.workoutrec.log.DayRoute
 import com.workoutrec.log.PastWorkoutRoute
@@ -115,6 +119,8 @@ private fun AppNavHost(container: AppContainer) {
                 val pending by container.workoutRepository.pending.collectAsState(initial = emptyList())
                 val syncStatus by container.syncStatusStore.status.collectAsState(initial = SyncStatus())
                 val scope = rememberCoroutineScope()
+                val workInfos by remember { WorkManager.getInstance(context).getWorkInfosForUniqueWorkFlow(SyncWork.NAME) }
+                    .collectAsState(initial = emptyList())
                 // The phone's sets belong to this account's spreadsheet; they go when the account does.
                 val clearWorkoutData: suspend () -> Unit = {
                     container.workoutRepository.clearAll()
@@ -149,6 +155,13 @@ private fun AppNavHost(container: AppContainer) {
                                 phase = syncStatus.phase,
                                 onSignIn = { viewModel.start() },
                             )
+                            if (DisplayModel.pendingCount(pending) > 0) {
+                                SyncDiagnosticsLine(
+                                    workStates = workInfos.filter { !it.state.isFinished }.map { it.state.name },
+                                    lastRun = syncStatus.background,
+                                    zone = syncStatus.zone(),
+                                )
+                            }
                         },
                     )
                 }

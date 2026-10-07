@@ -19,6 +19,7 @@ class SyncWorker(
     params: WorkerParameters,
     private val runSync: suspend () -> SyncOutcome?,
     private val retryLater: () -> Unit,
+    private val record: suspend (String) -> Unit = {},
 ) : CoroutineWorker(context, params) {
 
     /**
@@ -27,7 +28,10 @@ class SyncWorker(
      * analysis fix U1). Failures that need the user wait for the app to be opened.
      */
     override suspend fun doWork(): Result {
-        when (val outcome = runSync()) {
+        record("started")
+        val outcome = runSync()
+        record(BackgroundRun.describe(outcome))
+        when (outcome) {
             null -> retryLater()
             is SyncOutcome.Failed -> if (outcome.phase == SyncPhase.Failing(FailReason.NETWORK)) retryLater()
             else -> Unit
@@ -40,9 +44,10 @@ class SyncWorker(
 class SyncWorkerFactory(
     private val runSync: suspend () -> SyncOutcome?,
     private val retryLater: () -> Unit,
+    private val record: suspend (String) -> Unit = {},
 ) : WorkerFactory() {
     override fun createWorker(appContext: Context, workerClassName: String, workerParameters: WorkerParameters): ListenableWorker? =
-        if (workerClassName == SyncWorker::class.java.name) SyncWorker(appContext, workerParameters, runSync, retryLater) else null
+        if (workerClassName == SyncWorker::class.java.name) SyncWorker(appContext, workerParameters, runSync, retryLater, record) else null
 }
 
 /** The unique background sync work. */

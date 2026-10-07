@@ -23,10 +23,27 @@ sealed interface SyncPhase {
 /** Call 20 values cached per spreadsheet (research R8). */
 data class SheetInfoCache(val spreadsheetId: String, val timeZone: String, val logSheetId: Int)
 
+/** The last background sync run, shown while sets wait (quickstart-results.md issue 1). */
+data class BackgroundRun(val at: Long, val result: String) {
+    companion object {
+        fun describe(outcome: SyncOutcome?): String = when (outcome) {
+            null -> "error"
+            is SyncOutcome.Synced -> if (outcome.wrote) "synced" else "nothing to sync"
+            SyncOutcome.NoSpreadsheet -> "no spreadsheet"
+            is SyncOutcome.Failed -> when (val phase = outcome.phase) {
+                is SyncPhase.Failing -> "failed: ${phase.reason.name}"
+                SyncPhase.NeedsSignIn -> "failed: sign in"
+                else -> "failed"
+            }
+        }
+    }
+}
+
 data class SyncStatus(
     val phase: SyncPhase = SyncPhase.Idle,
     val lastSuccessAt: Long? = null,
     val sheet: SheetInfoCache? = null,
+    val background: BackgroundRun? = null,
 )
 
 /** Sync status values (data-model.md "Sync status"). */
@@ -37,6 +54,7 @@ interface SyncStatusStore {
     suspend fun markSuccess(at: Long)
     suspend fun setSheet(sheet: SheetInfoCache?)
     suspend fun clear()
+    suspend fun recordBackground(run: BackgroundRun)
 }
 
 class DataStoreSyncStatusStore(private val dataStore: DataStore<Preferences>) : SyncStatusStore {
@@ -46,6 +64,8 @@ class DataStoreSyncStatusStore(private val dataStore: DataStore<Preferences>) : 
     private val spreadsheetKey = stringPreferencesKey("sync.spreadsheetId")
     private val timeZoneKey = stringPreferencesKey("sync.timeZone")
     private val logSheetKey = intPreferencesKey("sync.logSheetId")
+    private val backgroundAtKey = longPreferencesKey("sync.background.at")
+    private val backgroundResultKey = stringPreferencesKey("sync.background.result")
 
     override val status: Flow<SyncStatus> = dataStore.data.map { prefs ->
         val spreadsheetId = prefs[spreadsheetKey]
@@ -54,6 +74,7 @@ class DataStoreSyncStatusStore(private val dataStore: DataStore<Preferences>) : 
         SyncStatus(
             phase = decode(prefs[stateKey]),
             lastSuccessAt = prefs[lastSuccessKey],
+            background = prefs[backgroundAtKey]?.let { at -> BackgroundRun(at, prefs[backgroundResultKey].orEmpty()) },
             sheet = if (spreadsheetId != null && timeZone != null && logSheetId != null) {
                 SheetInfoCache(spreadsheetId, timeZone, logSheetId)
             } else {
@@ -84,6 +105,13 @@ class DataStoreSyncStatusStore(private val dataStore: DataStore<Preferences>) : 
                 it[timeZoneKey] = sheet.timeZone
                 it[logSheetKey] = sheet.logSheetId
             }
+        }
+    }
+
+    override suspend fun recordBackground(run: BackgroundRun) {
+        dataStore.edit {
+            it[backgroundAtKey] = run.at
+            it[backgroundResultKey] = run.result
         }
     }
 

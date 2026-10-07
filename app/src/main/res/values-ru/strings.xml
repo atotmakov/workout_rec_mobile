@@ -137,4 +137,5 @@
     <string name="past_workout_error_future">Дата не может быть в будущем.</string>
     <string name="past_workout_error_duration">Длительность — от 1 до 600 минут.</string>
     <string name="past_workout_error_format">Введите дату как 2026-01-31, а время как 18:00.</string>
+    <string name="sync_background_details">Фоновая синхронизация: %1$s · последний запуск %2$s</string>
 </resources>
