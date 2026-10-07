@@ -188,13 +188,13 @@ duration on Save
 - [X] T048 [P] [US5] Write failing tests in `test/workout/PastWorkoutTimesTest.kt` (research R10): n = 1 → start; n > 1 → `start + round(i × duration / (n − 1))` seconds, first = start, last = start + duration; strictly increasing (+1 s on rounding collisions, e.g. 200 sets in 1 minute); recalculated after adding/deleting sets; date in the future rejected; duration "1–600, default 60" enforced
 - [X] T049 [P] [US5] Write failing tests in `test/log/PastWorkoutViewModelTest.kt`: draft stored with `draftId` sets that are not shown in today and not synced; warning when the day already has sets (FR-006a); Save computes times, clears `draftId` in one transaction and requests sync; Cancel deletes the draft and its sets
 - [X] T050 [P] [US5] Write failing Compose UI tests in `androidTest/log/PastWorkoutTest.kt`: `menu_past_workout` opens the dialog (date not in the future, start time, duration); the editor reuses the picker and logging rows and shows computed times; `past_workout_save` returns to Today
-- [X] T051 [US5] Add compiling stubs for T048–T050, push, and record the red run ID in this task — RUN_PLACEHOLDER
+- [X] T051 [US5] Add compiling stubs for T048–T050, push, and record the red run ID in this task — **red run 37552444123** (11 unit + 2 UI tests failing)
 
 ### Implementation for User Story 5
 
-- [ ] T052 [P] [US5] Implement `main/workout/PastWorkoutTimes.kt` so T048 passes
-- [ ] T053 [US5] Implement draft storage in `main/workout/data/WorkoutRepository.kt` and `main/log/PastWorkoutViewModel.kt` so T049 passes
-- [ ] T054 [US5] Implement `main/log/PastWorkoutDialog.kt` and `main/log/PastWorkoutEditor.kt`, menu entry and navigation, strings; push and confirm T050 green
+- [X] T052 [P] [US5] Implement `main/workout/PastWorkoutTimes.kt` so T048 passes
+- [X] T053 [US5] Implement draft storage in `main/workout/data/WorkoutRepository.kt` and `main/log/PastWorkoutViewModel.kt` so T049 passes
+- [X] T054 [US5] Implement `main/log/PastWorkoutDialog.kt` and `main/log/PastWorkoutEditor.kt`, menu entry and navigation, strings; push and confirm T050 green
 
 **Checkpoint**: All user stories functional
 

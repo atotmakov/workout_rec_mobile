@@ -130,4 +130,5 @@
     <string name="past_workout_day_has_sets">This day already has sets; the new ones are added to it.</string>
     <string name="past_workout_error_future">The date cannot be in the future.</string>
     <string name="past_workout_error_duration">Duration is 1 to 600 minutes.</string>
+    <string name="past_workout_error_format">Enter the date as 2026-01-31 and the time as 18:00.</string>
 </resources>

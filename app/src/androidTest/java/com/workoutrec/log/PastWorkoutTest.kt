@@ -64,7 +64,7 @@ class PastWorkoutTest {
         }
         compose.onNodeWithTag(PastWorkoutTags.DAY_HAS_SETS).assertIsDisplayed()
         compose.onAllNodesWithTag(PastWorkoutTags.SET).assertCountEquals(2)
-        compose.onNodeWithTag(PastWorkoutTags.EDITOR).assertTextContains("× 8", substring = true)
+        compose.onAllNodesWithTag(PastWorkoutTags.SET)[1].assertTextContains("× 8", substring = true)
         compose.onNodeWithTag(PastWorkoutTags.SAVE).performClick()
         assertEquals(1, saved)
     }

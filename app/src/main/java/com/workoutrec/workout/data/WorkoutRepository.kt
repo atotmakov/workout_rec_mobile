@@ -1,6 +1,7 @@
 package com.workoutrec.workout.data
 
 import com.workoutrec.log.LoggingStore
+import com.workoutrec.log.PastWorkoutStore
 import com.workoutrec.sync.LogSyncStore
 import com.workoutrec.sync.NoticeKind
 import com.workoutrec.sync.SyncNotice
@@ -27,7 +28,7 @@ class WorkoutRepository(
     private val dao: WorkoutDao,
     private val clock: () -> Long = System::currentTimeMillis,
     private val newId: () -> String = { UUID.randomUUID().toString() },
-) : LoggingStore, LogSyncStore {
+) : LoggingStore, LogSyncStore, PastWorkoutStore {
 
     val exercises: Flow<List<Exercise>> = dao.exercises().map { list -> list.map { Exercise(it.name, it.muscleGroup) } }
 
@@ -42,6 +43,11 @@ class WorkoutRepository(
         val id = newId()
         dao.upsertPending(PendingChange(id, ChangeKind.NEW, key, createdAt = clock()).toEntity())
         return id
+    }
+
+    override suspend fun confirmSets(keys: List<SetKey>) {
+        val created = clock()
+        dao.insertSets(keys.mapIndexed { i, key -> PendingChange(newId(), ChangeKind.NEW, key, createdAt = created + i).toEntity() })
     }
 
     suspend fun replaceCaches(exercises: List<Exercise>, rows: List<LogRow>) =

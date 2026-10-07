@@ -1,5 +1,7 @@
 package com.workoutrec.log
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
@@ -45,6 +47,7 @@ import kotlinx.coroutines.launch
 object LogRoutes {
     const val PICKER = "picker"
     const val WORKOUTS = "workouts"
+    const val PAST_WORKOUT = "past-workout"
     const val DAY = "day/{date}"
     fun day(date: LocalDate) = "day/$date"
     const val LOGGING = "log/{exercise}?sets={sets}"
@@ -63,6 +66,7 @@ fun TodayRoute(
     onOpenExercise: (String) -> Unit,
     modifier: Modifier = Modifier,
     onOpenWorkouts: () -> Unit = {},
+    onPastWorkout: () -> Unit = {},
     header: @Composable () -> Unit = {},
 ) {
     val sets by container.workoutRepository.displaySets.collectAsState(initial = emptyList())
@@ -75,7 +79,10 @@ fun TodayRoute(
     TodayScreen(groups, onAddExercise, onOpenExercise, modifier) {
         header()
         SyncNoticeList(notices, onDismiss = { id -> scope.launch { container.workoutRepository.dismissNotice(id) } })
-        TextButton(onClick = onOpenWorkouts, modifier = Modifier.testTag(TodayTags.WORKOUTS)) { Text(stringResource(R.string.menu_workouts)) }
+        Row {
+            TextButton(onClick = onOpenWorkouts, modifier = Modifier.testTag(TodayTags.WORKOUTS)) { Text(stringResource(R.string.menu_workouts)) }
+            TextButton(onClick = onPastWorkout, modifier = Modifier.testTag(PastWorkoutTags.MENU)) { Text(stringResource(R.string.menu_past_workout)) }
+        }
     }
 }
 
@@ -216,3 +223,40 @@ fun LoggingRoute(container: AppContainer, exercise: String, plannedSets: Int, on
     }
 }
 
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PastWorkoutRoute(container: AppContainer, onDone: () -> Unit) {
+    val status by container.syncStatusStore.status.collectAsState(initial = SyncStatus())
+    val zone = status.zone()
+    val viewModel: PastWorkoutViewModel = viewModel(
+        factory = viewModelFactory {
+            initializer {
+                PastWorkoutViewModel(container.workoutRepository, container.syncScheduler::requestSync, zone = { zone })
+            }
+        },
+    )
+    val state by viewModel.state.collectAsState()
+    val exercises by container.workoutRepository.exercises.collectAsState(initial = emptyList())
+    Scaffold(topBar = { TopAppBar(title = { Text(stringResource(R.string.past_workout_title)) }, navigationIcon = { TextButton(onClick = onDone) { Text("←") } }) }) { padding ->
+        Box(Modifier.padding(padding)) {
+            if (state.date == null) {
+                PastWorkoutDialog(
+                    initialDate = LocalDate.now(zone).minusDays(1),
+                    onStart = { date, start, duration -> viewModel.setup(date, start, duration) },
+                    onDismiss = onDone,
+                )
+            } else {
+                PastWorkoutEditor(
+                    state = state,
+                    exercises = exercises,
+                    onAddSet = viewModel::addSet,
+                    onRemoveSet = viewModel::removeSet,
+                    onSave = { if (viewModel.save()) onDone() },
+                    onCancel = { viewModel.cancel(); onDone() },
+                    zone = zone,
+                )
+            }
+        }
+    }
+}

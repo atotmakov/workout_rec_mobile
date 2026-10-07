@@ -136,4 +136,5 @@
     <string name="past_workout_day_has_sets">В этот день уже есть подходы; новые добавятся к ним.</string>
     <string name="past_workout_error_future">Дата не может быть в будущем.</string>
     <string name="past_workout_error_duration">Длительность — от 1 до 600 минут.</string>
+    <string name="past_workout_error_format">Введите дату как 2026-01-31, а время как 18:00.</string>
 </resources>

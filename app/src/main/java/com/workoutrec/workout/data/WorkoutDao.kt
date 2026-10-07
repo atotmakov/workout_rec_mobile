@@ -113,4 +113,11 @@ abstract class WorkoutDao {
         clearNotices()
         clearEditsAndDeletes()
     }
+
+    @Upsert
+    protected abstract suspend fun upsertPendingAll(changes: List<PendingChangeEntity>)
+
+    /** All sets of a past workout at once (research R10). */
+    @Transaction
+    open suspend fun insertSets(changes: List<PendingChangeEntity>) = upsertPendingAll(changes)
 }
