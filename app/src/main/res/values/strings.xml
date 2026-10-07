@@ -67,7 +67,7 @@
     <string name="weight_plus">More weight</string>
     <string name="reps_minus">Fewer reps</string>
     <string name="reps_plus">More reps</string>
-    <string name="set_not_synced">Not synced yet</string>
+    <string name="set_not_synced">Not in the spreadsheet yet</string>
     <string name="set_synced">In the spreadsheet</string>
     <string name="error_empty">Enter a value</string>
     <string name="error_not_a_number">Not a number</string>

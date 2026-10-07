@@ -19,12 +19,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.workoutrec.AppContainer
 import com.workoutrec.R
 import com.workoutrec.setup.Browser
+import com.workoutrec.sync.RefreshPolicy
 import com.workoutrec.sync.SyncStatus
 import com.workoutrec.workout.DisplayModel
 import com.workoutrec.workout.History
@@ -73,7 +75,13 @@ fun TodayRoute(
     val status by container.syncStatusStore.status.collectAsState(initial = SyncStatus())
     val zone = status.zone()
     val groups = remember(sets, zone) { DisplayModel.today(sets, LocalDate.now(zone), zone) }
-    LaunchedEffect(Unit) { container.syncScheduler.requestSync() }
+    // Research R7: on start and resume, sync when sets wait or the last sync is 5+ minutes old.
+    val pending by container.workoutRepository.pending.collectAsState(initial = emptyList())
+    LifecycleResumeEffect(Unit) {
+        val waiting = DisplayModel.pendingCount(pending)
+        if (RefreshPolicy.shouldSync(status.lastSuccessAt, System.currentTimeMillis(), waiting)) container.syncScheduler.requestSync()
+        onPauseOrDispose {}
+    }
     val notices by container.workoutRepository.notices.collectAsState(initial = emptyList())
     val scope = rememberCoroutineScope()
     TodayScreen(groups, onAddExercise, onOpenExercise, modifier) {
