@@ -1,8 +1,11 @@
 package com.workoutrec.sync
 
+import android.content.ComponentName
 import android.content.Context
+import android.content.pm.PackageManager
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.work.Configuration
 import androidx.work.ListenableWorker
 import androidx.work.NetworkType
 import androidx.work.WorkManager
@@ -10,6 +13,7 @@ import androidx.work.testing.TestListenableWorkerBuilder
 import androidx.work.testing.WorkManagerTestInitHelper
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -27,9 +31,33 @@ class SyncWorkerTest {
         WorkManagerTestInitHelper.initializeTestWorkManager(context)
     }
 
+    private val recorded = mutableListOf<String>()
+
     private fun worker(outcome: SyncOutcome?) = TestListenableWorkerBuilder<SyncWorker>(context)
-        .setWorkerFactory(SyncWorkerFactory(runSync = { outcome }, retryLater = { retriesLater++ }))
+        .setWorkerFactory(SyncWorkerFactory(runSync = { outcome }, retryLater = { retriesLater++ }, record = { recorded += it }))
         .build()
+
+    // quickstart-results.md issue 1: background sync never ran on a Pixel 10a.
+    @Test
+    fun aRunRecordsThatItStartedAndHowItEnded() = runTest {
+        worker(SyncOutcome.Failed(SyncPhase.Failing(FailReason.NETWORK))).doWork()
+        assertEquals(listOf("started", "failed: NETWORK"), recorded)
+    }
+
+    @Test
+    fun theAppStartsWorkManagerWithItsOwnWorkerFactory() {
+        val provider = context.applicationContext as Configuration.Provider
+        assertTrue(provider.workManagerConfiguration.workerFactory is SyncWorkerFactory)
+    }
+
+    @Test
+    fun theDefaultWorkManagerInitializerIsRemoved() {
+        val info = context.packageManager.getProviderInfo(
+            ComponentName(context, "androidx.startup.InitializationProvider"),
+            PackageManager.GET_META_DATA,
+        )
+        assertFalse(info.metaData?.containsKey("androidx.work.WorkManagerInitializer") == true)
+    }
 
     @Test
     fun backgroundWorkWaitsForAConnection() {

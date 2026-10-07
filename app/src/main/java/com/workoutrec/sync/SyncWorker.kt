@@ -19,6 +19,7 @@ class SyncWorker(
     params: WorkerParameters,
     private val runSync: suspend () -> SyncOutcome?,
     private val retryLater: () -> Unit,
+    private val record: suspend (String) -> Unit = {},
 ) : CoroutineWorker(context, params) {
 
     /**
@@ -40,9 +41,10 @@ class SyncWorker(
 class SyncWorkerFactory(
     private val runSync: suspend () -> SyncOutcome?,
     private val retryLater: () -> Unit,
+    private val record: suspend (String) -> Unit = {},
 ) : WorkerFactory() {
     override fun createWorker(appContext: Context, workerClassName: String, workerParameters: WorkerParameters): ListenableWorker? =
-        if (workerClassName == SyncWorker::class.java.name) SyncWorker(appContext, workerParameters, runSync, retryLater) else null
+        if (workerClassName == SyncWorker::class.java.name) SyncWorker(appContext, workerParameters, runSync, retryLater, record) else null
 }
 
 /** The unique background sync work. */

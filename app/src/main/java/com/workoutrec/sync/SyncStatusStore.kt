@@ -23,10 +23,18 @@ sealed interface SyncPhase {
 /** Call 20 values cached per spreadsheet (research R8). */
 data class SheetInfoCache(val spreadsheetId: String, val timeZone: String, val logSheetId: Int)
 
+/** The last background sync run, shown while sets wait (quickstart-results.md issue 1). */
+data class BackgroundRun(val at: Long, val result: String) {
+    companion object {
+        fun describe(outcome: SyncOutcome?): String = TODO()
+    }
+}
+
 data class SyncStatus(
     val phase: SyncPhase = SyncPhase.Idle,
     val lastSuccessAt: Long? = null,
     val sheet: SheetInfoCache? = null,
+    val background: BackgroundRun? = null,
 )
 
 /** Sync status values (data-model.md "Sync status"). */
@@ -37,6 +45,7 @@ interface SyncStatusStore {
     suspend fun markSuccess(at: Long)
     suspend fun setSheet(sheet: SheetInfoCache?)
     suspend fun clear()
+    suspend fun recordBackground(run: BackgroundRun)
 }
 
 class DataStoreSyncStatusStore(private val dataStore: DataStore<Preferences>) : SyncStatusStore {
@@ -86,6 +95,8 @@ class DataStoreSyncStatusStore(private val dataStore: DataStore<Preferences>) : 
             }
         }
     }
+
+    override suspend fun recordBackground(run: BackgroundRun): Unit = TODO()
 
     override suspend fun clear() {
         dataStore.edit { it.clear() }
