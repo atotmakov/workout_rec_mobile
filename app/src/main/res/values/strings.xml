@@ -116,4 +116,18 @@
     <string name="notice_conflict_dropped">The set %1$s was changed in the spreadsheet before your change reached it; the spreadsheet version is kept.</string>
     <string name="notice_workout_row">You deleted %1$s from a day already counted in the workout tab; its row there was not updated. Fix it in the spreadsheet if needed.</string>
     <string name="notice_dismiss">Dismiss</string>
+    <!-- 002 US5: past workout -->
+    <string name="menu_past_workout">Enter a past workout</string>
+    <string name="past_workout_title">Past workout</string>
+    <string name="past_workout_date">Date</string>
+    <string name="past_workout_start_time">Start</string>
+    <string name="past_workout_duration">Duration, min</string>
+    <string name="past_workout_start">Continue</string>
+    <string name="past_workout_cancel">Cancel</string>
+    <string name="past_workout_save">Save workout</string>
+    <string name="past_workout_add">Add set</string>
+    <string name="past_workout_remove">Remove</string>
+    <string name="past_workout_day_has_sets">This day already has sets; the new ones are added to it.</string>
+    <string name="past_workout_error_future">The date cannot be in the future.</string>
+    <string name="past_workout_error_duration">Duration is 1 to 600 minutes.</string>
 </resources>

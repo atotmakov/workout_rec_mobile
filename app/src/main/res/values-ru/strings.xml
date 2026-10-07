@@ -122,4 +122,18 @@
     <string name="notice_conflict_dropped">Подход %1$s изменили в таблице раньше, чем туда попало ваше изменение; оставлена версия из таблицы.</string>
     <string name="notice_workout_row">Вы удалили %1$s из дня, который уже учтён на вкладке workout; строка там не обновлена. При необходимости исправьте её в таблице.</string>
     <string name="notice_dismiss">Скрыть</string>
+    <!-- 002 US5: past workout -->
+    <string name="menu_past_workout">Внести прошлую тренировку</string>
+    <string name="past_workout_title">Прошлая тренировка</string>
+    <string name="past_workout_date">Дата</string>
+    <string name="past_workout_start_time">Начало</string>
+    <string name="past_workout_duration">Длительность, мин</string>
+    <string name="past_workout_start">Далее</string>
+    <string name="past_workout_cancel">Отмена</string>
+    <string name="past_workout_save">Сохранить тренировку</string>
+    <string name="past_workout_add">Добавить подход</string>
+    <string name="past_workout_remove">Убрать</string>
+    <string name="past_workout_day_has_sets">В этот день уже есть подходы; новые добавятся к ним.</string>
+    <string name="past_workout_error_future">Дата не может быть в будущем.</string>
+    <string name="past_workout_error_duration">Длительность — от 1 до 600 минут.</string>
 </resources>

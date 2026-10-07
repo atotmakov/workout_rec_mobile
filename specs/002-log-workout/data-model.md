@@ -121,7 +121,9 @@ Derived views:
 pending NEW ──(key found in sheet read)──────────────▶ removed (already written, FR-009)
 pending NEW ──(appendCells succeeded)────────────────▶ removed; log_row refreshed
 pending EDIT/DELETE ──(target found, batch succeeded)▶ removed
-pending EDIT/DELETE ──(target not found)─────────────▶ removed + sync_notice CONFLICT_DROPPED
+pending DELETE ──(target not found)──────────────────▶ removed (goal reached; analysis fix U2)
+pending EDIT ──(row with the new values found)────────▶ removed (applied by an interrupted run; U2)
+pending EDIT ──(target not found otherwise)───────────▶ removed + sync_notice CONFLICT_DROPPED
 any ──(network / 5xx / 429)──────────────────────────▶ unchanged; sync.state = Failing; retry
 any ──(consent needed)───────────────────────────────▶ unchanged; sync.state = NeedsSignIn
 spreadsheet ID changed ──────────────────────────────▶ caches + EDIT/DELETE cleared, NEW kept (R13)

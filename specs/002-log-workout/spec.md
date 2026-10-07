@@ -170,8 +170,9 @@ values, no deleted set, and no other row changed.
 5. **Given** a set is already in the log tab, **When** the user deletes it (after confirming),
    **Then** that row is removed from the log tab and no other set is lost or changed.
 6. **Given** the row was changed or removed in the web UI after the app last downloaded it,
-   **When** the app's edit or delete is synced, **Then** the web-UI version wins: the app's change
-   is not applied, the user is told which set it was, and the app shows the current values.
+   **When** the app's edit is synced, **Then** the web-UI version wins: the app's change is not
+   applied, the user is told which set it was, and the app shows the current values. A deletion
+   whose row is already gone is simply done, without a message.
 7. **Given** the phone is offline, **When** the user edits or deletes a synced set, **Then** the
    change is saved on the phone, shown as "not synced yet", and applied on the next sync.
 8. **Given** today's workout, **When** the user picks an exercise already in it, **Then** the new
