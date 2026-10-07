@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -29,6 +30,9 @@ import androidx.compose.ui.unit.dp
 import com.workoutrec.R
 import com.workoutrec.workout.InvalidReason
 import com.workoutrec.workout.SyncState
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
+import java.util.Locale
 
 /** Test tags of contracts/screens.md "Exercise logging". */
 object LoggingTags {
@@ -75,6 +79,7 @@ fun ExerciseLoggingScreen(
     ) {
         item {
             Text(state.exercise, style = MaterialTheme.typography.headlineSmall, modifier = Modifier.testTag(LoggingTags.TITLE))
+            LastTimeAndRecord(state, locale)
             header()
         }
         itemsIndexed(state.done) { i, done ->
@@ -103,14 +108,14 @@ private fun SetRow(i: Int, row: SetRowState, actions: LoggingActions) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
                 StepButton(minus = true, label = stringResource(R.string.weight_minus), tag = LoggingTags.weightMinus(i)) { actions.onStepWeight(i, -1) }
-                NumberField(row.weightText, stringResource(R.string.logging_weight), KeyboardType.Decimal, LoggingTags.weight(i), Modifier.weight(1f)) {
+                NumberField(row.weightText, stringResource(R.string.logging_weight), KeyboardType.Decimal, LoggingTags.weight(i), Modifier.weight(1f), row.weightSuggested) {
                     actions.onWeightChange(i, it)
                 }
                 StepButton(minus = false, label = stringResource(R.string.weight_plus), tag = LoggingTags.weightPlus(i)) { actions.onStepWeight(i, +1) }
             }
             Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
                 StepButton(minus = true, label = stringResource(R.string.reps_minus), tag = LoggingTags.repsMinus(i)) { actions.onStepReps(i, -1) }
-                NumberField(row.repsText, stringResource(R.string.logging_reps), KeyboardType.Number, LoggingTags.reps(i), Modifier.weight(1f)) {
+                NumberField(row.repsText, stringResource(R.string.logging_reps), KeyboardType.Number, LoggingTags.reps(i), Modifier.weight(1f), row.repsSuggested) {
                     actions.onRepsChange(i, it)
                 }
                 StepButton(minus = false, label = stringResource(R.string.reps_plus), tag = LoggingTags.repsPlus(i)) { actions.onStepReps(i, +1) }
@@ -132,16 +137,41 @@ private fun NumberField(
     keyboard: KeyboardType,
     tag: String,
     modifier: Modifier,
+    suggested: Boolean,
     onChange: (String) -> Unit,
 ) {
+    // Suggested values (from last time) are gray until changed or confirmed (FR-012).
+    val color = if (suggested) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f) else MaterialTheme.colorScheme.onSurface
     OutlinedTextField(
         value = value,
         onValueChange = onChange,
         label = { Text(label) },
         singleLine = true,
+        textStyle = LocalTextStyle.current.copy(color = color),
         keyboardOptions = KeyboardOptions(keyboardType = keyboard),
-        modifier = modifier.testTag(tag),
+        modifier = modifier.testTag(tag).semantics { this[LoggingTags.Suggested] = suggested },
     )
+}
+
+/** "Last time, 9 Jan 2026: 40 × 6   40 × 8" or "First time"; "Record: 40 kg × 8" (FR-011). */
+@Composable
+private fun LastTimeAndRecord(state: LoggingState, locale: Locale) {
+    val lastTime = state.lastTime
+    val text = if (lastTime == null) {
+        stringResource(R.string.logging_first_time)
+    } else {
+        val date = lastTime.date.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale))
+        stringResource(R.string.logging_last_time, date, lastTime.sets.map { setText(it, locale) }.joinToString("   "))
+    }
+    Text(text, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.testTag(LoggingTags.LAST_TIME))
+    state.record?.let {
+        Text(
+            stringResource(R.string.logging_record, it.weight.format(locale), it.reps.value),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.testTag(LoggingTags.RECORD),
+        )
+    }
 }
 
 /** − / + button used for sets, weight and reps (FR-003, FR-004). */

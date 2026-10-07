@@ -25,6 +25,7 @@ import com.workoutrec.R
 import com.workoutrec.setup.Browser
 import com.workoutrec.sync.SyncStatus
 import com.workoutrec.workout.DisplayModel
+import com.workoutrec.workout.History
 import java.time.DateTimeException
 import java.time.LocalDate
 import java.time.ZoneId
@@ -84,7 +85,12 @@ fun PickerRoute(container: AppContainer, onBack: () -> Unit, onStart: (exercise:
         )
     }
     picked?.let { exercise ->
-        PlanSetsDialog(initial = DEFAULT_SETS, onConfirm = { onStart(exercise, it); picked = null }, onDismiss = { picked = null })
+        val status by container.syncStatusStore.status.collectAsState(initial = SyncStatus())
+        val zone = status.zone()
+        val initial = remember(sets, exercise, zone) {
+            History.prefill(History.lastTime(sets, exercise, LocalDate.now(zone), zone)).plannedCount
+        }
+        PlanSetsDialog(initial = initial, onConfirm = { onStart(exercise, it); picked = null }, onDismiss = { picked = null })
     }
 }
 
@@ -127,5 +133,3 @@ fun LoggingRoute(container: AppContainer, exercise: String, plannedSets: Int, on
     }
 }
 
-/** Planned sets when there is no history yet (FR-012). */
-const val DEFAULT_SETS = 3

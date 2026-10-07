@@ -3,6 +3,7 @@ package com.workoutrec.log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.workoutrec.workout.DisplaySet
+import com.workoutrec.workout.History
 import com.workoutrec.workout.InvalidReason
 import com.workoutrec.workout.LastTime
 import com.workoutrec.workout.LiveSetTime
@@ -56,7 +57,7 @@ data class LoggingState(
     val suggestedSetCount: Int = 3,
 )
 
-/** Logging sets of one exercise (US1; FR-003–FR-006). Unconfirmed rows live only here (FR-003). */
+/** Logging sets of one exercise (US1, US3; FR-003–FR-006, FR-011, FR-012). Unconfirmed rows live only here (FR-003). */
 class ExerciseLoggingViewModel(
     private val exercise: String,
     private val store: LoggingStore,
@@ -65,20 +66,50 @@ class ExerciseLoggingViewModel(
     private val zone: () -> ZoneId = ZoneId::systemDefault,
 ) : ViewModel() {
 
-    private data class Draft(val weight: String, val reps: String)
+    private data class Draft(
+        val weight: String,
+        val reps: String,
+        val weightSuggested: Boolean = false,
+        val repsSuggested: Boolean = false,
+    )
 
     private val drafts = MutableStateFlow<List<Draft>>(emptyList())
 
-    /** The latest display sets, kept for timing and for copying the last done set. */
+    /** The latest display sets, kept for timing, pre-fill and copying the last done set. */
     private var latestSets: List<DisplaySet> = emptyList()
+
+    /** A plan made before the phone data arrived; applied on the first emission so it gets pre-filled. */
+    private var loaded = false
+    private var waitingPlan: Int? = null
 
     val state: StateFlow<LoggingState> = combine(store.displaySets, drafts) { sets, rows ->
         latestSets = sets
-        LoggingState(exercise, doneToday(sets), rows.map { it.toRow() })
+        if (!loaded) {
+            loaded = true
+            waitingPlan?.let { waitingPlan = null; applyPlan(it) }
+        }
+        val lastTime = lastTime(sets)
+        LoggingState(
+            exercise = exercise,
+            done = doneToday(sets),
+            rows = rows.map { it.toRow() },
+            lastTime = lastTime,
+            record = History.record(sets, exercise),
+            suggestedSetCount = History.prefill(lastTime).plannedCount,
+        )
     }.stateIn(viewModelScope, SharingStarted.Eagerly, LoggingState(exercise, emptyList(), emptyList()))
 
+    /** Planned rows, pre-filled from last time (FR-012). */
     fun plan(count: Int) {
-        drafts.value = List(count.coerceIn(MIN_SETS, MAX_SETS)) { Draft("", "") }
+        if (loaded) applyPlan(count) else waitingPlan = count
+    }
+
+    private fun applyPlan(count: Int) {
+        val prefill = History.prefill(lastTime(latestSets))
+        drafts.value = List(count.coerceIn(MIN_SETS, MAX_SETS)) { i ->
+            prefill.valuesFor(i)?.let { (weight, reps) -> Draft(weight.format(locale()), reps.value.toString(), true, true) }
+                ?: Draft("", "")
+        }
     }
 
     /** A new row copying the previous row, or the last done set when no rows are left. */
@@ -89,19 +120,19 @@ class ExerciseLoggingViewModel(
         drafts.value = drafts.value + previous
     }
 
-    fun setWeight(index: Int, text: String) = update(index) { it.copy(weight = text) }
+    fun setWeight(index: Int, text: String) = update(index) { it.copy(weight = text, weightSuggested = false) }
 
-    fun setReps(index: Int, text: String) = update(index) { it.copy(reps = text) }
+    fun setReps(index: Int, text: String) = update(index) { it.copy(reps = text, repsSuggested = false) }
 
     /** From an empty or invalid field the stepper starts at the minimum (0 kg, 1 rep). */
     fun stepWeight(index: Int, direction: Int) = update(index) { draft ->
         val current = (Weight.parse(draft.weight) as? Parsed.Ok)?.value ?: Weight.ZERO
-        draft.copy(weight = current.step(direction).format(locale()))
+        draft.copy(weight = current.step(direction).format(locale()), weightSuggested = false)
     }
 
     fun stepReps(index: Int, direction: Int) = update(index) { draft ->
         val current = (Reps.parse(draft.reps) as? Parsed.Ok)?.value ?: Reps(Reps.MIN)
-        draft.copy(reps = current.step(direction).value.toString())
+        draft.copy(reps = current.step(direction).value.toString(), repsSuggested = false)
     }
 
     /** Saves the set at once with its confirm time (FR-005, FR-006) and asks for a sync. */
@@ -124,8 +155,12 @@ class ExerciseLoggingViewModel(
         drafts.value = drafts.value.mapIndexed { i, draft -> if (i == index) change(draft) else draft }
     }
 
+    private fun today() = SheetTime.workoutDay(Instant.ofEpochMilli(clockMillis()).epochSecond, zone())
+
+    private fun lastTime(sets: List<DisplaySet>): LastTime? = History.lastTime(sets, exercise, today(), zone())
+
     private fun doneToday(sets: List<DisplaySet>): List<DoneSet> {
-        val today = SheetTime.workoutDay(Instant.ofEpochMilli(clockMillis()).epochSecond, zone())
+        val today = today()
         return sets.filter { it.key.exercise == exercise && SheetTime.workoutDay(it.key.time, zone()) == today }
             .sortedBy { it.key.time }
             .map { DoneSet(it.key, it.syncState) }
@@ -141,6 +176,8 @@ class ExerciseLoggingViewModel(
             weightError = weightError.takeIf { it != InvalidReason.EMPTY },
             repsError = repsError.takeIf { it != InvalidReason.EMPTY },
             canConfirm = weightError == null && repsError == null,
+            weightSuggested = weightSuggested,
+            repsSuggested = repsSuggested,
         )
     }
 

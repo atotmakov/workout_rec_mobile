@@ -139,12 +139,12 @@ tab, and set rows are pre-filled from the last workout (spec US3)
 
 - [X] T036 [P] [US3] Write failing tests in `test/workout/HistoryTest.kt` (research R11, FR-011, FR-012): last time = sets of the newest day before today with the exercise, time order; record = max weight and max reps among sets with that weight (e.g. 40 × 8 when 40 × 6, 40 × 8, 35 × 12); no history → none; planned count = last time's set count, default 3; set *i* pre-filled from last time's set *i* or its last set; today's sets of the same exercise do not count as "last time"; pending sets on the phone count for history
 - [X] T037 [P] [US3] Write failing Compose UI tests in `androidTest/log/PrefillTest.kt`: `last_time` shows date and sets or "First time"; `record` shown as "40 kg × 8" or hidden; pre-filled values have semantics `suggested=true` (gray); after a stepper tap or typing, or after confirm, `suggested=false`
-- [X] T038 [US3] Add compiling stubs for T036–T037, push, and record the red run ID in this task — RUN_PLACEHOLDER
+- [X] T038 [US3] Add compiling stubs for T036–T037, push, and record the red run ID in this task — **red run 37530326630** (11 unit + 2 UI tests failing)
 
 ### Implementation for User Story 3
 
-- [ ] T039 [US3] Implement `main/workout/History.kt` so T036 passes
-- [ ] T040 [US3] Show last time and the record and pre-fill rows in `main/log/ExerciseLoggingViewModel.kt` / `ExerciseLoggingScreen.kt` / `SetRow.kt` (suggested style + semantics property), default planned count in `main/log/PlanSetsDialog.kt`; add strings; push and confirm T037 green
+- [X] T039 [US3] Implement `main/workout/History.kt` so T036 passes
+- [X] T040 [US3] Show last time and the record and pre-fill rows in `main/log/ExerciseLoggingViewModel.kt` / `ExerciseLoggingScreen.kt` / `SetRow.kt` (suggested style + semantics property), default planned count in `main/log/PlanSetsDialog.kt`; add strings; push and confirm T037 green
 
 **Checkpoint**: US1–US3 work independently
 
