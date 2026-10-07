@@ -44,4 +44,97 @@
     <string name="sign_out_question">Выйти из Workout Rec? Ваша таблица останется в аккаунте Google.</string>
     <string name="sign_out_confirm">Выйти</string>
     <string name="sign_out_cancel">Отмена</string>
+    <!-- 002 US1: logging sets -->
+    <string name="today_empty">Сегодня подходов ещё нет. Нажмите «Добавить упражнение».</string>
+    <string name="today_add_exercise">Добавить упражнение</string>
+    <string name="set_weight_reps">%1$s × %2$d</string>
+    <string name="picker_title">Выберите упражнение</string>
+    <string name="picker_search">Поиск</string>
+    <string name="picker_recent">Недавние</string>
+    <string name="picker_other_group">Другое</string>
+    <string name="picker_empty">Упражнений пока нет. Добавьте их на вкладку drills в таблице: группа мышц в столбце A, упражнение в столбце B.</string>
+    <string name="picker_open_drills">Открыть вкладку drills</string>
+    <string name="plan_title">Сколько подходов?</string>
+    <string name="plan_ok">Начать</string>
+    <string name="plan_cancel">Отмена</string>
+    <string name="plan_minus">Меньше подходов</string>
+    <string name="plan_plus">Больше подходов</string>
+    <string name="logging_weight">кг</string>
+    <string name="logging_reps">повт.</string>
+    <string name="logging_confirm">Готово</string>
+    <string name="logging_add_set">Добавить подход</string>
+    <string name="weight_minus">Меньше вес</string>
+    <string name="weight_plus">Больше вес</string>
+    <string name="reps_minus">Меньше повторений</string>
+    <string name="reps_plus">Больше повторений</string>
+    <string name="set_not_synced">Ещё не в таблице</string>
+    <string name="set_synced">В таблице</string>
+    <string name="error_empty">Введите значение</string>
+    <string name="error_not_a_number">Это не число</string>
+    <string name="error_weight_negative">Вес не может быть отрицательным</string>
+    <string name="error_too_many_decimals">Не больше 2 знаков после запятой</string>
+    <string name="error_too_large">Слишком много</string>
+    <string name="error_reps_not_whole">Повторения — целое число</string>
+    <string name="error_reps_too_small">Минимум 1 повторение</string>
+    <!-- 002 US2: offline sync -->
+    <plurals name="sync_pending">
+        <item quantity="one">%d подход ещё не в таблице</item>
+        <item quantity="few">%d подхода ещё не в таблице</item>
+        <item quantity="many">%d подходов ещё не в таблице</item>
+        <item quantity="other">%d подхода ещё не в таблице</item>
+    </plurals>
+    <string name="sync_failing_network">Нет связи — синхронизация отложена. Подходы сохранены в телефоне.</string>
+    <string name="sync_failing_spreadsheet">Не удаётся синхронизировать: таблица не найдена.</string>
+    <string name="sync_failing_structure">Не удаётся синхронизировать: в таблице нет вкладки log или drills.</string>
+    <string name="sync_failing_other">Сейчас не удаётся синхронизировать. Попробуем ещё раз.</string>
+    <string name="sync_sign_in">Войдите снова, чтобы синхронизировать</string>
+    <plurals name="unsynced_warning">
+        <item quantity="one">%d подход ещё не в таблице и будет потерян.</item>
+        <item quantity="few">%d подхода ещё не в таблице и будут потеряны.</item>
+        <item quantity="many">%d подходов ещё не в таблице и будут потеряны.</item>
+        <item quantity="other">%d подхода ещё не в таблице и будут потеряны.</item>
+    </plurals>
+    <string name="switch_question">Сменить аккаунт?</string>
+    <string name="switch_confirm">Сменить</string>
+    <string name="switch_cancel">Отмена</string>
+    <!-- 002 US3: last time and record -->
+    <string name="logging_first_time">Это упражнение впервые</string>
+    <string name="logging_last_time">В прошлый раз, %1$s: %2$s</string>
+    <string name="logging_record">Рекорд: %1$s кг × %2$d</string>
+    <!-- 002 US4: corrections -->
+    <string name="menu_workouts">Тренировки</string>
+    <string name="past_days_title">Тренировки</string>
+    <string name="past_days_empty">Прошлых тренировок пока нет.</string>
+    <plurals name="past_day_summary">
+        <item quantity="one">%1$d упражнение · подходов: %2$d</item>
+        <item quantity="few">%1$d упражнения · подходов: %2$d</item>
+        <item quantity="many">%1$d упражнений · подходов: %2$d</item>
+        <item quantity="other">%1$d упражнения · подходов: %2$d</item>
+    </plurals>
+    <string name="edit_set_title">Изменить подход</string>
+    <string name="edit_set_time">Записан %1$s (время не меняется)</string>
+    <string name="edit_exercise">Упражнение</string>
+    <string name="edit_save">Сохранить</string>
+    <string name="edit_delete">Удалить</string>
+    <string name="edit_cancel">Отмена</string>
+    <string name="delete_set_question">Удалить этот подход? Он будет удалён и из таблицы.</string>
+    <string name="delete_set_confirm">Удалить</string>
+    <string name="notice_conflict_dropped">Подход %1$s изменили в таблице раньше, чем туда попало ваше изменение; оставлена версия из таблицы.</string>
+    <string name="notice_workout_row">Вы удалили %1$s из дня, который уже учтён на вкладке workout; строка там не обновлена. При необходимости исправьте её в таблице.</string>
+    <string name="notice_dismiss">Скрыть</string>
+    <!-- 002 US5: past workout -->
+    <string name="menu_past_workout">Внести прошлую тренировку</string>
+    <string name="past_workout_title">Прошлая тренировка</string>
+    <string name="past_workout_date">Дата</string>
+    <string name="past_workout_start_time">Начало</string>
+    <string name="past_workout_duration">Длительность, мин</string>
+    <string name="past_workout_start">Далее</string>
+    <string name="past_workout_cancel">Отмена</string>
+    <string name="past_workout_save">Сохранить тренировку</string>
+    <string name="past_workout_add">Добавить подход</string>
+    <string name="past_workout_remove">Убрать</string>
+    <string name="past_workout_day_has_sets">В этот день уже есть подходы; новые добавятся к ним.</string>
+    <string name="past_workout_error_future">Дата не может быть в будущем.</string>
+    <string name="past_workout_error_duration">Длительность — от 1 до 600 минут.</string>
+    <string name="past_workout_error_format">Введите дату как 2026-01-31, а время как 18:00.</string>
 </resources>

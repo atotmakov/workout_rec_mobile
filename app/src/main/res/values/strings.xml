@@ -44,4 +44,91 @@
     <string name="sign_out_question">Sign out of Workout Rec? Your spreadsheet stays in your Google account.</string>
     <string name="sign_out_confirm">Sign out</string>
     <string name="sign_out_cancel">Cancel</string>
+    <!-- 002 US1: logging sets -->
+    <string name="today_empty">No sets today yet. Tap “Add exercise” to start.</string>
+    <string name="today_add_exercise">Add exercise</string>
+    <string name="set_weight_reps">%1$s × %2$d</string>
+    <string name="picker_title">Choose exercise</string>
+    <string name="picker_search">Search</string>
+    <string name="picker_recent">Recent</string>
+    <string name="picker_other_group">Other</string>
+    <string name="picker_empty">No exercises yet. Add them to the drills tab of your spreadsheet: muscle group in column A, exercise in column B.</string>
+    <string name="picker_open_drills">Open drills tab</string>
+    <string name="plan_title">How many sets?</string>
+    <string name="plan_ok">Start</string>
+    <string name="plan_cancel">Cancel</string>
+    <string name="plan_minus">Fewer sets</string>
+    <string name="plan_plus">More sets</string>
+    <string name="logging_weight">kg</string>
+    <string name="logging_reps">reps</string>
+    <string name="logging_confirm">Done</string>
+    <string name="logging_add_set">Add set</string>
+    <string name="weight_minus">Less weight</string>
+    <string name="weight_plus">More weight</string>
+    <string name="reps_minus">Fewer reps</string>
+    <string name="reps_plus">More reps</string>
+    <string name="set_not_synced">Not in the spreadsheet yet</string>
+    <string name="set_synced">In the spreadsheet</string>
+    <string name="error_empty">Enter a value</string>
+    <string name="error_not_a_number">Not a number</string>
+    <string name="error_weight_negative">Weight can’t be negative</string>
+    <string name="error_too_many_decimals">At most 2 decimals</string>
+    <string name="error_too_large">Too large</string>
+    <string name="error_reps_not_whole">Reps must be a whole number</string>
+    <string name="error_reps_too_small">At least 1 rep</string>
+    <!-- 002 US2: offline sync -->
+    <plurals name="sync_pending">
+        <item quantity="one">%d set not in the spreadsheet yet</item>
+        <item quantity="other">%d sets not in the spreadsheet yet</item>
+    </plurals>
+    <string name="sync_failing_network">Can’t sync: no connection. Your sets are saved on the phone.</string>
+    <string name="sync_failing_spreadsheet">Can’t sync: the spreadsheet was not found.</string>
+    <string name="sync_failing_structure">Can’t sync: the log or drills tab of the spreadsheet is missing.</string>
+    <string name="sync_failing_other">Can’t sync right now. Will try again.</string>
+    <string name="sync_sign_in">Sign in again to sync</string>
+    <plurals name="unsynced_warning">
+        <item quantity="one">%d set is not in the spreadsheet yet and will be lost.</item>
+        <item quantity="other">%d sets are not in the spreadsheet yet and will be lost.</item>
+    </plurals>
+    <string name="switch_question">Switch account?</string>
+    <string name="switch_confirm">Switch</string>
+    <string name="switch_cancel">Cancel</string>
+    <!-- 002 US3: last time and record -->
+    <string name="logging_first_time">First time with this exercise</string>
+    <string name="logging_last_time">Last time, %1$s: %2$s</string>
+    <string name="logging_record">Record: %1$s kg × %2$d</string>
+    <!-- 002 US4: corrections -->
+    <string name="menu_workouts">Workouts</string>
+    <string name="past_days_title">Workouts</string>
+    <string name="past_days_empty">No earlier workouts yet.</string>
+    <plurals name="past_day_summary">
+        <item quantity="one">%1$d exercise · %2$d sets</item>
+        <item quantity="other">%1$d exercises · %2$d sets</item>
+    </plurals>
+    <string name="edit_set_title">Edit set</string>
+    <string name="edit_set_time">Logged at %1$s (cannot be changed)</string>
+    <string name="edit_exercise">Exercise</string>
+    <string name="edit_save">Save</string>
+    <string name="edit_delete">Delete</string>
+    <string name="edit_cancel">Cancel</string>
+    <string name="delete_set_question">Delete this set? It is removed from the spreadsheet too.</string>
+    <string name="delete_set_confirm">Delete</string>
+    <string name="notice_conflict_dropped">The set %1$s was changed in the spreadsheet before your change reached it; the spreadsheet version is kept.</string>
+    <string name="notice_workout_row">You deleted %1$s from a day already counted in the workout tab; its row there was not updated. Fix it in the spreadsheet if needed.</string>
+    <string name="notice_dismiss">Dismiss</string>
+    <!-- 002 US5: past workout -->
+    <string name="menu_past_workout">Enter a past workout</string>
+    <string name="past_workout_title">Past workout</string>
+    <string name="past_workout_date">Date</string>
+    <string name="past_workout_start_time">Start</string>
+    <string name="past_workout_duration">Duration, min</string>
+    <string name="past_workout_start">Continue</string>
+    <string name="past_workout_cancel">Cancel</string>
+    <string name="past_workout_save">Save workout</string>
+    <string name="past_workout_add">Add set</string>
+    <string name="past_workout_remove">Remove</string>
+    <string name="past_workout_day_has_sets">This day already has sets; the new ones are added to it.</string>
+    <string name="past_workout_error_future">The date cannot be in the future.</string>
+    <string name="past_workout_error_duration">Duration is 1 to 600 minutes.</string>
+    <string name="past_workout_error_format">Enter the date as 2026-01-31 and the time as 18:00.</string>
 </resources>

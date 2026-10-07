@@ -34,6 +34,7 @@ import com.workoutrec.data.SelectedAccount
 
 const val MainScreenTag = "main_screen"
 const val AccountAvatarTag = "account_avatar"
+const val UnsyncedWarningTag = "unsynced_warning"
 
 /** Main screen with the selected account in the top-right corner (FR-003). */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -42,6 +43,8 @@ fun MainScreen(
     account: SelectedAccount,
     onSwitchAccount: () -> Unit,
     onSignOut: () -> Unit,
+    unsyncedCount: Int = 0,
+    onMenuOpened: () -> Unit = {},
     content: @Composable (Modifier) -> Unit = {},
 ) {
     Scaffold(
@@ -52,13 +55,17 @@ fun MainScreen(
                 actions = {
                     var menuOpen by remember { mutableStateOf(false) }
                     var confirmSignOut by remember { mutableStateOf(false) }
+                    var confirmSwitch by remember { mutableStateOf(false) }
                     Box(modifier = Modifier.padding(end = 8.dp)) {
-                        AccountAvatar(account = account, onClick = { menuOpen = true })
+                        AccountAvatar(account = account, onClick = { menuOpen = true; onMenuOpened() })
                         AccountMenu(
                             account = account,
                             expanded = menuOpen,
                             onDismiss = { menuOpen = false },
-                            onSwitchAccount = { menuOpen = false; onSwitchAccount() },
+                            onSwitchAccount = {
+                                menuOpen = false
+                                if (unsyncedCount > 0) confirmSwitch = true else onSwitchAccount()
+                            },
                             onSignOut = { menuOpen = false; confirmSignOut = true },
                         )
                     }
@@ -66,6 +73,14 @@ fun MainScreen(
                         SignOutDialog(
                             onConfirm = { confirmSignOut = false; onSignOut() },
                             onCancel = { confirmSignOut = false },
+                            unsyncedCount = unsyncedCount,
+                        )
+                    }
+                    if (confirmSwitch) {
+                        SwitchAccountDialog(
+                            unsyncedCount = unsyncedCount,
+                            onConfirm = { confirmSwitch = false; onSwitchAccount() },
+                            onCancel = { confirmSwitch = false },
                         )
                     }
                 },
