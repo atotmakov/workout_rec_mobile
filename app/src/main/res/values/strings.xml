@@ -97,4 +97,23 @@
     <string name="logging_first_time">First time with this exercise</string>
     <string name="logging_last_time">Last time, %1$s: %2$s</string>
     <string name="logging_record">Record: %1$s kg × %2$d</string>
+    <!-- 002 US4: corrections -->
+    <string name="menu_workouts">Workouts</string>
+    <string name="past_days_title">Workouts</string>
+    <string name="past_days_empty">No earlier workouts yet.</string>
+    <plurals name="past_day_summary">
+        <item quantity="one">%1$d exercise · %2$d sets</item>
+        <item quantity="other">%1$d exercises · %2$d sets</item>
+    </plurals>
+    <string name="edit_set_title">Edit set</string>
+    <string name="edit_set_time">Logged at %1$s (cannot be changed)</string>
+    <string name="edit_exercise">Exercise</string>
+    <string name="edit_save">Save</string>
+    <string name="edit_delete">Delete</string>
+    <string name="edit_cancel">Cancel</string>
+    <string name="delete_set_question">Delete this set? It is removed from the spreadsheet too.</string>
+    <string name="delete_set_confirm">Delete</string>
+    <string name="notice_conflict_dropped">The set %1$s was changed in the spreadsheet before your change reached it; the spreadsheet version is kept.</string>
+    <string name="notice_workout_row">You deleted %1$s from a day already counted in the workout tab; its row there was not updated. Fix it in the spreadsheet if needed.</string>
+    <string name="notice_dismiss">Dismiss</string>
 </resources>
