@@ -28,7 +28,10 @@ class SyncWorker(
      * analysis fix U1). Failures that need the user wait for the app to be opened.
      */
     override suspend fun doWork(): Result {
-        when (val outcome = runSync()) {
+        record("started")
+        val outcome = runSync()
+        record(BackgroundRun.describe(outcome))
+        when (outcome) {
             null -> retryLater()
             is SyncOutcome.Failed -> if (outcome.phase == SyncPhase.Failing(FailReason.NETWORK)) retryLater()
             else -> Unit
