@@ -63,17 +63,13 @@ not stop the download. Replaced as a whole in one transaction on each refresh.
 | `EDIT` | edit | same `EDIT`, values replaced (`lastSeen` kept) |
 | `EDIT` | delete | `DELETE` with the same `lastSeen` |
 
-### `past_workout_draft` (FR-006a, US5)
+### `past_workout_draft` (FR-006a, US5) — table reserved, not used
 
-| Field | Type | Notes |
-|-------|------|-------|
-| `id` | text, PK | |
-| `date` | local date | ≤ today |
-| `start` | local time | |
-| `durationMinutes` | int | 1–600, default 60 |
-
-Its sets are `pending_change` rows with `draftId`; on Save their times are computed (R10) and
-`draftId` is cleared in one transaction, which makes them ordinary pending `NEW` sets.
+The draft (date, start, duration, sets in entry order) lives in the past-workout screen's
+ViewModel until Save or Cancel, so nothing reaches the database or the sheet before Save. On Save
+the times are computed (R10) and all sets are inserted as pending `NEW` in one transaction. A
+draft is lost if Android ends the app while it is open; the table and the `draftId` column stay in
+schema version 1 for a later persistent draft.
 
 ### `sync_notice` (FR-010, FR-015)
 
