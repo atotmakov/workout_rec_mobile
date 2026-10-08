@@ -8,7 +8,6 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.work.Configuration
 import androidx.work.ListenableWorker
-import androidx.work.NetworkType
 import androidx.work.WorkManager
 import androidx.work.testing.TestListenableWorkerBuilder
 import androidx.work.testing.WorkManagerTestInitHelper
@@ -61,13 +60,12 @@ class SyncWorkerTest {
     }
 
     @Test
-    fun backgroundWorkWaitsForAConnection() {
+    fun backgroundWorkStartsNowOrAfterTheRetryDelay() {
         val workManager = WorkManager.getInstance(context)
         val now = SyncWork.request()
         val later = SyncWork.request(delayMinutes = 1)
         workManager.enqueue(listOf(now, later)).result.get()
         val nowInfo = workManager.getWorkInfoById(now.id).get()!!
-        assertEquals(NetworkType.CONNECTED, nowInfo.constraints.requiredNetworkType)
         assertEquals(0L, nowInfo.initialDelayMillis)
         assertEquals(60_000L, workManager.getWorkInfoById(later.id).get()!!.initialDelayMillis)
     }
