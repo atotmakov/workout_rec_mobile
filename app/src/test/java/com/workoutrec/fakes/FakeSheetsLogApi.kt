@@ -9,6 +9,7 @@ import com.workoutrec.google.MissingTabException
 import com.workoutrec.google.SheetDrill
 import com.workoutrec.google.SheetLogRow
 import com.workoutrec.google.SheetsLogApi
+import kotlinx.coroutines.awaitCancellation
 
 /**
  * In-memory log and drills tabs that apply call 22 like the server (contracts/sheets-log.md):
@@ -39,7 +40,11 @@ class FakeSheetsLogApi(
     /** Lets the next write reach the sheet but then fail, like a lost response. */
     var loseNextWriteResponse = false
 
-    private fun maybeFail(call: String) {
+    /** The next call to [call] never returns. */
+    var hangOn: String? = null
+
+    private suspend fun maybeFail(call: String) {
+        if (hangOn == call) awaitCancellation()
         failures.remove(call)?.let { throw it }
     }
 

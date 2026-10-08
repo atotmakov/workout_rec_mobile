@@ -87,4 +87,9 @@ class AccountRepository(
     private fun remember(outcome: AuthOutcome) {
         if (outcome is AuthOutcome.Granted) cachedToken = outcome.accessToken
     }
+
+    companion object {
+        /** quickstart-results.md issue 1. */
+        const val AUTHORIZE_TIMEOUT_MILLIS = 20_000L
+    }
 }

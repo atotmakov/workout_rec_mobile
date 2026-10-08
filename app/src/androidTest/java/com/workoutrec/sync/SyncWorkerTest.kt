@@ -90,13 +90,16 @@ class SyncWorkerTest {
         assertEquals(0, retriesLater)
     }
 
+    // quickstart-results.md issue 1: runs queued behind a stuck run stayed BLOCKED; a new request
+    // now replaces the old one (safe: sync never writes a set twice, research R5).
     @Test
-    fun aRequestDuringAPendingRunIsKept() {
+    fun aNewRequestReplacesAPendingOrStuckOne() {
         val workManager = WorkManager.getInstance(context)
         SyncWork.enqueue(workManager)
         SyncWork.enqueue(workManager)
+        SyncWork.enqueue(workManager)
         val infos = workManager.getWorkInfosForUniqueWork(SyncWork.NAME).get()
-        assertTrue(infos.isNotEmpty())
-        assertTrue(infos.none { it.state.isFinished })
+        assertEquals(1, infos.count { !it.state.isFinished })
+        assertTrue(infos.none { it.state == androidx.work.WorkInfo.State.BLOCKED })
     }
 }

@@ -153,6 +153,11 @@ class LogSync(
         return row == daySets.first() || row == daySets.last()
     }
 
+    companion object {
+        /** quickstart-results.md issue 1. */
+        const val RUN_TIMEOUT_MILLIS = 120_000L
+    }
+
     private fun phaseOf(e: Exception): SyncPhase = when (e) {
         is ApiError.Offline, is ApiError.ServiceUnavailable -> SyncPhase.Failing(FailReason.NETWORK)
         is ApiError.AccessDenied, is ApiError.TokenExpired -> SyncPhase.NeedsSignIn

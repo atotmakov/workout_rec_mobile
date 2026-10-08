@@ -4,10 +4,13 @@ import com.workoutrec.data.SelectedAccount
 import com.workoutrec.fakes.FakeAccountPicker
 import com.workoutrec.fakes.FakeApiAuthorizer
 import com.workoutrec.fakes.FakeSettingsStore
+import com.workoutrec.google.ApiError
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Test
 
 class AccountRepositoryTest {
@@ -104,5 +107,19 @@ class AccountRepositoryTest {
         assertEquals("t1", repo.accessToken(forceRefresh = false))
         assertEquals("t2", repo.accessToken(forceRefresh = true))
         assertEquals(2, authorizer.authorizedEmails.size)
+    }
+
+    // quickstart-results.md issue 1: a token request that never answers must not block sync forever.
+    @Test
+    fun `a token request that never answers counts as no connection`() = runTest {
+        val authorizer = FakeApiAuthorizer().apply { hang = true }
+        val repo = AccountRepository(authorizer, FakeSettingsStore(account))
+        try {
+            repo.accessToken(forceRefresh = false)
+            fail("expected Offline")
+        } catch (e: ApiError) {
+            assertEquals(ApiError.Offline, e)
+        }
+        assertTrue(testScheduler.currentTime <= AccountRepository.AUTHORIZE_TIMEOUT_MILLIS)
     }
 }

@@ -84,4 +84,15 @@ class LogSyncErrorsTest {
         assertEquals(listOf(SyncPhase.Running, SyncPhase.Idle), status.phases)
         assertEquals(7L, status.status.value.lastSuccessAt)
     }
+
+    // quickstart-results.md issue 1: a hanging call must not keep a run (and the sync lock) forever.
+    @Test
+    fun `a run that hangs ends as a network failure after the time limit`() = runTest {
+        store.pending += set
+        sheets.hangOn = "read"
+        assertEquals(SyncOutcome.Failed(SyncPhase.Failing(FailReason.NETWORK)), sync.run())
+        assertEquals(LogSync.RUN_TIMEOUT_MILLIS, testScheduler.currentTime)
+        assertEquals(SyncPhase.Failing(FailReason.NETWORK), status.status.value.phase)
+        assertEquals(listOf("a"), store.pending.map { it.id })
+    }
 }
