@@ -19,6 +19,8 @@ import java.time.DateTimeException
 import java.time.ZoneId
 import java.time.ZoneOffset
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.withTimeout
 
 enum class NoticeKind { CONFLICT_DROPPED, WORKOUT_ROW_NOT_UPDATED }
 
@@ -56,7 +58,11 @@ class LogSync(
         val id = spreadsheetId() ?: return SyncOutcome.NoSpreadsheet
         status.setPhase(SyncPhase.Running)
         return try {
-            runFor(id)
+            withTimeout(RUN_TIMEOUT_MILLIS) { runFor(id) }
+        } catch (e: TimeoutCancellationException) {
+            // A hanging call must not hold the sync lock forever (quickstart-results.md issue 1).
+            status.setPhase(SyncPhase.Failing(FailReason.NETWORK))
+            SyncOutcome.Failed(SyncPhase.Failing(FailReason.NETWORK))
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -151,6 +157,11 @@ class LogSync(
         if (day >= today) return false
         val daySets = rows.filter { SheetTime.workoutDay(it.key.time, zone) == day }.sortedBy { it.key.time }
         return row == daySets.first() || row == daySets.last()
+    }
+
+    companion object {
+        /** quickstart-results.md issue 1. */
+        const val RUN_TIMEOUT_MILLIS = 120_000L
     }
 
     private fun phaseOf(e: Exception): SyncPhase = when (e) {

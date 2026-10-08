@@ -61,10 +61,11 @@ object SyncWork {
             .build()
 
     /**
-     * Appends after a pending or running sync, so a set saved during a run is never left behind
-     * (analysis fix I1); runs never overlap because they share the sync mutex.
+     * Replaces a pending or running sync. Appending (analysis fix I1) left runs BLOCKED forever behind
+     * a run that never finished (quickstart-results.md issue 1). Replacing is safe: a cancelled run
+     * leaves the pending changes in place, and the next run never writes a set twice (research R5).
      */
     fun enqueue(workManager: WorkManager, delayMinutes: Long = 0) {
-        workManager.enqueueUniqueWork(NAME, ExistingWorkPolicy.APPEND_OR_REPLACE, request(delayMinutes))
+        workManager.enqueueUniqueWork(NAME, ExistingWorkPolicy.REPLACE, request(delayMinutes))
     }
 }
