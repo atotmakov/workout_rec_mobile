@@ -3,6 +3,7 @@ package com.workoutrec.sync
 import android.content.ComponentName
 import android.content.Context
 import android.content.pm.PackageManager
+import android.net.NetworkCapabilities
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.work.Configuration
@@ -101,5 +102,18 @@ class SyncWorkerTest {
         val infos = workManager.getWorkInfosForUniqueWork(SyncWork.NAME).get()
         assertEquals(1, infos.count { !it.state.isFinished })
         assertTrue(infos.none { it.state == androidx.work.WorkInfo.State.BLOCKED })
+    }
+
+    // quickstart-results.md issue 1 (3d): in airplane mode a Pixel offers a network without internet,
+    // which met CONNECTED; runs started offline and hung. Require a validated internet network.
+    @Test
+    fun backgroundWorkWaitsForAValidatedInternetConnection() {
+        val workManager = WorkManager.getInstance(context)
+        val request = SyncWork.request()
+        workManager.enqueue(request).result.get()
+        val networkRequest = workManager.getWorkInfoById(request.id).get()!!.constraints.requiredNetworkRequest
+        assertTrue(networkRequest != null)
+        assertTrue(networkRequest!!.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET))
+        assertTrue(networkRequest.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED))
     }
 }
