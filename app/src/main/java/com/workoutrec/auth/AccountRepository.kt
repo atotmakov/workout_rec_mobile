@@ -6,6 +6,7 @@ import com.workoutrec.data.SettingsStore
 import com.workoutrec.google.ApiError
 import com.workoutrec.google.TokenProvider
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -77,7 +78,8 @@ class AccountRepository(
     override suspend fun accessToken(forceRefresh: Boolean): String = tokenLock.withLock {
         cachedToken?.takeIf { !forceRefresh }?.let { return@withLock it }
         val account = store.account.first() ?: throw ApiError.AccessDenied("No Google account selected")
-        when (val outcome = authorize(account)) {
+        // Play services may wait for a network that does not come; treat that as offline (issue 1).
+        when (val outcome = withTimeoutOrNull(AUTHORIZE_TIMEOUT_MILLIS) { authorize(account) } ?: AuthOutcome.Unavailable) {
             is AuthOutcome.Granted -> outcome.accessToken
             AuthOutcome.Unavailable -> throw ApiError.Offline
             else -> throw ApiError.AccessDenied("Google access was not granted")

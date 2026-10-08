@@ -19,8 +19,12 @@ Kotlin + Compose, manual DI (`AppContainer`), OkHttp + kotlinx.serialization RES
 ## R2. Background sync
 
 - **Decision**: WorkManager unique one-time work `log-sync` with a `CONNECTED` network
-  constraint, enqueued with `ExistingWorkPolicy.APPEND_OR_REPLACE` after every local change and on
-  app start, so a set saved while a run is in progress always gets another run (analysis fix I1).
+  constraint, enqueued with `ExistingWorkPolicy.REPLACE` after every local change and on app start:
+  a new request replaces a pending or running one, so a set saved during a run always gets a fresh
+  run. (Appending, analysis fix I1, left runs blocked behind a run that never finished on the
+  device — quickstart-results.md issue 1. A replaced run is cancelled safely: pending changes stay,
+  and R5 prevents double writes.) A token request is limited to 20 s and a whole run to 2 min, so
+  nothing can hold the sync lock forever.
   The worker always finishes as success; after a network failure it queues a fresh run one minute
   later instead of using WorkManager backoff, which can grow to hours (analysis fix U1, SC-003). When online, the app also runs the same sync in-process right after a set is
   confirmed, so SC-003's "within 1 minute" holds. A process-wide mutex serializes runs, so the
