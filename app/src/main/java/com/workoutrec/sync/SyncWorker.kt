@@ -1,6 +1,8 @@
 package com.workoutrec.sync
 
 import android.content.Context
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingWorkPolicy
@@ -54,9 +56,18 @@ class SyncWorkerFactory(
 object SyncWork {
     const val NAME = "log-sync"
 
+    /**
+     * Internet that Android has verified works. Plain CONNECTED was met in airplane mode by a network
+     * without internet, so runs started offline and hung (quickstart-results.md issue 1, 3d).
+     */
+    private val VALIDATED_INTERNET: NetworkRequest = NetworkRequest.Builder()
+        .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+        .addCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+        .build()
+
     fun request(delayMinutes: Long = 0): OneTimeWorkRequest =
         OneTimeWorkRequestBuilder<SyncWorker>()
-            .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
+            .setConstraints(Constraints.Builder().setRequiredNetworkRequest(VALIDATED_INTERNET, NetworkType.CONNECTED).build())
             .setInitialDelay(delayMinutes, TimeUnit.MINUTES)
             .build()
 

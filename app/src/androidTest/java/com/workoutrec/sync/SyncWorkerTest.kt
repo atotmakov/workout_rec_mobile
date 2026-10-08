@@ -3,11 +3,11 @@ package com.workoutrec.sync
 import android.content.ComponentName
 import android.content.Context
 import android.content.pm.PackageManager
+import android.net.NetworkCapabilities
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.work.Configuration
 import androidx.work.ListenableWorker
-import androidx.work.NetworkType
 import androidx.work.WorkManager
 import androidx.work.testing.TestListenableWorkerBuilder
 import androidx.work.testing.WorkManagerTestInitHelper
@@ -60,13 +60,12 @@ class SyncWorkerTest {
     }
 
     @Test
-    fun backgroundWorkWaitsForAConnection() {
+    fun backgroundWorkStartsNowOrAfterTheRetryDelay() {
         val workManager = WorkManager.getInstance(context)
         val now = SyncWork.request()
         val later = SyncWork.request(delayMinutes = 1)
         workManager.enqueue(listOf(now, later)).result.get()
         val nowInfo = workManager.getWorkInfoById(now.id).get()!!
-        assertEquals(NetworkType.CONNECTED, nowInfo.constraints.requiredNetworkType)
         assertEquals(0L, nowInfo.initialDelayMillis)
         assertEquals(60_000L, workManager.getWorkInfoById(later.id).get()!!.initialDelayMillis)
     }
@@ -101,5 +100,18 @@ class SyncWorkerTest {
         val infos = workManager.getWorkInfosForUniqueWork(SyncWork.NAME).get()
         assertEquals(1, infos.count { !it.state.isFinished })
         assertTrue(infos.none { it.state == androidx.work.WorkInfo.State.BLOCKED })
+    }
+
+    // quickstart-results.md issue 1 (3d): in airplane mode a Pixel offers a network without internet,
+    // which met CONNECTED; runs started offline and hung. Require a validated internet network.
+    @Test
+    fun backgroundWorkWaitsForAValidatedInternetConnection() {
+        val workManager = WorkManager.getInstance(context)
+        val request = SyncWork.request()
+        workManager.enqueue(request).result.get()
+        val networkRequest = workManager.getWorkInfoById(request.id).get()!!.constraints.requiredNetworkRequest
+        assertTrue(networkRequest != null)
+        assertTrue(networkRequest!!.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET))
+        assertTrue(networkRequest.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED))
     }
 }
