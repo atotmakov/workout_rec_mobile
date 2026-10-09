@@ -36,6 +36,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.workoutrec.auth.CredentialManagerAccountPicker
+import com.workoutrec.diag.shareLogIntent
 import com.workoutrec.home.AutomationReminder
 import com.workoutrec.home.MainScreen
 import com.workoutrec.log.LogRoutes
@@ -72,14 +73,26 @@ object Routes {
 }
 
 class MainActivity : ComponentActivity() {
+    private val container get() = (application as WorkoutRecApplication).container
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val container = (application as WorkoutRecApplication).container
         setContent {
             WorkoutRecTheme {
                 AppNavHost(container)
             }
         }
+    }
+
+    // When the app is on screen, for reading the background sync log (quickstart-results.md issue 1).
+    override fun onStart() {
+        super.onStart()
+        container.diagnosticLog.write("app opened")
+    }
+
+    override fun onStop() {
+        container.diagnosticLog.write("app closed")
+        super.onStop()
     }
 }
 
@@ -138,6 +151,7 @@ private fun AppNavHost(container: AppContainer) {
                     unsyncedCount = DisplayModel.pendingCount(pending),
                     // Research R13: try to sync first, so the warning counts only what is really left.
                     onMenuOpened = container.syncScheduler::requestSync,
+                    onShareLog = { context.startActivity(shareLogIntent(context, container.diagnosticLog)) },
                 ) { modifier ->
                     TodayRoute(
                         container = container,
