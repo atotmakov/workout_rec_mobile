@@ -68,11 +68,14 @@ object SyncWork {
 
     /**
      * Internet that Android has verified works. Plain CONNECTED was met in airplane mode by a network
-     * without internet, so runs started offline and hung (quickstart-results.md issue 1, 3d).
+     * without internet, so runs started offline and hung (quickstart-results.md issue 1, 3d). A VPN is
+     * allowed: with an always-on VPN the app's network is the VPN, and the builder's default "not a
+     * VPN" requirement kept every run waiting (3e).
      */
     private val VALIDATED_INTERNET: NetworkRequest = NetworkRequest.Builder()
         .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
         .addCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+        .removeCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)
         .build()
 
     fun request(delayMinutes: Long = 0): OneTimeWorkRequest =
