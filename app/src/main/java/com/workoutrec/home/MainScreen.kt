@@ -45,6 +45,8 @@ fun MainScreen(
     onSignOut: () -> Unit,
     unsyncedCount: Int = 0,
     onMenuOpened: () -> Unit = {},
+    /** Shares the background sync log (quickstart-results.md issue 1). */
+    onShareLog: () -> Unit = {},
     content: @Composable (Modifier) -> Unit = {},
 ) {
     Scaffold(

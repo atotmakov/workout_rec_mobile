@@ -17,6 +17,8 @@ class AccountRepository(
     private val store: SettingsStore,
     /** Clears Credential Manager state on sign-out (US3). */
     private val clearCredentials: suspend () -> Unit = {},
+    /** Diagnostic log for background sync (quickstart-results.md issue 1). */
+    private val log: (String) -> Unit = {},
 ) : TokenProvider {
 
     private val tokenLock = Mutex()

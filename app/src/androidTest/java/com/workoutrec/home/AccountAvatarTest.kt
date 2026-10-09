@@ -10,6 +10,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.workoutrec.R
 import com.workoutrec.data.SelectedAccount
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -48,5 +49,15 @@ class AccountAvatarTest {
         compose.onNodeWithText("alex@example.com").assertIsDisplayed()
         compose.onNodeWithText(context.getString(R.string.account_switch)).assertIsDisplayed()
         compose.onNodeWithText(context.getString(R.string.account_sign_out)).assertIsDisplayed()
+    }
+
+    // quickstart-results.md issue 1: the sync log is shared from the account menu.
+    @Test
+    fun theMenuSharesTheSyncLog() {
+        var shared = 0
+        compose.setContent { MainScreen(account = account, onSwitchAccount = {}, onSignOut = {}, onShareLog = { shared++ }) }
+        compose.onNodeWithTag(AccountAvatarTag).performClick()
+        compose.onNodeWithText(context.getString(R.string.account_share_log)).assertIsDisplayed().performClick()
+        assertEquals(1, shared)
     }
 }

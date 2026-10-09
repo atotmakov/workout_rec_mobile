@@ -13,6 +13,7 @@
     <string name="account_menu_description">Account menu</string>
     <string name="account_switch">Switch account</string>
     <string name="account_sign_out">Sign out</string>
+    <string name="account_share_log">Share sync log</string>
 
     <!-- US2: spreadsheet setup -->
     <string name="setup_error_offline">Internet connection needed. Connect and try again.</string>

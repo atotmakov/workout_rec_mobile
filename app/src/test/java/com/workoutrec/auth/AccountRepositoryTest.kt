@@ -122,4 +122,23 @@ class AccountRepositoryTest {
         }
         assertTrue(testScheduler.currentTime <= AccountRepository.AUTHORIZE_TIMEOUT_MILLIS)
     }
+
+    // quickstart-results.md issue 1: the shared log shows whether the token request is the step that hangs.
+    @Test
+    fun `token requests are written to the diagnostic log`() = runTest {
+        val logged = mutableListOf<String>()
+        val authorizer = FakeApiAuthorizer(AuthOutcome.Granted("t1"))
+        val repo = AccountRepository(authorizer, FakeSettingsStore(account), log = { logged += it })
+        repo.accessToken(forceRefresh = false)
+        repo.accessToken(forceRefresh = false)
+        assertEquals(listOf("token: requesting", "token: granted", "token: cached"), logged)
+    }
+
+    @Test
+    fun `a token request without an answer is written to the diagnostic log`() = runTest {
+        val logged = mutableListOf<String>()
+        val repo = AccountRepository(FakeApiAuthorizer().apply { hang = true }, FakeSettingsStore(account), log = { logged += it })
+        runCatching { repo.accessToken(forceRefresh = false) }
+        assertEquals(listOf("token: requesting", "token: no answer in 20 s"), logged)
+    }
 }

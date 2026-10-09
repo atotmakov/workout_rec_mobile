@@ -51,6 +51,8 @@ class LogSync(
     private val status: SyncStatusStore,
     private val spreadsheetId: suspend () -> String?,
     private val now: () -> Long = System::currentTimeMillis,
+    /** Diagnostic log for background sync (quickstart-results.md issue 1). */
+    private val log: (String) -> Unit = {},
 ) {
 
     /** Never throws for Google or network errors; they become [SyncOutcome.Failed] (contracts "Errors"). */

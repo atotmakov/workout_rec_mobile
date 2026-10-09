@@ -13,6 +13,7 @@
     <string name="account_menu_description">Меню аккаунта</string>
     <string name="account_switch">Сменить аккаунт</string>
     <string name="account_sign_out">Выйти</string>
+    <string name="account_share_log">Отправить журнал синхронизации</string>
 
     <!-- US2: spreadsheet setup -->
     <string name="setup_error_offline">Нужно подключение к интернету. Подключитесь и повторите.</string>
