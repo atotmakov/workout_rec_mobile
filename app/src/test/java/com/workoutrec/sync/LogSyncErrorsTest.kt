@@ -95,4 +95,25 @@ class LogSyncErrorsTest {
         assertEquals(SyncPhase.Failing(FailReason.NETWORK), status.status.value.phase)
         assertEquals(listOf("a"), store.pending.map { it.id })
     }
+
+    // quickstart-results.md issue 1: the shared log shows each run and why it failed.
+    @Test
+    fun `each run and its error are written to the diagnostic log`() = runTest {
+        val logged = mutableListOf<String>()
+        val logging = LogSync(store, sheets, status, spreadsheetId = { "s1" }, now = { 7L }, log = { logged += it })
+        store.pending += set
+        sheets.failNext("read", ApiError.Offline)
+        logging.run()
+        assertEquals("sync: start", logged.first())
+        assertTrue(logged.toString(), logged.any { it.startsWith("sync: failed") && "Offline" in it })
+    }
+
+    @Test
+    fun `a successful run writes how many changes it sent`() = runTest {
+        val logged = mutableListOf<String>()
+        val logging = LogSync(store, sheets, status, spreadsheetId = { "s1" }, now = { 7L }, log = { logged += it })
+        store.pending += set
+        logging.run()
+        assertEquals(listOf("sync: start", "sync: 1 pending", "sync: done, wrote 1 new, 0 edited, 0 deleted"), logged)
+    }
 }

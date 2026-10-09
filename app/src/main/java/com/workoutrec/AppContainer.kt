@@ -21,6 +21,7 @@ import com.workoutrec.google.SheetsClient
 import com.workoutrec.google.SheetsLogClient
 import com.workoutrec.setup.SpreadsheetSetupFlow
 import com.workoutrec.spreadsheet.SpreadsheetSetupService
+import com.workoutrec.diag.DiagnosticLog
 import com.workoutrec.sync.DataStoreSyncStatusStore
 import com.workoutrec.sync.LogSync
 import com.workoutrec.sync.SyncScheduler
@@ -28,6 +29,7 @@ import com.workoutrec.sync.SyncWork
 import com.workoutrec.sync.SyncStatusStore
 import com.workoutrec.workout.data.WorkoutDatabase
 import com.workoutrec.workout.data.WorkoutRepository
+import java.io.File
 import java.time.Instant
 import java.time.ZoneId
 import java.util.concurrent.TimeUnit
@@ -48,9 +50,12 @@ class AppContainer(context: Context) {
 
     val apiAuthorizer: ApiAuthorizer = GoogleApiAuthorizer(appContext)
 
+    /** Background sync log, shared from the account menu (quickstart-results.md issue 1). */
+    val diagnosticLog = DiagnosticLog(File(appContext.filesDir, "logs/sync.log"))
+
     val accountRepository = AccountRepository(apiAuthorizer, settingsStore, clearCredentials = {
         runCatching { CredentialManager.create(appContext).clearCredentialState(ClearCredentialStateRequest()) }
-    })
+    }, log = diagnosticLog::write)
 
     val okHttpClient: OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(20, TimeUnit.SECONDS)
@@ -82,8 +87,12 @@ class AppContainer(context: Context) {
             sheets = sheetsLogClient,
             status = syncStatusStore,
             spreadsheetId = { settingsStore.binding.first()?.spreadsheetId },
+            log = diagnosticLog::write,
         ),
         appScope,
-        enqueueBackground = { SyncWork.enqueue(WorkManager.getInstance(appContext)) },
+        enqueueBackground = {
+            diagnosticLog.write("background run queued")
+            SyncWork.enqueue(WorkManager.getInstance(appContext))
+        },
     )
 }

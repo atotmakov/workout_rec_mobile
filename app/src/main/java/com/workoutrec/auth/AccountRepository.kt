@@ -17,6 +17,8 @@ class AccountRepository(
     private val store: SettingsStore,
     /** Clears Credential Manager state on sign-out (US3). */
     private val clearCredentials: suspend () -> Unit = {},
+    /** Diagnostic log for background sync (quickstart-results.md issue 1). */
+    private val log: (String) -> Unit = {},
 ) : TokenProvider {
 
     private val tokenLock = Mutex()
@@ -76,12 +78,24 @@ class AccountRepository(
     }
 
     override suspend fun accessToken(forceRefresh: Boolean): String = tokenLock.withLock {
-        cachedToken?.takeIf { !forceRefresh }?.let { return@withLock it }
+        cachedToken?.takeIf { !forceRefresh }?.let {
+            log("token: cached")
+            return@withLock it
+        }
         val account = store.account.first() ?: throw ApiError.AccessDenied("No Google account selected")
+        log("token: requesting")
         // Play services may wait for a network that does not come; treat that as offline (issue 1).
-        when (val outcome = withTimeoutOrNull(AUTHORIZE_TIMEOUT_MILLIS) { authorize(account) } ?: AuthOutcome.Unavailable) {
+        val outcome = withTimeoutOrNull(AUTHORIZE_TIMEOUT_MILLIS) { authorize(account) }
+        log(
+            when (outcome) {
+                null -> "token: no answer in ${AUTHORIZE_TIMEOUT_MILLIS / 1000} s"
+                is AuthOutcome.Granted -> "token: granted"
+                else -> "token: ${outcome::class.simpleName}"
+            },
+        )
+        when (outcome) {
             is AuthOutcome.Granted -> outcome.accessToken
-            AuthOutcome.Unavailable -> throw ApiError.Offline
+            null, AuthOutcome.Unavailable -> throw ApiError.Offline
             else -> throw ApiError.AccessDenied("Google access was not granted")
         }
     }

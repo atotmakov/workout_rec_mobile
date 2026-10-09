@@ -51,21 +51,27 @@ class LogSync(
     private val status: SyncStatusStore,
     private val spreadsheetId: suspend () -> String?,
     private val now: () -> Long = System::currentTimeMillis,
+    /** Diagnostic log for background sync (quickstart-results.md issue 1). */
+    private val log: (String) -> Unit = {},
 ) {
 
     /** Never throws for Google or network errors; they become [SyncOutcome.Failed] (contracts "Errors"). */
     suspend fun run(): SyncOutcome {
-        val id = spreadsheetId() ?: return SyncOutcome.NoSpreadsheet
+        log("sync: start")
+        val id = spreadsheetId() ?: return SyncOutcome.NoSpreadsheet.also { log("sync: no spreadsheet") }
         status.setPhase(SyncPhase.Running)
         return try {
             withTimeout(RUN_TIMEOUT_MILLIS) { runFor(id) }
         } catch (e: TimeoutCancellationException) {
             // A hanging call must not hold the sync lock forever (quickstart-results.md issue 1).
+            log("sync: failed: no answer in ${RUN_TIMEOUT_MILLIS / 1000} s")
             status.setPhase(SyncPhase.Failing(FailReason.NETWORK))
             SyncOutcome.Failed(SyncPhase.Failing(FailReason.NETWORK))
         } catch (e: CancellationException) {
+            log("sync: cancelled")
             throw e
         } catch (e: Exception) {
+            log("sync: failed: ${e::class.simpleName}: ${e.message}")
             val phase = phaseOf(e)
             status.setPhase(phase)
             SyncOutcome.Failed(phase)
@@ -81,6 +87,7 @@ class LogSync(
         var read = sheets.readLogAndDrills(id)
         var rows = rowsOf(read, zone)
         val pending = store.pendingNow().filter { it.draftId == null }.sortedBy { it.createdAt }
+        log("sync: ${pending.size} pending")
 
         // Step 4 (research R5): a new set already in the log was written by an earlier run.
         val unmatched = rows.map { it.key }.toMutableList()
@@ -143,6 +150,7 @@ class LogSync(
         // Step 6.
         store.commit(read.drills.map { Exercise(it.name, it.muscleGroup) }, rows, done, notices)
         status.markSuccess(now())
+        log("sync: done, wrote ${appends.size} new, ${edits.size} edited, ${deletes.size} deleted")
         return SyncOutcome.Synced(wrote)
     }
 

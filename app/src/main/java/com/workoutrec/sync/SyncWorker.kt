@@ -1,6 +1,7 @@
 package com.workoutrec.sync
 
 import android.content.Context
+import android.os.Build
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import androidx.work.Constraints
@@ -14,6 +15,9 @@ import androidx.work.WorkManager
 import androidx.work.WorkerFactory
 import androidx.work.WorkerParameters
 import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 
 /** Background sync that also runs after the app was closed (research R2). */
 class SyncWorker(
@@ -31,7 +35,13 @@ class SyncWorker(
      */
     override suspend fun doWork(): Result {
         record("started")
-        val outcome = runSync()
+        val outcome = try {
+            runSync()
+        } catch (e: CancellationException) {
+            // Replaced by a newer request, or the network or time limit ended (issue 1 diagnostics).
+            withContext(NonCancellable) { record("stopped by Android (reason ${if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) stopReason else "n/a"})") }
+            throw e
+        }
         record(BackgroundRun.describe(outcome))
         when (outcome) {
             null -> retryLater()

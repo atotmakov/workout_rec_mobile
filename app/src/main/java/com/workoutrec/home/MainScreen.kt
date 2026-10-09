@@ -45,6 +45,8 @@ fun MainScreen(
     onSignOut: () -> Unit,
     unsyncedCount: Int = 0,
     onMenuOpened: () -> Unit = {},
+    /** Shares the background sync log (quickstart-results.md issue 1). */
+    onShareLog: () -> Unit = {},
     content: @Composable (Modifier) -> Unit = {},
 ) {
     Scaffold(
@@ -67,6 +69,7 @@ fun MainScreen(
                                 if (unsyncedCount > 0) confirmSwitch = true else onSwitchAccount()
                             },
                             onSignOut = { menuOpen = false; confirmSignOut = true },
+                            onShareLog = { menuOpen = false; onShareLog() },
                         )
                     }
                     if (confirmSignOut) {
@@ -130,6 +133,7 @@ fun AccountMenu(
     onDismiss: () -> Unit,
     onSwitchAccount: () -> Unit,
     onSignOut: () -> Unit,
+    onShareLog: () -> Unit = {},
 ) {
     DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
         account.displayName?.let { name ->
@@ -142,5 +146,6 @@ fun AccountMenu(
         )
         DropdownMenuItem(text = { Text(stringResource(R.string.account_switch)) }, onClick = onSwitchAccount)
         DropdownMenuItem(text = { Text(stringResource(R.string.account_sign_out)) }, onClick = onSignOut)
+        DropdownMenuItem(text = { Text(stringResource(R.string.account_share_log)) }, onClick = onShareLog)
     }
 }

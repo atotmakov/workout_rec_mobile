@@ -114,4 +114,17 @@ class SyncWorkerTest {
         assertTrue(networkRequest!!.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET))
         assertTrue(networkRequest.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED))
     }
+
+    // quickstart-results.md issue 1: the shared log shows when Android stops a run before it ends.
+    @Test
+    fun aRunStoppedByAndroidIsRecorded() = runTest {
+        val stopped = TestListenableWorkerBuilder<SyncWorker>(context)
+            .setWorkerFactory(
+                SyncWorkerFactory(runSync = { throw kotlinx.coroutines.CancellationException("stopped") }, retryLater = {}, record = { recorded += it }),
+            )
+            .build()
+        runCatching { stopped.doWork() }
+        assertEquals("started", recorded.first())
+        assertTrue(recorded.toString(), recorded.last().startsWith("stopped by Android"))
+    }
 }
