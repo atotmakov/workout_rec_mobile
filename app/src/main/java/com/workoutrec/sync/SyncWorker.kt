@@ -70,7 +70,8 @@ object SyncWork {
      * Internet that Android has verified works. Plain CONNECTED was met in airplane mode by a network
      * without internet, so runs started offline and hung (quickstart-results.md issue 1, 3d). A VPN is
      * allowed: with an always-on VPN the app's network is the VPN, and the builder's default "not a
-     * VPN" requirement kept every run waiting (3e).
+     * VPN" requirement kept every run waiting (3e). WorkManager 2.10.5+ keeps the removed capability
+     * when it stores the request (b/409716532); 2.10.0 added it back.
      */
     private val VALIDATED_INTERNET: NetworkRequest = NetworkRequest.Builder()
         .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
