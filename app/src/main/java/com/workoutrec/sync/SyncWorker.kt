@@ -1,6 +1,7 @@
 package com.workoutrec.sync
 
 import android.content.Context
+import android.os.Build
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import androidx.work.Constraints
@@ -38,7 +39,7 @@ class SyncWorker(
             runSync()
         } catch (e: CancellationException) {
             // Replaced by a newer request, or the network or time limit ended (issue 1 diagnostics).
-            withContext(NonCancellable) { record("stopped by Android (reason $stopReason)") }
+            withContext(NonCancellable) { record("stopped by Android (reason ${if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) stopReason else "n/a"})") }
             throw e
         }
         record(BackgroundRun.describe(outcome))
