@@ -127,4 +127,15 @@ class SyncWorkerTest {
         assertEquals("started", recorded.first())
         assertTrue(recorded.toString(), recorded.last().startsWith("stopped by Android"))
     }
+
+    // quickstart-results.md issue 1 (3e): with an always-on VPN the app's network is the VPN, so the
+    // default "not a VPN" requirement was never met and background runs never started.
+    @Test
+    fun backgroundWorkAcceptsAVpnNetwork() {
+        val workManager = WorkManager.getInstance(context)
+        val request = SyncWork.request()
+        workManager.enqueue(request).result.get()
+        val networkRequest = workManager.getWorkInfoById(request.id).get()!!.constraints.requiredNetworkRequest!!
+        assertFalse(networkRequest.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN))
+    }
 }

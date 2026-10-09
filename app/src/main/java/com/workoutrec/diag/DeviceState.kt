@@ -28,6 +28,8 @@ object DeviceState {
         "unknown"
     }
 
+    fun network(internet: Boolean, validated: Boolean, vpn: Boolean): String = TODO("issue 1 (3e)")
+
     private fun idle(context: Context): Boolean? = context.getSystemService(PowerManager::class.java)?.isDeviceIdleMode
 
     private fun powerSaver(context: Context): Boolean? = context.getSystemService(PowerManager::class.java)?.isPowerSaveMode
