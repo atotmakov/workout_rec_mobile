@@ -17,7 +17,7 @@ import com.workoutrec.R
 
 /** First-launch account chooser (US1, FR-001); explains access before asking (FR-002). */
 @Composable
-fun ChooseAccountScreen(message: SetupMessage?, onChooseAccount: () -> Unit) {
+fun ChooseAccountScreen(message: SetupMessage?, onChooseAccount: () -> Unit, onShareLog: () -> Unit = {}) {
     Column(
         modifier = Modifier
             .fillMaxSize()
