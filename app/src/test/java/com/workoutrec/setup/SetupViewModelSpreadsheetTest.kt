@@ -35,6 +35,7 @@ class SetupViewModelSpreadsheetTest {
     private val account = SelectedAccount("a@example.com", "Alex T", null)
     private val now = Instant.parse("2026-10-05T12:00:00Z")
     private val log = mutableListOf<String>()
+    private val diagnostics = mutableListOf<String>()
     private val setup = FakeSpreadsheetSetupService(log = log)
     private val installer = FakeScriptInstaller(log = log)
     private lateinit var store: FakeSettingsStore
@@ -51,7 +52,7 @@ class SetupViewModelSpreadsheetTest {
      */
     private fun pickedAccount(binding: SpreadsheetBinding? = null): SetupViewModel {
         store = FakeSettingsStore(account = if (binding != null) account else null, binding = binding)
-        val flow = SpreadsheetSetupFlow(setup, installer, store, timeZone = { "Europe/Moscow" }, now = { now })
+        val flow = SpreadsheetSetupFlow(setup, installer, store, timeZone = { "Europe/Moscow" }, now = { now }, log = { diagnostics += it })
         val vm = SetupViewModel(AccountRepository(FakeApiAuthorizer(AuthOutcome.Granted("t")), store), flow)
         vm.start()
         if (binding == null) vm.chooseAccount(FakeAccountPicker(PickResult.Picked(account)))
@@ -117,6 +118,25 @@ class SetupViewModelSpreadsheetTest {
         setup.matches = false
         val vm = pickedAccount()
         assertEquals(SetupState.AskRewrite("existing"), vm.state.value)
+    }
+
+    // Sign out, sign in: the rewrite question for a spreadsheet the user considers fine. The shared
+    // sync log must say which structure rule failed.
+    @Test
+    fun `a mismatch writes its reasons to the diagnostic log`() = runTest {
+        setup.found = DriveFile("existing")
+        setup.matches = false
+        pickedAccount()
+        val line = diagnostics.single { it.startsWith("setup: spreadsheet existing does not match") }
+        assertTrue(line, "MissingTab(tab=log)" in line && "MissingTab(tab=balance)" in line)
+    }
+
+    @Test
+    fun `a match is written to the diagnostic log`() = runTest {
+        setup.found = DriveFile("existing")
+        setup.metadata = enabledNow
+        pickedAccount()
+        assertTrue(diagnostics.toString(), "setup: spreadsheet existing matches" in diagnostics)
     }
 
     @Test

@@ -23,6 +23,8 @@ class SpreadsheetSetupFlow(
     private val store: SettingsStore,
     private val timeZone: () -> String,
     private val now: () -> Instant,
+    /** Diagnostic log, shared from the account menu. */
+    private val log: (String) -> Unit = {},
 ) : PostAuthStep {
 
     /** On launch with a binding: Ready at once, no network (FR-004); [refresh] checks in the background. */
