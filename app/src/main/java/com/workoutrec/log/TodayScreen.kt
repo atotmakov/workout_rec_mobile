@@ -40,6 +40,9 @@ fun TodayScreen(
     onAddExercise: () -> Unit,
     onOpenExercise: (String) -> Unit,
     modifier: Modifier = Modifier,
+    /** Pull down to sync now instead of waiting for the 5-minute refresh (research R7). */
+    refreshing: Boolean = false,
+    onRefresh: () -> Unit = {},
     header: @Composable () -> Unit = {},
 ) {
     val locale = LocalConfiguration.current.locales[0]

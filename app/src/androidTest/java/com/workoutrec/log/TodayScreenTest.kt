@@ -5,6 +5,8 @@ import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeDown
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.workoutrec.workout.DisplaySet
 import com.workoutrec.workout.ExerciseGroup
@@ -50,5 +52,25 @@ class TodayScreenTest {
         compose.onNodeWithTag(TodayTags.exercise(1)).assertTextContains("bench", substring = true)
         compose.onNodeWithTag(TodayTags.exercise(1)).performClick()
         assertEquals("bench", opened)
+    }
+
+    // Rows deleted in the web UI stayed until the 5-minute refresh (research R7); pulling down syncs now.
+    @Test
+    fun pullingDownRefreshes() {
+        var refreshed = 0
+        val groups = listOf(ExerciseGroup("squat", listOf(set(1_768_240_800, 2000, 10, "squat"))))
+        compose.setContent { TodayScreen(groups = groups, onAddExercise = {}, onOpenExercise = {}, onRefresh = { refreshed++ }) }
+        compose.onNodeWithTag(TodayTags.SCREEN).performTouchInput { swipeDown() }
+        compose.waitForIdle()
+        assertEquals(1, refreshed)
+    }
+
+    @Test
+    fun pullingDownRefreshesAnEmptyDay() {
+        var refreshed = 0
+        compose.setContent { TodayScreen(groups = emptyList(), onAddExercise = {}, onOpenExercise = {}, onRefresh = { refreshed++ }) }
+        compose.onNodeWithTag(TodayTags.SCREEN).performTouchInput { swipeDown() }
+        compose.waitForIdle()
+        assertEquals(1, refreshed)
     }
 }
