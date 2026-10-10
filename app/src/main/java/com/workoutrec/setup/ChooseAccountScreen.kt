@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -36,6 +37,7 @@ fun ChooseAccountScreen(message: SetupMessage?, onChooseAccount: () -> Unit, onS
         Button(onClick = onChooseAccount) {
             Text(stringResource(if (message == null) R.string.setup_choose_account else R.string.setup_choose_again))
         }
+        TextButton(onClick = onShareLog) { Text(stringResource(R.string.account_share_log)) }
     }
 }
 

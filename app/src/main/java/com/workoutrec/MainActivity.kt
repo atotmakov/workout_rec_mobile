@@ -119,7 +119,10 @@ private fun AppNavHost(container: AppContainer) {
     NavHost(navController = navController, startDestination = Routes.SETUP) {
         composable(Routes.SETUP) {
             val setupAccount by container.settingsStore.account.collectAsState(initial = null)
-            SetupRoute(viewModel, state, accountEmail = setupAccount?.email, onReady = {
+            val context = LocalContext.current
+            SetupRoute(viewModel, state, accountEmail = setupAccount?.email, onShareLog = {
+                context.startActivity(shareLogIntent(context, container.diagnosticLog))
+            }, onReady = {
                 navController.navigate(Routes.HOME) { popUpTo(Routes.SETUP) { inclusive = true } }
             })
         }
@@ -213,7 +216,7 @@ private fun AppNavHost(container: AppContainer) {
 }
 
 @Composable
-private fun SetupRoute(viewModel: SetupViewModel, state: SetupState, accountEmail: String?, onReady: () -> Unit) {
+private fun SetupRoute(viewModel: SetupViewModel, state: SetupState, accountEmail: String?, onShareLog: () -> Unit, onReady: () -> Unit) {
     val context = LocalContext.current
     val language = LocalConfiguration.current.locales[0].language
     val consentLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result ->
@@ -238,7 +241,7 @@ private fun SetupRoute(viewModel: SetupViewModel, state: SetupState, accountEmai
         SetupState.Starting, SetupState.Authorizing, SetupState.Working -> SetupProgressScreen(error = null, onRetry = {})
         is SetupState.SignedOut -> ChooseAccountScreen(message = state.message, onChooseAccount = {
             viewModel.chooseAccount(CredentialManagerAccountPicker(context, BuildConfig.WEB_CLIENT_ID))
-        })
+        }, onShareLog = onShareLog)
         is SetupState.NeedsConsent -> {
             Progress()
             LaunchedEffect(state) {

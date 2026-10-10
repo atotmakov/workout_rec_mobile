@@ -71,6 +71,7 @@ class AppContainer(context: Context) {
         store = settingsStore,
         timeZone = { ZoneId.systemDefault().id },
         now = { Instant.now() },
+        log = diagnosticLog::write,
     )
 
     // Feature 002: workout logging (plan.md).
