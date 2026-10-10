@@ -72,5 +72,6 @@ object StructureValidator {
     private fun sameFormula(actual: String?, expected: String): Boolean =
         actual != null && normalize(actual) == normalize(expected)
 
-    private fun normalize(formula: String) = formula.filterNot { it.isWhitespace() }
+    /** Whitespace dropped; `;` read as `,` since Google may return the locale's separator (ru_RU uses `;`). */
+    private fun normalize(formula: String) = formula.filterNot { it.isWhitespace() }.replace(';', ',')
 }
