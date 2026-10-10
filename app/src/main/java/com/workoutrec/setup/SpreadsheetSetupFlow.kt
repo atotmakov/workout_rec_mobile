@@ -23,6 +23,8 @@ class SpreadsheetSetupFlow(
     private val store: SettingsStore,
     private val timeZone: () -> String,
     private val now: () -> Instant,
+    /** Diagnostic log, shared from the account menu. */
+    private val log: (String) -> Unit = {},
 ) : PostAuthStep {
 
     /** On launch with a binding: Ready at once, no network (FR-004); [refresh] checks in the background. */
@@ -70,9 +72,13 @@ class SpreadsheetSetupFlow(
     private suspend fun checkExisting(account: SelectedAccount, spreadsheetId: String): SetupState =
         guarded(SetupStep.Checking) {
             val check = setup.check(spreadsheetId)
-            when (check.result) {
-                is StructureCheckResult.Mismatch -> SetupState.AskRewrite(spreadsheetId)
+            when (val result = check.result) {
+                is StructureCheckResult.Mismatch -> {
+                    log("setup: spreadsheet $spreadsheetId does not match: ${result.reasons.joinToString("; ")}")
+                    SetupState.AskRewrite(spreadsheetId)
+                }
                 StructureCheckResult.Match -> {
+                    log("setup: spreadsheet $spreadsheetId matches")
                     bind(account, spreadsheetId, check.snapshot.metadata)
                     afterMatch(account, spreadsheetId, check.snapshot)
                 }

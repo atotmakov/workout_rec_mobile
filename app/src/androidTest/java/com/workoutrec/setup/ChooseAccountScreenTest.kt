@@ -44,4 +44,13 @@ class ChooseAccountScreenTest {
         compose.setContent { ChooseAccountScreen(message = SetupMessage.AccessRevoked, onChooseAccount = {}) }
         compose.onNodeWithText(context.getString(R.string.setup_access_revoked)).assertIsDisplayed()
     }
+
+    // After "No" to the rewrite question the user is signed out; the log must still be shareable.
+    @Test
+    fun theSyncLogCanBeSharedWhileSignedOut() {
+        var shared = 0
+        compose.setContent { ChooseAccountScreen(message = null, onChooseAccount = {}, onShareLog = { shared++ }) }
+        compose.onNodeWithText(context.getString(R.string.account_share_log)).assertIsDisplayed().performClick()
+        assertEquals(1, shared)
+    }
 }

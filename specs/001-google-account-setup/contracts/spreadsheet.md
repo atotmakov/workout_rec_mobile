@@ -77,5 +77,9 @@ ones:
    listed types (by column position; colours and table size not compared);
 7. `log!B2` has a drop-down from `drills!$B$2:$B`.
 
+Formulas (rules 3–5 and 7) are compared ignoring whitespace and treating `,` and `;` as the same
+argument separator: Google may return them in the spreadsheet locale's form, and `ru_RU` uses `;`
+(found on the device test, 2026-10-10: every check of an app-created spreadsheet failed on rule 5).
+
 Script presence and automation state are not part of the match (see `AutomationStatus` in
 [../data-model.md](../data-model.md)).

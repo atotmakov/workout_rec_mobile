@@ -59,6 +59,15 @@ class StructureValidatorTest {
     }
 
     @Test
+    fun `formulas in the ru_RU form with semicolons match`() {
+        val snapshot = reference.copy(
+            recA2Formula = "=FILTER(log!A:Z; log!B:B=A1)",
+            recRules = reference.recRules.map { it.copy(formula = it.formula.replace(",", ";")) },
+        )
+        assertEquals(StructureCheckResult.Match, StructureValidator.check(snapshot))
+    }
+
+    @Test
     fun `missing drop-down`() {
         assertEquals(listOf(MismatchReason.MissingRecDropDown), mismatch(reference.copy(recDropDownRange = null)))
         assertEquals(listOf(MismatchReason.MissingRecDropDown), mismatch(reference.copy(recDropDownRange = "=drills!\$A:\$A")))
