@@ -10,8 +10,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
@@ -34,6 +36,7 @@ object TodayTags {
 }
 
 /** Today's workout with "Add exercise" (FR-000, FR-013). */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TodayScreen(
     groups: List<ExerciseGroup>,
@@ -46,12 +49,17 @@ fun TodayScreen(
     header: @Composable () -> Unit = {},
 ) {
     val locale = LocalConfiguration.current.locales[0]
-    Column(modifier.fillMaxSize().padding(16.dp).testTag(TodayTags.SCREEN), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        header()
-        if (groups.isEmpty()) {
-            Text(stringResource(R.string.today_empty), modifier = Modifier.testTag(TodayTags.EMPTY))
-        }
-        LazyColumn(Modifier.weight(1f, fill = false), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    // One scrolling list, so pulling down works even on an empty day.
+    PullToRefreshBox(isRefreshing = refreshing, onRefresh = onRefresh, modifier = modifier.fillMaxSize().testTag(TodayTags.SCREEN)) {
+        LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            item {
+                Column(Modifier.padding(top = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    header()
+                    if (groups.isEmpty()) {
+                        Text(stringResource(R.string.today_empty), modifier = Modifier.testTag(TodayTags.EMPTY))
+                    }
+                }
+            }
             itemsIndexed(groups) { index, group ->
                 Card(
                     Modifier.fillMaxWidth()
@@ -65,9 +73,14 @@ fun TodayScreen(
                     }
                 }
             }
-        }
-        Button(onClick = onAddExercise, modifier = Modifier.fillMaxWidth().testTag(TodayTags.ADD_EXERCISE)) {
-            Text(stringResource(R.string.today_add_exercise))
+            item {
+                Button(
+                    onClick = onAddExercise,
+                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 16.dp).testTag(TodayTags.ADD_EXERCISE),
+                ) {
+                    Text(stringResource(R.string.today_add_exercise))
+                }
+            }
         }
     }
 }

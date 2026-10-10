@@ -44,6 +44,8 @@ import com.workoutrec.workout.Weight
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
 
 /** Navigation routes of the logging screens (contracts/screens.md "Navigation"). */
 object LogRoutes {
@@ -84,7 +86,22 @@ fun TodayRoute(
     }
     val notices by container.workoutRepository.notices.collectAsState(initial = emptyList())
     val scope = rememberCoroutineScope()
-    TodayScreen(groups, onAddExercise, onOpenExercise, modifier) {
+    var refreshing by remember { mutableStateOf(false) }
+    val refresh: () -> Unit = {
+        scope.launch {
+            refreshing = true
+            try {
+                // Off the main thread: a sync parses the whole log (research R7).
+                withContext(Dispatchers.Default) {
+                    container.diagnosticLog.write("pulled to refresh")
+                    container.syncScheduler.runNow()
+                }
+            } finally {
+                refreshing = false
+            }
+        }
+    }
+    TodayScreen(groups, onAddExercise, onOpenExercise, modifier, refreshing = refreshing, onRefresh = refresh) {
         header()
         SyncNoticeList(notices, onDismiss = { id -> scope.launch { container.workoutRepository.dismissNotice(id) } })
         Row {
