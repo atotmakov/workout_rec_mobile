@@ -30,7 +30,7 @@ client (package `com.workoutrec`, SHA-1 of the shared CI debug key) and Web OAut
 | 9 | Rewrite question and backup | 32, 36 | **Pass** – via Switch account → same account; old spreadsheet kept as `workout_rec_database_backup_2026-10-04` (and `_2`), new one created |
 | 10 | No network on first launch | – | Not yet run |
 | 11 | Russian UI | – | Not yet run |
-| 12 | Sign out | – | Not yet run |
+| 12 | Sign out | 89, 98 | **Fail → fixed in build 98** – signing in again asked to rewrite a correct spreadsheet; see issue 4. Build 98: the existing spreadsheet is reused (2026-10-10) |
 | 13 | Automation stopped reminder | – | Not yet run |
 
 ## Issues found
@@ -46,6 +46,11 @@ client (package `com.workoutrec`, SHA-1 of the shared CI debug key) and Web OAut
    the created spreadsheet only has header rows. Spec gap – to be added to the reference
    structure (version 2, build 32). Build 32 still created none: `spreadsheets.create` silently
    ignores `Sheet.tables`. Build 36 adds them with `addTable` right after create – **fixed**.
+4. **Rewrite question on a correct spreadsheet** (2026-10-10): the structure check compared
+   formulas as text, and Google returns them in the spreadsheet locale's form – `ru_RU` uses `;`
+   – so the rec rule `=AND($C2=MAX($C:$C), …)` never matched and every existing spreadsheet got
+   the rewrite question (also behind the backups in scenario 9). Build 98 treats `,` and `;` as
+   the same separator – **fixed**.
 
 **2026-10-04: the user accepted feature 001 as complete.** Scenarios still marked *Not yet run*
 were not executed before acceptance.
