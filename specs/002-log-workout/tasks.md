@@ -206,7 +206,7 @@ duration on Save
 - [X] T056 Refresh rules (research R7): refresh caches on app start and on resume at most every 5 minutes, and after a sync that wrote something, in `main/sync/SyncScheduler.kt`; test-first in `test/sync/RefreshPolicyTest.kt`
 - [X] T057 [P] Review all new RU and EN strings for consistency with feature 001 wording; lint `MissingTranslation` clean
 - [X] T058 [P] Update `README.md`: what the app now does (logging, offline sync, corrections, past workouts), and the troubleshooting line for "Sign in again" and sync notices
-- [ ] T059 Merge to `master` via PR after a green CI run; install the release APK and run [quickstart.md](quickstart.md) manual scenarios 1–13 on a device with the user; record results in `specs/002-log-workout/quickstart-results.md` and fix any failure test-first
+- [X] T059 Merge to `master` via PR after a green CI run; install the release APK and run [quickstart.md](quickstart.md) manual scenarios 1–13 on a device with the user; record results in `specs/002-log-workout/quickstart-results.md` and fix any failure test-first — all 13 pass on build 80; issue 1 fixed in PRs #10–#14
 
 ---
 
