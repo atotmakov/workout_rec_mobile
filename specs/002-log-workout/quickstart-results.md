@@ -1,7 +1,7 @@
 # Quickstart Results: Log New Workout
 
-Device run of [quickstart.md](quickstart.md) "Manual on a device" (task T059). Build: **57**
-(GitHub Release `build-57`, from PR #9). Tester: the owner, on an Android phone with Brave as
+Device run of [quickstart.md](quickstart.md) "Manual on a device" (task T059). Builds: **57** (GitHub
+Release `build-57`, from PR #9) to **80** (`build-80`, from PR #14, issue 1 fixed). Tester: the owner, on an Android phone with Brave as
 default browser.
 
 | # | Scenario | Build | Result |
@@ -15,3 +15,15 @@ default browser.
 | 3d | Build 65 (time limits + replace policy): offline then online, app in background | 65 | **Fail (issue 1)** — background run started while offline and hung ~3 min ("started" → "failed: NETWORK"), then retried every ~4 min; with the app open the set synced ~2 min after the network returned. Cause: the CONNECTED constraint is met by a network without internet in airplane mode; fix: require a validated internet network |
 | 3e | Build 75 (shared sync log): offline then online, app closed; phone has an always-on VPN | 75 | **Fail (issue 1, cause found)** — log: sets queued 01:16, app process stayed alive, standby "active", yet no background run started for 13 min; on opening the app a new run started in 60 ms and synced. Cause: the network request kept the builder's default "not a VPN" capability, and with an always-on VPN the app's network is the VPN; fix: allow a VPN network |
 | 3f | Build 80 (VPN network allowed, WorkManager 2.10.5): airplane mode, log sets, close the app, airplane mode off, do not open the app; always-on VPN | 80 | **Pass (issue 1 fixed)** — sets reached the log tab without opening the app |
+| 4 | Kill the app during a sync (airplane mode toggled mid-sync) | 80 | **Pass** — No duplicate and no missing rows |
+| 5 | Edit reps of a synced set, delete another | 80 | **Pass** — Only those rows changed / disappeared in the log tab |
+| 6 | Edit a set offline; change the same row in the web UI; go online | 80 | **Pass** — Web value kept; the app showed a notice for that set |
+| 7 | Past day from the web UI: open in Workouts, change a weight | 80 | **Pass** — That row changed in the log tab; no other row changed |
+| 9 | Delete the first set of a past day that has a workout row | 80 | **Pass** — Notice shown: workout row not updated |
+| 10 | Sign out with unsynced sets offline | 80 | **Pass** — Dialog showed how many sets will be lost |
+| 11 | Empty drills tab | 80 | **Pass** — Picker showed the empty message and opened the drills tab |
+| 12 | Russian phone language | 80 | **Pass** — All new screens in Russian |
+| 13 | 200 sets offline | 80 | **Pass** — No blocking error; all synced later |
+
+**Result**: all 13 scenarios pass on build 80. Issue 1 (background sync with the app closed) is
+fixed: the cause was the phone's always-on VPN (rows 3c–3f).
