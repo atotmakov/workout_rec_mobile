@@ -18,14 +18,26 @@ object DeviceState {
     private fun network(context: Context): String = try {
         val connectivity = context.getSystemService(ConnectivityManager::class.java)
         val caps = connectivity?.activeNetwork?.let(connectivity::getNetworkCapabilities)
-        when {
-            caps == null -> "none"
-            !caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) -> "no internet"
-            caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED) -> "internet (validated)"
-            else -> "internet (not validated)"
+        if (caps == null) {
+            "none"
+        } else {
+            network(
+                internet = caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET),
+                validated = caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED),
+                vpn = caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN),
+            )
         }
     } catch (e: SecurityException) {
         "unknown"
+    }
+
+    fun network(internet: Boolean, validated: Boolean, vpn: Boolean): String {
+        val state = when {
+            !internet -> "no internet"
+            validated -> "internet (validated)"
+            else -> "internet (not validated)"
+        }
+        return if (vpn) "$state, vpn" else state
     }
 
     private fun idle(context: Context): Boolean? = context.getSystemService(PowerManager::class.java)?.isDeviceIdleMode
