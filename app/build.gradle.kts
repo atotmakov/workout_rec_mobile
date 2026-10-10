@@ -30,12 +30,12 @@ val copyScriptAssets by tasks.registering(Sync::class) {
 
 android {
     namespace = "com.workoutrec"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.workoutrec"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 36
         // CI passes -PversionCode=<run number> so each published APK installs over the previous one.
         versionCode = (project.findProperty("versionCode") as String?)?.toInt() ?: 1
         versionName = "0.1.0"
@@ -55,11 +55,23 @@ android {
                 keyPassword = "android"
             }
         }
+        // Google Play upload key, from the UPLOAD_KEYSTORE_BASE64 / UPLOAD_KEYSTORE_PASSWORD
+        // secrets in CI. Play re-signs the bundle with its app signing key.
+        create("upload") {
+            System.getenv("UPLOAD_KEYSTORE_FILE")?.takeIf { it.isNotBlank() }?.let { path ->
+                storeFile = file(path)
+                storeType = "pkcs12"
+                storePassword = System.getenv("UPLOAD_KEYSTORE_PASSWORD")
+                keyAlias = "upload"
+                keyPassword = System.getenv("UPLOAD_KEYSTORE_PASSWORD")
+            }
+        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
+            signingConfigs.getByName("upload").takeIf { it.storeFile != null }?.let { signingConfig = it }
         }
     }
 
