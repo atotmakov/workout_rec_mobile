@@ -5,11 +5,13 @@ import com.workoutrec.data.SelectedAccount
 import com.workoutrec.data.SettingsStore
 import com.workoutrec.google.ApiError
 import com.workoutrec.google.TokenProvider
+import com.workoutrec.monitoring.Monitoring
+import com.workoutrec.monitoring.NoMonitoring
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeoutOrNull
 
 /** The selected account and its API access; also the token source for Google calls. */
 class AccountRepository(
@@ -19,6 +21,8 @@ class AccountRepository(
     private val clearCredentials: suspend () -> Unit = {},
     /** Diagnostic log for background sync (quickstart-results.md issue 1). */
     private val log: (String) -> Unit = {},
+    /** Feature 003: failed token requests as non-fatal events (FR-005). */
+    private val monitoring: Monitoring = NoMonitoring,
 ) : TokenProvider {
 
     private val tokenLock = Mutex()

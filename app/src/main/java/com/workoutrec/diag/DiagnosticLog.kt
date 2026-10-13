@@ -1,5 +1,7 @@
 package com.workoutrec.diag
 
+import com.workoutrec.monitoring.Monitoring
+import com.workoutrec.monitoring.NoMonitoring
 import java.io.File
 import java.io.IOException
 import java.time.Instant
@@ -15,6 +17,8 @@ class DiagnosticLog(
     private val now: () -> Long = System::currentTimeMillis,
     private val zone: () -> ZoneId = ZoneId::systemDefault,
     private val maxBytes: Long = 256_000,
+    /** Feature 003: guarded lines also go to the buffer attached to monitoring reports (FR-006). */
+    private val monitoring: Monitoring = NoMonitoring,
 ) {
     private val format = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS")
 

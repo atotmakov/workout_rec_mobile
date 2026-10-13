@@ -5,13 +5,17 @@ import android.content.Context
 import androidx.work.Configuration
 import androidx.work.WorkManager
 import com.workoutrec.diag.DeviceState
+import com.workoutrec.monitoring.MonitoringConfig
 import com.workoutrec.monitoring.MonitoringSettings
 import com.workoutrec.monitoring.SharedPreferencesStore
+import com.workoutrec.monitoring.TracerMonitoring
 import com.workoutrec.sync.BackgroundRun
 import com.workoutrec.sync.SyncWork
 import com.workoutrec.sync.SyncWorkerFactory
+import ru.ok.tracer.HasTracerConfiguration
+import ru.ok.tracer.TracerConfiguration
 
-class WorkoutRecApplication : Application(), Configuration.Provider {
+class WorkoutRecApplication : Application(), Configuration.Provider, HasTracerConfiguration {
     lateinit var container: AppContainer
         private set
 
@@ -25,6 +29,13 @@ class WorkoutRecApplication : Application(), Configuration.Provider {
             SharedPreferencesStore(base.getSharedPreferences(MonitoringSettings.FILE, Context.MODE_PRIVATE)),
         )
     }
+
+    /**
+     * Read by Tracer once per process, after [attachBaseContext] and before [onCreate]: every
+     * module with Send diagnostics on, nothing with it off or without a token (research R3).
+     */
+    override val tracerConfiguration: List<TracerConfiguration>
+        get() = TracerMonitoring.configurations(MonitoringConfig.plan(BuildConfig.TRACER_ENABLED, monitoringSettings.startedWith))
 
     override fun onCreate() {
         super.onCreate()

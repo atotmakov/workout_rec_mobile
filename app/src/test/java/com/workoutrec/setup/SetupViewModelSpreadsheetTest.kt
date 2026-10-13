@@ -8,11 +8,13 @@ import com.workoutrec.data.SelectedAccount
 import com.workoutrec.data.SpreadsheetBinding
 import com.workoutrec.fakes.FakeAccountPicker
 import com.workoutrec.fakes.FakeApiAuthorizer
+import com.workoutrec.fakes.FakeMonitoring
 import com.workoutrec.fakes.FakeScriptInstaller
 import com.workoutrec.fakes.FakeSettingsStore
 import com.workoutrec.fakes.FakeSpreadsheetSetupService
 import com.workoutrec.google.ApiError
 import com.workoutrec.google.DriveFile
+import com.workoutrec.monitoring.NonFatalIssue
 import java.time.Instant
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -36,6 +38,7 @@ class SetupViewModelSpreadsheetTest {
     private val now = Instant.parse("2026-10-05T12:00:00Z")
     private val log = mutableListOf<String>()
     private val diagnostics = mutableListOf<String>()
+    private val monitoring = FakeMonitoring()
     private val setup = FakeSpreadsheetSetupService(log = log)
     private val installer = FakeScriptInstaller(log = log)
     private lateinit var store: FakeSettingsStore
@@ -52,7 +55,7 @@ class SetupViewModelSpreadsheetTest {
      */
     private fun pickedAccount(binding: SpreadsheetBinding? = null): SetupViewModel {
         store = FakeSettingsStore(account = if (binding != null) account else null, binding = binding)
-        val flow = SpreadsheetSetupFlow(setup, installer, store, timeZone = { "Europe/Moscow" }, now = { now }, log = { diagnostics += it })
+        val flow = SpreadsheetSetupFlow(setup, installer, store, timeZone = { "Europe/Moscow" }, now = { now }, log = { diagnostics += it }, monitoring = monitoring)
         val vm = SetupViewModel(AccountRepository(FakeApiAuthorizer(AuthOutcome.Granted("t")), store), flow)
         vm.start()
         if (binding == null) vm.chooseAccount(FakeAccountPicker(PickResult.Picked(account)))
@@ -137,6 +140,25 @@ class SetupViewModelSpreadsheetTest {
         setup.metadata = enabledNow
         pickedAccount()
         assertTrue(diagnostics.toString(), "setup: spreadsheet existing matches" in diagnostics)
+    }
+
+    // Feature 003 FR-005: a mismatch also reaches monitoring, with the failed rules.
+    @Test
+    fun `a mismatch reports spreadsheet-mismatch with its reasons`() = runTest {
+        setup.found = DriveFile("existing")
+        setup.matches = false
+        pickedAccount()
+        val event = monitoring.nonFatals.single()
+        assertEquals(NonFatalIssue.SPREADSHEET_MISMATCH, event.issue)
+        assertTrue(event.error.message.orEmpty(), "MissingTab(tab=balance)" in event.error.message.orEmpty())
+    }
+
+    @Test
+    fun `a match reports nothing`() = runTest {
+        setup.found = DriveFile("existing")
+        setup.metadata = enabledNow
+        pickedAccount()
+        assertTrue(monitoring.nonFatals.isEmpty())
     }
 
     @Test

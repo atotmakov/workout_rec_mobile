@@ -6,6 +6,8 @@ import com.workoutrec.google.LogAppend
 import com.workoutrec.google.LogEdit
 import com.workoutrec.google.MissingTabException
 import com.workoutrec.google.SheetsLogApi
+import com.workoutrec.monitoring.Monitoring
+import com.workoutrec.monitoring.NoMonitoring
 import com.workoutrec.workout.ChangeKind
 import com.workoutrec.workout.Exercise
 import com.workoutrec.workout.LogRow
@@ -53,6 +55,8 @@ class LogSync(
     private val now: () -> Long = System::currentTimeMillis,
     /** Diagnostic log for background sync (quickstart-results.md issue 1). */
     private val log: (String) -> Unit = {},
+    /** Feature 003: handled errors as non-fatal events (FR-005). */
+    private val monitoring: Monitoring = NoMonitoring,
 ) {
 
     /** Never throws for Google or network errors; they become [SyncOutcome.Failed] (contracts "Errors"). */

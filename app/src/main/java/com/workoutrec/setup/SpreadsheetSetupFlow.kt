@@ -7,6 +7,8 @@ import com.workoutrec.data.SelectedAccount
 import com.workoutrec.data.SettingsStore
 import com.workoutrec.data.SpreadsheetBinding
 import com.workoutrec.google.ApiError
+import com.workoutrec.monitoring.Monitoring
+import com.workoutrec.monitoring.NoMonitoring
 import com.workoutrec.spreadsheet.SpreadsheetSetup
 import com.workoutrec.spreadsheet.SpreadsheetSnapshot
 import com.workoutrec.spreadsheet.StructureCheckResult
@@ -25,6 +27,8 @@ class SpreadsheetSetupFlow(
     private val now: () -> Instant,
     /** Diagnostic log, shared from the account menu. */
     private val log: (String) -> Unit = {},
+    /** Feature 003: a mismatch as a non-fatal event (FR-005). */
+    private val monitoring: Monitoring = NoMonitoring,
 ) : PostAuthStep {
 
     /** On launch with a binding: Ready at once, no network (FR-004); [refresh] checks in the background. */

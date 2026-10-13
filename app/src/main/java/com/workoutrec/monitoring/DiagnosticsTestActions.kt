@@ -15,9 +15,12 @@ class DiagnosticsTestActions(
     private val sleep: (Long) -> Unit,
     private val monitoring: Monitoring,
 ) {
-    fun crashNow() {}
+    /** An unhandled crash on the main thread (US1, quickstart scenario 1). */
+    fun crashNow() = runOnMain { throw DiagnosticsTestCrash() }
 
-    fun freeze(durationMs: Long) {}
+    /** Blocks the main thread so the system reports a freeze (US1, scenario 2). */
+    fun freeze(durationMs: Long) = runOnMain { sleep(durationMs) }
 
-    fun sendTestError() {}
+    /** One non-fatal event, grouped under `diagnostics-test` (US2). */
+    fun sendTestError() = monitoring.nonFatal(NonFatalIssue.DIAGNOSTICS_TEST, DiagnosticsTestError())
 }
