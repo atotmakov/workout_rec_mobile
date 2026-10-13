@@ -3,6 +3,9 @@ package com.workoutrec
 import android.content.Context
 import android.content.res.Configuration
 import android.util.TypedValue
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
+import androidx.compose.ui.graphics.toArgb
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Assert.assertEquals
@@ -29,11 +32,11 @@ class LaunchThemeTest {
 
     @Test
     fun theLaunchScreenIsDarkInDarkMode() {
-        assertEquals(0xFF1C1B1F.toInt(), windowBackground(Configuration.UI_MODE_NIGHT_YES))
+        assertEquals(darkColorScheme().background.toArgb(), windowBackground(Configuration.UI_MODE_NIGHT_YES))
     }
 
     @Test
     fun theLaunchScreenIsLightInLightMode() {
-        assertEquals(0xFFFFFBFE.toInt(), windowBackground(Configuration.UI_MODE_NIGHT_NO))
+        assertEquals(lightColorScheme().background.toArgb(), windowBackground(Configuration.UI_MODE_NIGHT_NO))
     }
 }
