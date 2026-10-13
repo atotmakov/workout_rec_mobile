@@ -32,7 +32,7 @@ ahead, so 2.2 is fine; if CI reports a metadata error, the Kotlin bump is a sepa
   to the CI step that builds the published APK and bundle (job "Build, lint, unit tests"). Locally
   they can come from `local.properties` (`tracer.appToken`, `tracer.pluginToken`), like
   `google.webClientId`.
-- In the `tracer {}` Gradle block: `disabled = appToken.isBlank()` (the DSL property is
+- In the `tracer {}` Gradle block: `setDisabled(appToken.isBlank())` (the DSL setter is
   `disabled`), so builds without the token
   (local builds, forks, the emulator job "Compose UI tests") never start Tracer.
 - `uploadMapping = false` and `dontFailOnUploadFailure = true`: R8 is off, so there is no mapping

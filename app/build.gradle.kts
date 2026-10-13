@@ -124,7 +124,7 @@ tracer {
     create("defaultConfig") {
         appToken = tracerAppToken
         pluginToken = tracerPluginToken
-        disabled = tracerAppToken.isBlank()
+        setDisabled(tracerAppToken.isBlank())
         // R8 is off, so stack traces are readable without a mapping (FR-004).
         uploadMapping = false
         dontFailOnUploadFailure = true
