@@ -27,6 +27,8 @@ import com.workoutrec.monitoring.Monitoring
 import com.workoutrec.monitoring.MonitoringControl
 import com.workoutrec.monitoring.MonitoringSettings
 import com.workoutrec.monitoring.NoMonitoring
+import com.workoutrec.monitoring.ProfileSampler
+import com.workoutrec.monitoring.SharedPreferencesStore
 import com.workoutrec.monitoring.StoredReportsCleaner
 import com.workoutrec.monitoring.TracerMonitoring
 import com.workoutrec.setup.SpreadsheetSetupFlow
@@ -42,6 +44,7 @@ import java.io.File
 import java.time.Instant
 import java.time.ZoneId
 import java.util.concurrent.TimeUnit
+import kotlin.random.Random
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -59,9 +62,15 @@ class AppContainer(context: Context, val monitoringSettings: MonitoringSettings)
      * Feature 003: Tracer when this build has its token and the process started with Send
      * diagnostics on; the switch is read again on every call (research R3).
      */
+    /** Research R9: which runs are profiled; "Profile next app start" is kept across restarts. */
+    val profileSampler = ProfileSampler(
+        SharedPreferencesStore(appContext.getSharedPreferences(MonitoringSettings.FILE, Context.MODE_PRIVATE)),
+        roll = { n -> Random.nextInt(n) },
+    )
+
     val monitoring: Monitoring =
         if (BuildConfig.TRACER_ENABLED && monitoringSettings.startedWith) {
-            TracerMonitoring(isEnabled = { monitoringSettings.sendDiagnostics })
+            TracerMonitoring(isEnabled = { monitoringSettings.sendDiagnostics }, sampler = profileSampler)
         } else {
             NoMonitoring
         }
@@ -80,6 +89,7 @@ class AppContainer(context: Context, val monitoringSettings: MonitoringSettings)
         monitoring = monitoring,
         takeHeapDump = { tag -> if (monitoring.enabled) TracerMonitoring.heapDumpNow(tag) },
         runDiskCheck = { if (monitoring.enabled) TracerMonitoring.diskCheckNow() },
+        forceProfileNextStart = profileSampler::forceNextAppStart,
     )
 
     val settingsStore: SettingsStore = DataStoreSettingsStore(appContext.settingsDataStore)

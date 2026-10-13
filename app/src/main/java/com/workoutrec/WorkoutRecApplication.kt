@@ -7,6 +7,8 @@ import androidx.work.WorkManager
 import com.workoutrec.diag.DeviceState
 import com.workoutrec.monitoring.MonitoringConfig
 import com.workoutrec.monitoring.MonitoringSettings
+import com.workoutrec.monitoring.ProfileTarget
+import com.workoutrec.monitoring.ScreenProfile
 import com.workoutrec.monitoring.SharedPreferencesStore
 import com.workoutrec.monitoring.StoredReportsCleaner
 import com.workoutrec.monitoring.TracerMonitoring
@@ -23,6 +25,9 @@ class WorkoutRecApplication : Application(), Configuration.Provider, HasTracerCo
     /** Feature 003: the Send diagnostics switch, read before Tracer starts (research R3). */
     lateinit var monitoringSettings: MonitoringSettings
         private set
+
+    /** App start until the first screen is drawn (FR-011); MainActivity marks it shown. */
+    val appStartProfile = ScreenProfile { container.monitoring.beginProfile(ProfileTarget.APP_START) }
 
     override fun attachBaseContext(base: Context) {
         super.attachBaseContext(base)
@@ -45,6 +50,7 @@ class WorkoutRecApplication : Application(), Configuration.Provider, HasTracerCo
     override fun onCreate() {
         super.onCreate()
         container = AppContainer(this, monitoringSettings)
+        appStartProfile.entered()
         container.diagnosticLog.write("app process started; ${DeviceState.describe(this)}")
         // Until quickstart scenario 0 confirms where Tracer keeps unsent reports (plan phase 5).
         container.diagnosticLog.write("storage: cache ${cacheDir.list()?.sorted()}, no backup ${noBackupFilesDir.list()?.sorted()}")

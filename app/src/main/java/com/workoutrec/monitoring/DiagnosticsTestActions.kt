@@ -34,5 +34,5 @@ class DiagnosticsTestActions(
     fun diskCheckNow() = runDiskCheck()
 
     /** The next app start is profiled whatever the share of runs (US5, scenario 8). */
-    fun profileNextAppStart() {}
+    fun profileNextAppStart() = forceProfileNextStart()
 }

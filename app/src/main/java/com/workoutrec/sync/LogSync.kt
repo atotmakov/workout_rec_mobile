@@ -9,6 +9,8 @@ import com.workoutrec.google.SheetsLogApi
 import com.workoutrec.monitoring.Monitoring
 import com.workoutrec.monitoring.NoMonitoring
 import com.workoutrec.monitoring.NonFatalIssue
+import com.workoutrec.monitoring.Profile
+import com.workoutrec.monitoring.ProfileTarget
 import com.workoutrec.workout.ChangeKind
 import com.workoutrec.workout.Exercise
 import com.workoutrec.workout.LogRow
@@ -64,19 +66,23 @@ class LogSync(
     suspend fun run(): SyncOutcome {
         log("sync: start")
         val id = spreadsheetId() ?: return SyncOutcome.NoSpreadsheet.also { log("sync: no spreadsheet") }
+        val profile = monitoring.beginProfile(ProfileTarget.SYNC)
         status.setPhase(SyncPhase.Running)
         return try {
-            withTimeout(RUN_TIMEOUT_MILLIS) { runFor(id) }
+            withTimeout(RUN_TIMEOUT_MILLIS) { runFor(id, profile) }.also { profile.commit() }
         } catch (e: TimeoutCancellationException) {
+            profile.abort()
             // A hanging call must not hold the sync lock forever (quickstart-results.md issue 1).
             log("sync: failed: no answer in ${RUN_TIMEOUT_MILLIS / 1000} s")
             monitoring.nonFatal(NonFatalIssue.SYNC_TIMEOUT, e)
             status.setPhase(SyncPhase.Failing(FailReason.NETWORK))
             SyncOutcome.Failed(SyncPhase.Failing(FailReason.NETWORK))
         } catch (e: CancellationException) {
+            profile.abort()
             log("sync: cancelled")
             throw e
         } catch (e: Exception) {
+            profile.abort()
             log("sync: failed: ${e::class.simpleName}: ${e.message}")
             monitoring.nonFatal(NonFatalIssue.SYNC_FAILED, e)
             val phase = phaseOf(e)
@@ -85,13 +91,14 @@ class LogSync(
         }
     }
 
-    private suspend fun runFor(id: String): SyncOutcome {
+    /** [profile] gets one section per step: info, read, write (only when writing), commit. */
+    private suspend fun runFor(id: String, profile: Profile): SyncOutcome {
         // Research R13: the spreadsheet was rewritten or re-created; only new sets still apply.
         status.current().sheet?.let { cached -> if (cached.spreadsheetId != id) store.keepOnlyNewSets() }
-        val sheet = sheetInfo(id)
+        val sheet = profile.section("info").use { sheetInfo(id) }
         val zone = zoneOf(sheet.timeZone)
 
-        var read = sheets.readLogAndDrills(id)
+        var read = profile.section("read").use { sheets.readLogAndDrills(id) }
         var rows = rowsOf(read, zone)
         val pending = store.pendingNow().filter { it.draftId == null }.sortedBy { it.createdAt }
         log("sync: ${pending.size} pending")
@@ -142,21 +149,25 @@ class LogSync(
         // Step 5: one atomic write, then a fresh read for the caches.
         val wrote = appends.isNotEmpty() || deletes.isNotEmpty() || edits.isNotEmpty()
         if (wrote) {
-            sheets.writeLog(
-                spreadsheetId = id,
-                logSheetId = sheet.logSheetId,
-                deletes = deletes,
-                edits = edits,
-                appends = appends.map { it.key.toAppend(zone) },
-            )
-            done += written + appends.map { it.id }
-            read = sheets.readLogAndDrills(id)
-            rows = rowsOf(read, zone)
+            profile.section("write").use {
+                sheets.writeLog(
+                    spreadsheetId = id,
+                    logSheetId = sheet.logSheetId,
+                    deletes = deletes,
+                    edits = edits,
+                    appends = appends.map { it.key.toAppend(zone) },
+                )
+                done += written + appends.map { it.id }
+                read = sheets.readLogAndDrills(id)
+                rows = rowsOf(read, zone)
+            }
         }
 
         // Step 6.
-        store.commit(read.drills.map { Exercise(it.name, it.muscleGroup) }, rows, done, notices)
-        status.markSuccess(now())
+        profile.section("commit").use {
+            store.commit(read.drills.map { Exercise(it.name, it.muscleGroup) }, rows, done, notices)
+            status.markSuccess(now())
+        }
         log("sync: done, wrote ${appends.size} new, ${edits.size} edited, ${deletes.size} deleted")
         return SyncOutcome.Synced(wrote)
     }

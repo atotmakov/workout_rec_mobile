@@ -1,5 +1,7 @@
 package com.workoutrec.monitoring
 
+import android.os.Build
+import android.os.Trace
 import ru.ok.tracer.CoreTracerConfiguration
 import ru.ok.tracer.Severity
 import ru.ok.tracer.Tracer
@@ -11,7 +13,9 @@ import ru.ok.tracer.disk.usage.DiskUsage
 import ru.ok.tracer.disk.usage.DiskUsageConfiguration
 import ru.ok.tracer.heap.dumps.HeapDumpConfiguration
 import ru.ok.tracer.heap.dumps.HeapDumps
+import ru.ok.tracer.profiler.sampling.SamplingProfiler
 import ru.ok.tracer.profiler.sampling.SamplingProfilerConfiguration
+import ru.ok.tracer.profiler.systrace.SystraceProfiler
 import ru.ok.tracer.profiler.systrace.SystraceProfilerConfiguration
 
 /**
@@ -22,7 +26,11 @@ import ru.ok.tracer.profiler.systrace.SystraceProfilerConfiguration
 class TracerMonitoring(
     private val isEnabled: () -> Boolean,
     private val limiter: NonFatalLimiter = NonFatalLimiter(),
+    /** Null: profiling off (research R9). */
+    sampler: ProfileSampler? = null,
 ) : Monitoring {
+
+    private val profiles = sampler?.let { ProfileStarter({ enabled }, it, ProfileGate(), ::startProfile) }
 
     override val enabled: Boolean get() = isEnabled()
 
@@ -36,7 +44,46 @@ class TracerMonitoring(
         safely { TracerCrashReport.report(issue.severity.toTracer(), reported, issue.key) }
     }
 
-    override fun beginProfile(target: ProfileTarget): Profile = NoProfile
+    override fun beginProfile(target: ProfileTarget): Profile = profiles?.begin(target) ?: NoProfile
+
+    /** Starts the target's profiler for at most its max duration; commits with the suffix `done`. */
+    private fun startProfile(target: ProfileTarget): Profile {
+        var started = false
+        safely {
+            when (target.kind) {
+                ProfilerKind.SAMPLING -> SamplingProfiler.start(target.tag, target.maxDurationMs)
+                ProfilerKind.SYSTRACE -> SystraceProfiler.start(target.tag, target.maxDurationMs)
+            }
+            started = true
+        }
+        return if (started) TracerProfile(target.kind) else NoProfile
+    }
+
+    private class TracerProfile(private val kind: ProfilerKind) : Profile {
+        private var cookie = 0
+
+        /** Async sections: a sync step may resume on another thread (API 29+; none before). */
+        override fun section(name: String): AutoCloseable {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return AutoCloseable { }
+            val id = ++cookie
+            Trace.beginAsyncSection(name, id)
+            return AutoCloseable { Trace.endAsyncSection(name, id) }
+        }
+
+        override fun commit() = safely {
+            when (kind) {
+                ProfilerKind.SAMPLING -> SamplingProfiler.commit("done")
+                ProfilerKind.SYSTRACE -> SystraceProfiler.commit("done")
+            }
+        }
+
+        override fun abort() = safely {
+            when (kind) {
+                ProfilerKind.SAMPLING -> SamplingProfiler.abort()
+                ProfilerKind.SYSTRACE -> SystraceProfiler.abort()
+            }
+        }
+    }
 
     /** Carries [details] in the event's message, with the original error as its cause. */
     private class ReportedError(details: String, cause: Throwable) : Exception(details, cause)
