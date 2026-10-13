@@ -133,4 +133,14 @@
     <string name="past_workout_error_duration">Duration is 1 to 600 minutes.</string>
     <string name="past_workout_error_format">Enter the date as 2026-01-31 and the time as 18:00.</string>
     <string name="sync_background_details">Background sync: %1$s · last run %2$s</string>
+    <string name="account_send_diagnostics">Send diagnostics</string>
+    <string name="account_send_diagnostics_restart">Applies after restart</string>
+    <string name="diagnostics_test_title">Diagnostics test</string>
+    <string name="diagnostics_test_crash">Crash now</string>
+    <string name="diagnostics_test_freeze">Freeze for 10 s</string>
+    <string name="diagnostics_test_error">Send test error</string>
+    <string name="diagnostics_test_heap_dump">Memory snapshot now</string>
+    <string name="diagnostics_test_disk">Disk check now</string>
+    <string name="diagnostics_test_profile_start">Profile next app start</string>
+    <string name="diagnostics_test_close">Close</string>
 </resources>

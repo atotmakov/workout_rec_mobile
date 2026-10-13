@@ -66,11 +66,11 @@ class AppContainer(context: Context, val monitoringSettings: MonitoringSettings)
     val apiAuthorizer: ApiAuthorizer = GoogleApiAuthorizer(appContext)
 
     /** Background sync log, shared from the account menu (quickstart-results.md issue 1). */
-    val diagnosticLog = DiagnosticLog(File(appContext.filesDir, "logs/sync.log"))
+    val diagnosticLog = DiagnosticLog(File(appContext.filesDir, "logs/sync.log"), monitoring = monitoring)
 
     val accountRepository = AccountRepository(apiAuthorizer, settingsStore, clearCredentials = {
         runCatching { CredentialManager.create(appContext).clearCredentialState(ClearCredentialStateRequest()) }
-    }, log = diagnosticLog::write)
+    }, log = diagnosticLog::write, monitoring = monitoring)
 
     val okHttpClient: OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(20, TimeUnit.SECONDS)
@@ -87,6 +87,7 @@ class AppContainer(context: Context, val monitoringSettings: MonitoringSettings)
         timeZone = { ZoneId.systemDefault().id },
         now = { Instant.now() },
         log = diagnosticLog::write,
+        monitoring = monitoring,
     )
 
     // Feature 002: workout logging (plan.md).
@@ -104,6 +105,7 @@ class AppContainer(context: Context, val monitoringSettings: MonitoringSettings)
             status = syncStatusStore,
             spreadsheetId = { settingsStore.binding.first()?.spreadsheetId },
             log = diagnosticLog::write,
+            monitoring = monitoring,
         ),
         appScope,
         enqueueBackground = {

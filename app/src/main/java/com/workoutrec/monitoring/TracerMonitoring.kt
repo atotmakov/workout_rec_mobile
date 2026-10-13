@@ -16,7 +16,10 @@ import ru.ok.tracer.profiler.systrace.SystraceProfilerConfiguration
  * that imports `ru.ok.tracer`; a thin adapter, validated on the phone (quickstart.md). Every call
  * checks [enabled] first and never lets an SDK error reach the app (FR-015).
  */
-class TracerMonitoring(private val isEnabled: () -> Boolean) : Monitoring {
+class TracerMonitoring(
+    private val isEnabled: () -> Boolean,
+    private val limiter: NonFatalLimiter = NonFatalLimiter(),
+) : Monitoring {
 
     override val enabled: Boolean get() = isEnabled()
 
@@ -25,7 +28,7 @@ class TracerMonitoring(private val isEnabled: () -> Boolean) : Monitoring {
     }
 
     override fun nonFatal(issue: NonFatalIssue, error: Throwable, details: String?) {
-        if (!enabled) return
+        if (!enabled || !limiter.allow(issue)) return
         val reported = if (details == null) error else ReportedError(details, error)
         safely { TracerCrashReport.report(issue.severity.toTracer(), reported, issue.key) }
     }

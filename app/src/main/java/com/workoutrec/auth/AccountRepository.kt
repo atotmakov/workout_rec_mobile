@@ -7,6 +7,7 @@ import com.workoutrec.google.ApiError
 import com.workoutrec.google.TokenProvider
 import com.workoutrec.monitoring.Monitoring
 import com.workoutrec.monitoring.NoMonitoring
+import com.workoutrec.monitoring.NonFatalIssue
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
@@ -90,13 +91,13 @@ class AccountRepository(
         log("token: requesting")
         // Play services may wait for a network that does not come; treat that as offline (issue 1).
         val outcome = withTimeoutOrNull(AUTHORIZE_TIMEOUT_MILLIS) { authorize(account) }
-        log(
-            when (outcome) {
-                null -> "token: no answer in ${AUTHORIZE_TIMEOUT_MILLIS / 1000} s"
-                is AuthOutcome.Granted -> "token: granted"
-                else -> "token: ${outcome::class.simpleName}"
-            },
-        )
+        val failure = when (outcome) {
+            null -> "no answer in ${AUTHORIZE_TIMEOUT_MILLIS / 1000} s"
+            is AuthOutcome.Granted -> null
+            else -> "${outcome::class.simpleName}"
+        }
+        log("token: ${failure ?: "granted"}")
+        if (failure != null) monitoring.nonFatal(NonFatalIssue.TOKEN_FAILED, TokenRequestFailed(failure), details = failure)
         when (outcome) {
             is AuthOutcome.Granted -> outcome.accessToken
             null, AuthOutcome.Unavailable -> throw ApiError.Offline
@@ -113,3 +114,6 @@ class AccountRepository(
         const val AUTHORIZE_TIMEOUT_MILLIS = 20_000L
     }
 }
+
+/** Reported when a Google access token request fails (feature 003 FR-005). */
+class TokenRequestFailed(reason: String) : Exception("Token request failed: $reason")

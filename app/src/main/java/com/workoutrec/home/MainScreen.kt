@@ -47,6 +47,8 @@ fun MainScreen(
     onMenuOpened: () -> Unit = {},
     /** Shares the background sync log (quickstart-results.md issue 1). */
     onShareLog: () -> Unit = {},
+    /** Feature 003: the Send diagnostics switch and its hidden test actions. */
+    diagnostics: DiagnosticsMenuState = DiagnosticsMenuState(),
     content: @Composable (Modifier) -> Unit = {},
 ) {
     Scaffold(
@@ -70,6 +72,7 @@ fun MainScreen(
                             },
                             onSignOut = { menuOpen = false; confirmSignOut = true },
                             onShareLog = { menuOpen = false; onShareLog() },
+                            diagnostics = diagnostics.copy(onTestAction = { menuOpen = false; diagnostics.onTestAction(it) }),
                         )
                     }
                     if (confirmSignOut) {
@@ -134,6 +137,7 @@ fun AccountMenu(
     onSwitchAccount: () -> Unit,
     onSignOut: () -> Unit,
     onShareLog: () -> Unit = {},
+    diagnostics: DiagnosticsMenuState = DiagnosticsMenuState(),
 ) {
     DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
         account.displayName?.let { name ->
@@ -147,5 +151,6 @@ fun AccountMenu(
         DropdownMenuItem(text = { Text(stringResource(R.string.account_switch)) }, onClick = onSwitchAccount)
         DropdownMenuItem(text = { Text(stringResource(R.string.account_sign_out)) }, onClick = onSignOut)
         DropdownMenuItem(text = { Text(stringResource(R.string.account_share_log)) }, onClick = onShareLog)
+        SendDiagnosticsItem(diagnostics, diagnostics.onTestAction)
     }
 }

@@ -8,6 +8,7 @@ import com.workoutrec.google.MissingTabException
 import com.workoutrec.google.SheetsLogApi
 import com.workoutrec.monitoring.Monitoring
 import com.workoutrec.monitoring.NoMonitoring
+import com.workoutrec.monitoring.NonFatalIssue
 import com.workoutrec.workout.ChangeKind
 import com.workoutrec.workout.Exercise
 import com.workoutrec.workout.LogRow
@@ -69,6 +70,7 @@ class LogSync(
         } catch (e: TimeoutCancellationException) {
             // A hanging call must not hold the sync lock forever (quickstart-results.md issue 1).
             log("sync: failed: no answer in ${RUN_TIMEOUT_MILLIS / 1000} s")
+            monitoring.nonFatal(NonFatalIssue.SYNC_TIMEOUT, e)
             status.setPhase(SyncPhase.Failing(FailReason.NETWORK))
             SyncOutcome.Failed(SyncPhase.Failing(FailReason.NETWORK))
         } catch (e: CancellationException) {
@@ -76,6 +78,7 @@ class LogSync(
             throw e
         } catch (e: Exception) {
             log("sync: failed: ${e::class.simpleName}: ${e.message}")
+            monitoring.nonFatal(NonFatalIssue.SYNC_FAILED, e)
             val phase = phaseOf(e)
             status.setPhase(phase)
             SyncOutcome.Failed(phase)

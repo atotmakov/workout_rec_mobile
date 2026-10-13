@@ -1,5 +1,6 @@
 package com.workoutrec.diag
 
+import com.workoutrec.monitoring.LogLineGuard
 import com.workoutrec.monitoring.Monitoring
 import com.workoutrec.monitoring.NoMonitoring
 import java.io.File
@@ -31,6 +32,7 @@ class DiagnosticLog(
         } catch (e: IOException) {
             // The log is only a diagnostic aid.
         }
+        if (LogLineGuard.allows(message)) monitoring.log(message)
     }
 
     @Synchronized
