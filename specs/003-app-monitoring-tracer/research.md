@@ -2,7 +2,8 @@
 
 Sources: Tracer documentation at apptracer.ru/doc (Android quick start, configuration, Crash and
 ANR, heap dumps, disk usage, sampling and systrace profilers, sideload, logging, migration), read
-2026-10-13. Facts the documentation does not state are marked **to verify** and are checked on
+2026-10-13; and the public classes of the 1.4.0 artifacts on Maven Central (read 2026-10-14,
+see "SDK API as published" at the end). Facts the documentation does not state are marked **to verify** and are checked on
 the device (see [quickstart.md](quickstart.md)).
 
 ## R1. SDK version and modules
@@ -31,7 +32,8 @@ ahead, so 2.2 is fine; if CI reports a metadata error, the Kotlin bump is a sepa
   to the CI step that builds the published APK and bundle (job "Build, lint, unit tests"). Locally
   they can come from `local.properties` (`tracer.appToken`, `tracer.pluginToken`), like
   `google.webClientId`.
-- In the `tracer {}` Gradle block: `isDisabled = appToken.isBlank()`, so builds without the token
+- In the `tracer {}` Gradle block: `disabled = appToken.isBlank()` (the DSL property is
+  `disabled`), so builds without the token
   (local builds, forks, the emulator job "Compose UI tests") never start Tracer.
 - `uploadMapping = false` and `dontFailOnUploadFailure = true`: R8 is off, so there is no mapping
   to upload, and a monitoring hiccup never fails a build.
@@ -73,6 +75,15 @@ Tracer reads `HasTracerConfiguration.tracerConfiguration` **once per process**, 
 
 **Alternatives considered**: restarting the process on toggle is abrupt and could interrupt a
 sync. Keeping the SDK running and filtering uploads isn't possible without an API.
+
+**Update 2026-10-14 (SDK classes)**: 1.4.0 has a runtime switch the docs don't mention,
+`Tracer.disable()`, and keeps its files in the app's **cache folder**, in entries whose names
+start with `tracer` (`TracerFiles.getTracerDir`). So:
+- Turning the switch off calls `Tracer.disable()` at once, and then deletes `cacheDir/tracer*`.
+  Nothing more is collected or sent in this process.
+- At a start with the switch off, the configuration list is empty and `cacheDir/tracer*` is
+  deleted before anything else runs.
+- Scenario 0 of the quickstart still confirms this on the phone.
 
 ## R4. Wrapping Tracer for test-first development
 
@@ -168,3 +179,20 @@ before the first build with monitoring reaches the phone. The Play Data safety f
 
 Tracer receives diagnostics only. Workout and spreadsheet data still go only through Google APIs,
 and no backend of ours is added. It is a new third-party dependency, justified in the plan.
+
+## SDK API as published (1.4.0, read from the artifacts)
+
+- Configuration: `ru.ok.tracer.HasTracerConfiguration` (`tracerConfiguration: List<TracerConfiguration>`);
+  builders `CoreTracerConfiguration.Builder` (`setDebugUpload`), `crash.report.CrashReportConfiguration.Builder`
+  (`setSendAnr`, `setExperimentalNonFatalRateLimitEnabled(Boolean?)`), `crash.report.CrashFreeConfiguration.Builder`,
+  `heap.dumps.HeapDumpConfiguration.Builder`, `disk.usage.DiskUsageConfiguration.Builder`
+  (`setInterestingSize(Long)`, `setProbability(Long)`), `profiler.sampling.SamplingProfilerConfiguration.Builder`,
+  `profiler.systrace.SystraceProfilerConfiguration.Builder`; each with `build()`.
+- Calls: `Tracer.disable()`; `TracerCrashReport.log(String)`, `TracerCrashReport.report(Severity, Throwable, String issueKey)`;
+  `Severity.ERROR/WARNING/INFO…`; `HeapDumps.runNow(tag)`; `DiskUsage.runNow()`;
+  `SamplingProfiler.start(tag, durationMs) / commit(suffix) / abort()`; the same on `SystraceProfiler`.
+- Heap dumps use a WorkManager worker (`ShrinkDumpWorker`); the app's `SyncWorkerFactory` returns
+  `null` for other workers, so WorkManager creates it by default.
+- Gradle plugin `ru.ok.tracer` (artifact `tracer-plugin`): `tracer { create("defaultConfig") { … } }` with
+  `appToken`, `pluginToken`, `uploadMapping`, `dontFailOnUploadFailure`, `environment`, `disabled`.
+- The SDK is built with Kotlin 1.8.22, so the project's Kotlin 2.1 reads it without issue.

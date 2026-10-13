@@ -18,6 +18,7 @@ browser = "1.8.0"
 room = "2.6.1"
 ksp = "2.1.0-1.0.29"
 work = "2.10.5"
+tracer = "1.4.0"
 junit = "4.13.2"
 androidxTestExtJunit = "1.2.1"
 androidxTestRunner = "1.6.2"
@@ -58,9 +59,18 @@ junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-test-ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidxTestExtJunit" }
 androidx-test-runner = { group = "androidx.test", name = "runner", version.ref = "androidxTestRunner" }
 
+# Tracer (apptracer.ru) app monitoring, feature 003 research R1; versions come from the BOM.
+tracer-platform = { group = "ru.ok.tracer", name = "tracer-platform", version.ref = "tracer" }
+tracer-crash-report = { group = "ru.ok.tracer", name = "tracer-crash-report" }
+tracer-heap-dumps = { group = "ru.ok.tracer", name = "tracer-heap-dumps" }
+tracer-disk-usage = { group = "ru.ok.tracer", name = "tracer-disk-usage" }
+tracer-profiler-sampling = { group = "ru.ok.tracer", name = "tracer-profiler-sampling" }
+tracer-profiler-systrace = { group = "ru.ok.tracer", name = "tracer-profiler-systrace" }
+
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+tracer = { id = "ru.ok.tracer", version.ref = "tracer" }

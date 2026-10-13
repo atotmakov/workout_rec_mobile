@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.tracer)
 }
 
 val localProperties = Properties().apply {
@@ -17,6 +18,16 @@ val localProperties = Properties().apply {
 // Read from local.properties (google.webClientId) or the GOOGLE_WEB_CLIENT_ID env var in CI.
 val webClientId: String = localProperties.getProperty("google.webClientId")
     ?: System.getenv("GOOGLE_WEB_CLIENT_ID")
+    ?: ""
+
+// Tracer (apptracer.ru) project tokens, feature 003 research R2: from local.properties
+// (tracer.appToken, tracer.pluginToken) or the TRACER_* env vars, which CI sets only for the
+// builds that are published. Without the app token Tracer is disabled in the build.
+val tracerAppToken: String = localProperties.getProperty("tracer.appToken")
+    ?: System.getenv("TRACER_APP_TOKEN")
+    ?: ""
+val tracerPluginToken: String = localProperties.getProperty("tracer.pluginToken")
+    ?: System.getenv("TRACER_PLUGIN_TOKEN")
     ?: ""
 
 // The attached script is uploaded by the app from its assets (research R11).
@@ -87,6 +98,8 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+        // Tracer puts its build info into generated resources (off by default from AGP 9).
+        resValues = true
     }
 
     sourceSets["main"].assets.srcDir(scriptAssetsDir)
@@ -106,6 +119,20 @@ android {
 }
 
 tasks.named("preBuild") { dependsOn(copyScriptAssets) }
+
+tracer {
+    create("defaultConfig") {
+        appToken = tracerAppToken
+        pluginToken = tracerPluginToken
+        disabled = tracerAppToken.isBlank()
+        // R8 is off, so stack traces are readable without a mapping (FR-004).
+        uploadMapping = false
+        dontFailOnUploadFailure = true
+    }
+    // contracts/monitoring.md "Project and environments".
+    create("debug") { environment = "github" }
+    create("release") { environment = "play" }
+}
 
 ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
@@ -128,6 +155,12 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.coroutines.play.services)
     implementation(libs.okhttp)
+    implementation(platform(libs.tracer.platform))
+    implementation(libs.tracer.crash.report)
+    implementation(libs.tracer.heap.dumps)
+    implementation(libs.tracer.disk.usage)
+    implementation(libs.tracer.profiler.sampling)
+    implementation(libs.tracer.profiler.systrace)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.coil.compose)
