@@ -14,6 +14,8 @@ class DiagnosticsTestActions(
     private val runOnMain: (() -> Unit) -> Unit,
     private val sleep: (Long) -> Unit,
     private val monitoring: Monitoring,
+    private val takeHeapDump: (tag: String) -> Unit = {},
+    private val runDiskCheck: () -> Unit = {},
 ) {
     /** An unhandled crash on the main thread (US1, quickstart scenario 1). */
     fun crashNow() = runOnMain { throw DiagnosticsTestCrash() }
@@ -23,4 +25,10 @@ class DiagnosticsTestActions(
 
     /** One non-fatal event, grouped under `diagnostics-test` (US2). */
     fun sendTestError() = monitoring.nonFatal(NonFatalIssue.DIAGNOSTICS_TEST, DiagnosticsTestError())
+
+    /** A memory snapshot, sent when the phone is idle (US3, scenario 6). */
+    fun memorySnapshotNow() {}
+
+    /** One disk-usage check (US4, scenario 7). */
+    fun diskCheckNow() {}
 }

@@ -38,6 +38,8 @@ import androidx.navigation.navArgument
 import com.workoutrec.auth.CredentialManagerAccountPicker
 import com.workoutrec.diag.shareLogIntent
 import com.workoutrec.home.AutomationReminder
+import com.workoutrec.home.DiagnosticsMenuState
+import com.workoutrec.home.DiagnosticsTestAction
 import com.workoutrec.home.MainScreen
 import com.workoutrec.log.LogRoutes
 import com.workoutrec.log.LoggingRoute
@@ -155,6 +157,7 @@ private fun AppNavHost(container: AppContainer) {
                     // Research R13: try to sync first, so the warning counts only what is really left.
                     onMenuOpened = container.syncScheduler::requestSync,
                     onShareLog = { context.startActivity(shareLogIntent(context, container.diagnosticLog)) },
+                    diagnostics = diagnosticsMenuState(container),
                 ) { modifier ->
                     TodayRoute(
                         container = container,
@@ -287,4 +290,28 @@ private fun SetupRoute(viewModel: SetupViewModel, state: SetupState, accountEmai
 @Composable
 private fun Progress() {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+}
+
+/** Feature 003: the Send diagnostics switch and its test actions, for the account menu. */
+@Composable
+private fun diagnosticsMenuState(container: AppContainer): DiagnosticsMenuState {
+    val settings = container.monitoringSettings
+    var send by remember { mutableStateOf(settings.sendDiagnostics) }
+    val actions = container.diagnosticsTestActions
+    return DiagnosticsMenuState(
+        sendDiagnostics = send,
+        appliesAfterRestart = send && !settings.startedWith,
+        onSendDiagnosticsChange = { on ->
+            container.monitoringControl.setSendDiagnostics(on)
+            send = on
+        },
+        onTestAction = { action ->
+            when (action) {
+                DiagnosticsTestAction.CRASH -> actions.crashNow()
+                DiagnosticsTestAction.FREEZE -> actions.freeze(10_000)
+                DiagnosticsTestAction.TEST_ERROR -> actions.sendTestError()
+                DiagnosticsTestAction.HEAP_DUMP, DiagnosticsTestAction.DISK_CHECK, DiagnosticsTestAction.PROFILE_NEXT_START -> {}
+            }
+        },
+    )
 }

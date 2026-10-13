@@ -13,10 +13,15 @@ class DiagnosticsTestActionsTest {
     private val slept = mutableListOf<Long>()
     private val monitoring = FakeMonitoring()
 
+    private val heapDumps = mutableListOf<String>()
+    private var diskChecks = 0
+
     private val actions = DiagnosticsTestActions(
         runOnMain = { posted += it },
         sleep = { slept += it },
         monitoring = monitoring,
+        takeHeapDump = { heapDumps += it },
+        runDiskCheck = { diskChecks++ },
     )
 
     @Test
@@ -43,5 +48,19 @@ class DiagnosticsTestActionsTest {
     fun `send test error reports a diagnostics-test non-fatal`() {
         actions.sendTestError()
         assertEquals(NonFatalIssue.DIAGNOSTICS_TEST, monitoring.nonFatals.single().issue)
+    }
+
+    // User Story 3, research R7
+    @Test
+    fun `memory snapshot now takes a manual snapshot`() {
+        actions.memorySnapshotNow()
+        assertEquals(listOf("manual"), heapDumps)
+    }
+
+    // User Story 4, research R8
+    @Test
+    fun `disk check now runs one disk check`() {
+        actions.diskCheckNow()
+        assertEquals(1, diskChecks)
     }
 }

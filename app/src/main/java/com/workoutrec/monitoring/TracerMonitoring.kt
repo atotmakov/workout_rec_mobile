@@ -58,6 +58,9 @@ class TracerMonitoring(
             }
         }
 
+        /** Stops Tracer for the rest of this process (Send diagnostics turned off, R3 update). */
+        fun disableNow() = safely { Tracer.disable() }
+
         private fun IssueSeverity.toTracer(): Severity = when (this) {
             IssueSeverity.ERROR -> Severity.ERROR
             IssueSeverity.WARNING -> Severity.WARNING

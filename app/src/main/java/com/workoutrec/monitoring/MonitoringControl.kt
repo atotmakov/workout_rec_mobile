@@ -9,5 +9,11 @@ class MonitoringControl(
     private val disableTracer: () -> Unit,
     private val deleteStoredReports: () -> Unit,
 ) {
-    fun setSendDiagnostics(on: Boolean) {}
+    fun setSendDiagnostics(on: Boolean) {
+        settings.sendDiagnostics = on
+        if (!on) {
+            disableTracer()
+            deleteStoredReports()
+        }
+    }
 }

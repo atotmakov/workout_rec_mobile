@@ -1,6 +1,8 @@
 package com.workoutrec
 
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import androidx.credentials.ClearCredentialStateRequest
 import androidx.credentials.CredentialManager
 import androidx.datastore.core.DataStore
@@ -14,23 +16,26 @@ import com.workoutrec.automation.ScriptAssets
 import com.workoutrec.automation.ScriptInstaller
 import com.workoutrec.data.DataStoreSettingsStore
 import com.workoutrec.data.SettingsStore
+import com.workoutrec.diag.DiagnosticLog
 import com.workoutrec.google.DriveClient
 import com.workoutrec.google.GoogleHttp
 import com.workoutrec.google.ScriptClient
 import com.workoutrec.google.SheetsClient
 import com.workoutrec.google.SheetsLogClient
-import com.workoutrec.setup.SpreadsheetSetupFlow
-import com.workoutrec.spreadsheet.SpreadsheetSetupService
-import com.workoutrec.diag.DiagnosticLog
+import com.workoutrec.monitoring.DiagnosticsTestActions
 import com.workoutrec.monitoring.Monitoring
+import com.workoutrec.monitoring.MonitoringControl
 import com.workoutrec.monitoring.MonitoringSettings
 import com.workoutrec.monitoring.NoMonitoring
+import com.workoutrec.monitoring.StoredReportsCleaner
 import com.workoutrec.monitoring.TracerMonitoring
+import com.workoutrec.setup.SpreadsheetSetupFlow
+import com.workoutrec.spreadsheet.SpreadsheetSetupService
 import com.workoutrec.sync.DataStoreSyncStatusStore
 import com.workoutrec.sync.LogSync
 import com.workoutrec.sync.SyncScheduler
-import com.workoutrec.sync.SyncWork
 import com.workoutrec.sync.SyncStatusStore
+import com.workoutrec.sync.SyncWork
 import com.workoutrec.workout.data.WorkoutDatabase
 import com.workoutrec.workout.data.WorkoutRepository
 import java.io.File
@@ -60,6 +65,20 @@ class AppContainer(context: Context, val monitoringSettings: MonitoringSettings)
         } else {
             NoMonitoring
         }
+
+    /** The Send diagnostics switch: off stops Tracer at once and drops unsent reports (US6). */
+    val monitoringControl = MonitoringControl(
+        monitoringSettings,
+        disableTracer = { if (monitoring is TracerMonitoring) TracerMonitoring.disableNow() },
+        deleteStoredReports = StoredReportsCleaner(appContext.cacheDir)::deleteStoredReports,
+    )
+
+    /** Hidden test actions behind a long-press on Send diagnostics (research R10). */
+    val diagnosticsTestActions = DiagnosticsTestActions(
+        runOnMain = { Handler(Looper.getMainLooper()).post(it) },
+        sleep = Thread::sleep,
+        monitoring = monitoring,
+    )
 
     val settingsStore: SettingsStore = DataStoreSettingsStore(appContext.settingsDataStore)
 

@@ -8,6 +8,7 @@ import com.workoutrec.diag.DeviceState
 import com.workoutrec.monitoring.MonitoringConfig
 import com.workoutrec.monitoring.MonitoringSettings
 import com.workoutrec.monitoring.SharedPreferencesStore
+import com.workoutrec.monitoring.StoredReportsCleaner
 import com.workoutrec.monitoring.TracerMonitoring
 import com.workoutrec.sync.BackgroundRun
 import com.workoutrec.sync.SyncWork
@@ -28,6 +29,10 @@ class WorkoutRecApplication : Application(), Configuration.Provider, HasTracerCo
         monitoringSettings = MonitoringSettings(
             SharedPreferencesStore(base.getSharedPreferences(MonitoringSettings.FILE, Context.MODE_PRIVATE)),
         )
+        // Started with Send diagnostics off: drop what Tracer stored but has not sent (US6).
+        if (MonitoringConfig.plan(BuildConfig.TRACER_ENABLED, monitoringSettings.startedWith).deleteStoredReports) {
+            StoredReportsCleaner(base.cacheDir).deleteStoredReports()
+        }
     }
 
     /**
@@ -41,6 +46,8 @@ class WorkoutRecApplication : Application(), Configuration.Provider, HasTracerCo
         super.onCreate()
         container = AppContainer(this, monitoringSettings)
         container.diagnosticLog.write("app process started; ${DeviceState.describe(this)}")
+        // Until quickstart scenario 0 confirms where Tracer keeps unsent reports (plan phase 5).
+        container.diagnosticLog.write("storage: cache ${cacheDir.list()?.sorted()}, no backup ${noBackupFilesDir.list()?.sorted()}")
     }
 
     /** Background sync runs through the app's own sync (research R2). */
