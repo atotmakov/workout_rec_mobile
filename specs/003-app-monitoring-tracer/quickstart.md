@@ -16,7 +16,7 @@ checked on the phone with a build that has the token. Record results in
 
 | # | Scenario | Steps | Expected |
 |---|---|---|---|
-| 0 | Storage location (R3, to verify) | Diagnostics test → Crash now, with the phone in airplane mode; reopen, then share the sync log (it lists the app's folders on start) | The folder where Tracer keeps unsent reports is known; fill it into the code if it differs from the plan |
+| 0 | Storage location (R3, to verify) | Diagnostics test → Crash now, with the phone in airplane mode; reopen, then share the sync log (its `storage:` line lists the cache folder on start) | The folder where Tracer keeps unsent reports is known; fill it into the code if it differs from the plan |
 | 1 | Crash (US1) | Diagnostics test → Crash now; reopen the app with network | Within 10 min: a crash in console env `github`, build N, readable `com.workoutrec` frames, the "Logs" tab with recent lines (SC-001, SC-002) |
 | 2 | Freeze (US1) | Diagnostics test → Freeze for 10 s; wait for the "isn't responding" dialog; close the app; reopen | An ANR event with the main-thread stack |
 | 3 | Offline crash (US1) | Airplane mode → Crash now → reopen offline → turn network on → reopen | The crash arrives after network returns |
@@ -24,7 +24,7 @@ checked on the phone with a build that has the token. Record results in
 | 5 | Spreadsheet mismatch (US2) | Rename the `balance` tab; sign out and in; answer No; rename back | One `spreadsheet-mismatch` event listing `MissingTab(balance)` |
 | 6 | Memory snapshot (US3) | Diagnostics test → Memory snapshot now; leave the phone idle and charging overnight | A memory report in "Memory leaks" next day |
 | 7 | Disk usage (US4) | Diagnostics test → Disk check now | Nothing (under 50 MB) — expected; optional: the debug-limit check from the docs |
-| 8 | Profiling (US5) | Diagnostics test → Profile next app start; restart the app; pull to refresh 10 times | Profiles `app-start` and (with ~1/10 luck per sync) `sync` with sections |
+| 8 | Profiling (US5) | Diagnostics test → Profile next app start; restart the app; pull to refresh 10 times | Profiles `app-start` and (with ~1/10 luck per sync) `sync` with sections `info`, `read`, `write`, `commit` |
 | 9 | Switch off (US6) | Turn Send diagnostics off; Crash now; reopen with network | Nothing new in the console, now or after a day |
 | 10 | Switch on again (US6) | Turn it on ("Applies after restart"); restart; Crash now; reopen | The crash arrives |
 | 11 | Privacy (SC-005) | Open one event of each kind in the console | No exercise names, weights, email or token anywhere |

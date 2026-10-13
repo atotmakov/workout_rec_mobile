@@ -38,7 +38,7 @@ The app's only door to Tracer (research R4).
 | `enabled` | `startedWith && sendDiagnostics && token present` — checked on every call |
 | `log(line)` | Adds a diagnostic log line to the buffer attached to reports (R5) |
 | `nonFatal(issue, error, details)` | Reports a handled error through `NonFatalLimiter` (R6) |
-| `profile(target, block)` | Profiles `block` if `ProfileSampler` selects this run and `ProfileGate` is free (R9) |
+| `beginProfile(target)` | A `Profile` (sections, commit, abort) if `ProfileSampler` selects this run and `ProfileGate` is free, else `NoProfile` (R9); `profiled(target) { }` wraps a block |
 
 Implementations: `TracerMonitoring` (SDK), `NoMonitoring` (no token, or switched off), and a
 `FakeMonitoring` for tests.
@@ -48,7 +48,7 @@ Implementations: `TracerMonitoring` (SDK), `NoMonitoring` (no token, or switched
 | Value | Severity | Source |
 |---|---|---|
 | `sync-failed` | ERROR | `LogSync` failure (not cancellation) |
-| `sync-timeout` | WARNING | `LogSync` "no answer in 120 s" while internet is validated |
+| `sync-timeout` | WARNING | `LogSync` "no answer in 120 s" |
 | `spreadsheet-mismatch` | WARNING | `SpreadsheetSetupFlow.checkExisting` mismatch, reasons in details |
 | `token-failed` | ERROR | `AccountRepository.accessToken` failure outcome |
 
@@ -69,11 +69,13 @@ resets `sentToday` when the day changes.
 | Value | Profiler | Share of runs | Max duration | Commit point | Abort point |
 |---|---|---|---|---|---|
 | `app-start` | Sampling | 1/3 | 10 s | first frame of the start screen | timeout, process end |
-| `sync` | Systrace (sections `token`, `read`, `write`, `refresh`) | 1/10 | 120 s | sync done | cancelled, failed |
+| `sync` | Systrace (sections `info`, `read`, `write`, `commit`) | 1/10 | 120 s | sync done | cancelled, failed |
 | `today-open` | Systrace | 1/5 | 5 s | Today list first drawn | screen left first |
 
-`ProfileSampler.selected(target, random)` takes `random` as a parameter, so tests are
-deterministic. `ProfileGate` allows one active profile at a time.
+`ProfileSampler(store, roll)` takes the random roll as a parameter, so tests are
+deterministic; "Profile next app start" sets `profile_next_app_start` in the same preferences file,
+used once. `ProfileGate` allows one active profile at a time; `ScreenProfile` handles
+begin-on-enter, commit-when-shown, abort-when-left for app start and Today.
 
 ## LogLineGuard
 

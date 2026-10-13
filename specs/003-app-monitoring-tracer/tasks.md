@@ -91,7 +91,7 @@ US5 (P4).
 
 ### Tests for User Story 1 (write first, push red)
 
-- [X] T013 [P] [US1] Add tests in `test/WorkoutRecApplicationTracerTest.kt` (JVM, no SDK). With a token and the switch on, the application's configuration plan comes from `MonitoringConfig` with crash and ANR on. With the switch off, the plan is empty.
+- [X] T013 [P] [US1] The application's configuration comes from `MonitoringConfig.plan(BuildConfig.TRACER_ENABLED, startedWith)`; covered by `test/monitoring/MonitoringConfigTest.kt` (crash and ANR on with the switch on, empty with it off).
 - [X] T014 [P] [US1] Add a test in `test/monitoring/DiagnosticsTestActionsTest.kt`: `crashNow()` throws a `DiagnosticsTestCrash` from the main thread and `freeze(10 s)` blocks the main thread for the given duration. Use an injected main-thread runner and clock fakes.
 
 ### Implementation for User Story 1
@@ -156,7 +156,7 @@ US5 (P4).
   - Turning it on when the process started with it off shows "Applies after restart" (RU «Включится после перезапуска»).
   - A long-press opens the dialog tagged `diagnostics_test_dialog` with the six actions from contracts/monitoring.md "UI".
 - [X] T033 [P] [US6] Add tests in `test/monitoring/StoredReportsCleanerTest.kt`. When `ConfigPlan.deleteStoredReports` is true, the cleaner deletes the configured Tracer report folders (a temp-dir fake) and leaves the app's own files (`logs/sync.log`, databases, datastore) alone. When it is false, nothing is deleted.
-- [X] T034 [P] [US6] Add a test in `test/monitoring/MonitoringGateTest.kt`: after `sendDiagnostics` turns off at runtime, `TracerMonitoring.enabled` is false at once, so `log`, `nonFatal` and `profile` become no-ops (R3).
+- [X] T034 [P] [US6] After `sendDiagnostics` turns off at runtime, `TracerMonitoring.enabled` is false at once, so `log`, `nonFatal` and `profile` become no-ops (R3). Covered in `test/monitoring/MonitoringControlTest.kt`, which also checks that `Tracer.disable()` runs and stored reports are deleted.
 
 ### Implementation for User Story 6
 
@@ -176,7 +176,7 @@ US5 (P4).
 **Independent Test**: quickstart scenario 6. Diagnostics test → Memory snapshot now, and the next day a report appears under "Memory leaks".
 
 - [X] T039 [P] [US3] Add a test in `test/monitoring/MonitoringConfigTest.kt`: the plan with the switch on includes `heap-dumps` enabled. Add another in `test/monitoring/DiagnosticsTestActionsTest.kt`: "Memory snapshot now" calls the adapter's `heapDumpNow("manual")`.
-- [ ] T040 [US3] Map `heap-dumps` to `HeapDumpConfiguration.build { }` and implement `heapDumpNow(tag)` with `HeapDumps.runNow(tag)` in `main/monitoring/TracerMonitoring.kt`. Wire the action in `main/monitoring/DiagnosticsTestActions.kt` (R7).
+- [X] T040 [US3] Map `heap-dumps` to `HeapDumpConfiguration.build { }` and implement `heapDumpNow(tag)` with `HeapDumps.runNow(tag)` in `main/monitoring/TracerMonitoring.kt`. Wire the action in `main/monitoring/DiagnosticsTestActions.kt` (R7).
 - [ ] T041 [US3] Run quickstart scenario 6 and record the result.
 
 ---
@@ -188,7 +188,7 @@ US5 (P4).
 **Independent Test**: quickstart scenario 7. Diagnostics test → Disk check now; under 50 MB nothing is sent, which is expected.
 
 - [X] T042 [P] [US4] Add a test in `test/monitoring/MonitoringConfigTest.kt`: `disk-usage` has `interestingSizeBytes = 50 * 1024 * 1024` and `probability = 1`. Add another in `test/monitoring/DiagnosticsTestActionsTest.kt`: "Disk check now" calls the adapter's `diskCheckNow()`.
-- [ ] T043 [US4] Map `disk-usage` to `DiskUsageConfiguration.build { setInterestingSize(…); setProbability(1) }` and implement `diskCheckNow()` with `DiskUsage.runNow()` in `main/monitoring/TracerMonitoring.kt`. Wire the action in `main/monitoring/DiagnosticsTestActions.kt` (R8).
+- [X] T043 [US4] Map `disk-usage` to `DiskUsageConfiguration.build { setInterestingSize(…); setProbability(1) }` and implement `diskCheckNow()` with `DiskUsage.runNow()` in `main/monitoring/TracerMonitoring.kt`. Wire the action in `main/monitoring/DiagnosticsTestActions.kt` (R8).
 - [ ] T044 [US4] Run quickstart scenario 7 and record the result.
 
 ---
@@ -201,22 +201,22 @@ US5 (P4).
 
 ### Tests for User Story 5 (write first, push red)
 
-- [ ] T045 [P] [US5] Add tests in `test/monitoring/ProfileTargetsTest.kt` (data-model "ProfileTarget"):
+- [X] T045 [P] [US5] Add tests in `test/monitoring/ProfileTargetsTest.kt` (data-model "ProfileTarget"):
   - `ProfileSampler.selected` uses "Share of runs" exactly: `app-start` 1/3, `sync` 1/10, `today-open` 1/5, with an injected random.
   - "Profile next app start" forces the next `app-start` to be selected, once.
   - `ProfileGate` allows one active profile, and an overlapping target is skipped.
   - A profile is aborted after its max duration: 10 s, 120 s, 5 s.
-- [ ] T046 [P] [US5] Add tests in `test/sync/LogSyncProfileTest.kt`. With `FakeMonitoring`, a sync run is wrapped in `profile(sync)`, which is committed on success and aborted on failure or cancellation. The sections are `token`, `read`, `write` and `refresh`, in that order.
-- [ ] T047 [P] [US5] Add a test in `androidTest/log/TodayProfileTest.kt`: opening Today commits `today-open` once the list is first drawn, and leaving before that aborts it (`FakeMonitoring` injected).
+- [X] T046 [P] [US5] Add tests in `test/sync/LogSyncProfileTest.kt`. With `FakeMonitoring`, a sync run is wrapped in `profile(sync)`, which is committed on success and aborted on failure or cancellation. The sections are `info`, `read`, `write` (only when writing) and `commit`, in that order.
+- [X] T047 [P] [US5] Opening Today commits `today-open` once it is first drawn, and leaving before that aborts it. Done as JVM tests of `ScreenProfile` in `test/monitoring/ProfileTargetsTest.kt`; `TodayRoute` only calls it (entered, shown after the first frame, left on dispose).
 
 ### Implementation for User Story 5
 
-- [ ] T048 [P] [US5] Implement `ProfileSampler`, `ProfileGate` and the target table in `main/monitoring/ProfileTargets.kt`.
-- [ ] T049 [US5] Implement `profile(target, block)` in `main/monitoring/TracerMonitoring.kt` using the sampler and the gate. `app-start` uses `SamplingProfiler`, while `sync` and `today-open` use `SystraceProfiler` plus `Trace.beginSection`/`endSection` in `try`/`finally`. Commit with the suffix `done`.
-- [ ] T050 [US5] Start `app-start` in `WorkoutRecApplication.onCreate`, and commit it in `main/MainActivity.kt` when the start screen draws its first frame (`reportFullyDrawn` point).
-- [ ] T051 [US5] Wrap `LogSync.run` and its four phases in `main/sync/LogSync.kt`.
-- [ ] T052 [US5] Profile `today-open` in `main/log/LogRoutes.kt` from route entry to the first composition of the list.
-- [ ] T053 [US5] Wire "Profile next app start" in `main/monitoring/DiagnosticsTestActions.kt`.
+- [X] T048 [P] [US5] Implement `ProfileSampler`, `ProfileGate` and the target table in `main/monitoring/ProfileTargets.kt`.
+- [X] T049 [US5] Implement `profile(target, block)` in `main/monitoring/TracerMonitoring.kt` using the sampler and the gate. `app-start` uses `SamplingProfiler`, while `sync` and `today-open` use `SystraceProfiler` plus `Trace.beginSection`/`endSection` in `try`/`finally`. Commit with the suffix `done`.
+- [X] T050 [US5] Start `app-start` in `WorkoutRecApplication.onCreate`, and commit it in `main/MainActivity.kt` when the start screen draws its first frame (`reportFullyDrawn` point).
+- [X] T051 [US5] Wrap `LogSync.run` and its four phases in `main/sync/LogSync.kt`.
+- [X] T052 [US5] Profile `today-open` in `main/log/LogRoutes.kt` from route entry to the first composition of the list.
+- [X] T053 [US5] Wire "Profile next app start" in `main/monitoring/DiagnosticsTestActions.kt`.
 - [ ] T054 [US5] Run quickstart scenarios 8 and 12 (overhead ≤ 5%, SC-004) and record the results.
 
 ---
@@ -224,7 +224,7 @@ US5 (P4).
 ## Phase 9: Polish & Cross-Cutting Concerns
 
 - [X] T055 [P] Add a "Diagnostics" section to `docs/privacy.html` that names Tracer (OK.TECH) and lists what is sent, what is never sent (contracts/monitoring.md "Never sent"), the 90-day retention, and the Send diagnostics switch (FR-014). It must merge **before** the first master build that has `TRACER_APP_TOKEN`.
-- [ ] T056 [P] Update `README.md` with the Tracer secrets and the fact that builds without them have monitoring off.
+- [X] T056 [P] Update `README.md` with the Tracer secrets and the fact that builds without them have monitoring off.
 - [ ] T057 Run quickstart scenarios 11 (privacy sample, SC-005) and 13 (no CI events, SC-006). Then finish `specs/003-app-monitoring-tracer/quickstart-results.md` and mark the feature complete.
 
 ---

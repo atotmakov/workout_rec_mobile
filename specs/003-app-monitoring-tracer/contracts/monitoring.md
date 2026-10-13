@@ -27,7 +27,7 @@ N" in the console is the GitHub release `build-N`.
 | Non-fatal | `diagnostics-test` | INFO | from the hidden test actions only |
 | Memory snapshot | `oom` / `manual` | — | cleaned snapshot (SDK) |
 | Disk usage | (SDK) | — | sizes by folder over 50 MB total |
-| Profile | `app-start`, `sync`, `today-open` (+ SDK suffix `_done`) | — | per-method timings; `sync` with sections `token`, `read`, `write`, `refresh` |
+| Profile | `app-start`, `sync`, `today-open` (+ SDK suffix `_done`) | — | per-method timings; `sync` with sections `info`, `read`, `write`, `commit` |
 
 Limits: non-fatals at most 1 per issue per 30 min and 20 per day per process (data-model
 `NonFatalLimiter`).

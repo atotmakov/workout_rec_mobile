@@ -114,8 +114,8 @@ them. The guard drops such a line from the monitoring copy only.
 
 | Issue key | Where | Severity |
 |---|---|---|
-| `sync-failed` | `LogSync` on `failed: …` (not on `cancelled`, and not on "no answer in 120 s" while offline) | ERROR |
-| `sync-timeout` | `LogSync` "no answer in 120 s" with validated internet | WARNING |
+| `sync-failed` | `LogSync` on `failed: …` (not on `cancelled`) | ERROR |
+| `sync-timeout` | `LogSync` "no answer in 120 s" | WARNING |
 | `spreadsheet-mismatch` | `SpreadsheetSetupFlow.checkExisting` on Mismatch (reasons in the message) | WARNING |
 | `token-failed` | `AccountRepository.accessToken` on a failure outcome | ERROR |
 
@@ -146,7 +146,7 @@ the test actions.
 | Target | Profiler | Starts | Ends (commit) | Abort | Share of runs | Max duration |
 |---|---|---|---|---|---|---|
 | `app-start` | Sampling | `Application.onCreate` | first frame of the start screen | process ends / timeout | 1 in 3 | 10 s |
-| `sync` | Systrace + sections `token`, `read`, `write`, `refresh` | `LogSync.run` start | sync done | cancelled / failed | 1 in 10 | 120 s |
+| `sync` | Systrace + sections `info`, `read`, `write`, `commit` (async trace sections, API 29+) | `LogSync.run` start | sync done | cancelled / failed | 1 in 10 | 120 s |
 | `today-open` | Systrace | Today route entered | list first drawn | left before drawn | 1 in 5 | 5 s |
 
 Only one profile runs at a time (`ProfileGate`); a target that would overlap is skipped for that
