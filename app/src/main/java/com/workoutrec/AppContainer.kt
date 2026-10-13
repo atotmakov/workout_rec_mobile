@@ -56,7 +56,7 @@ class AppContainer(context: Context, val monitoringSettings: MonitoringSettings)
      */
     val monitoring: Monitoring =
         if (BuildConfig.TRACER_ENABLED && monitoringSettings.startedWith) {
-            TracerMonitoring { monitoringSettings.sendDiagnostics }
+            TracerMonitoring(isEnabled = { monitoringSettings.sendDiagnostics })
         } else {
             NoMonitoring
         }
