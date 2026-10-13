@@ -32,7 +32,7 @@ ahead, so 2.2 is fine; if CI reports a metadata error, the Kotlin bump is a sepa
   to the CI step that builds the published APK and bundle (job "Build, lint, unit tests"). Locally
   they can come from `local.properties` (`tracer.appToken`, `tracer.pluginToken`), like
   `google.webClientId`.
-- In the `tracer {}` Gradle block: `setDisabled(appToken.isBlank())` (the DSL setter is
+- In the `tracer {}` Gradle block: `isDisabled = appToken.isBlank()` (the DSL property is
   `disabled`), so builds without the token
   (local builds, forks, the emulator job "Compose UI tests") never start Tracer.
 - `uploadMapping = false` and `dontFailOnUploadFailure = true`: R8 is off, so there is no mapping
@@ -194,5 +194,5 @@ and no backend of ours is added. It is a new third-party dependency, justified i
 - Heap dumps use a WorkManager worker (`ShrinkDumpWorker`); the app's `SyncWorkerFactory` returns
   `null` for other workers, so WorkManager creates it by default.
 - Gradle plugin `ru.ok.tracer` (artifact `tracer-plugin`): `tracer { create("defaultConfig") { … } }` with
-  `appToken`, `pluginToken`, `uploadMapping`, `dontFailOnUploadFailure`, `environment`, `disabled`.
+  `appToken`, `pluginToken`, `uploadMapping`, `dontFailOnUploadFailure`, `environment`, `isDisabled`.
 - The SDK is built with Kotlin 1.8.22, so the project's Kotlin 2.1 reads it without issue.

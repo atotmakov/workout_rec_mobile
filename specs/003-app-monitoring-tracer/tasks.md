@@ -43,7 +43,7 @@ US5 (P4).
   - Apply the plugin and add `implementation(platform(libs.tracer.platform))` plus the five modules.
   - Set `buildFeatures.resValues = true`.
   - Read `tracer.appToken` and `tracer.pluginToken` from `local.properties`, or `TRACER_APP_TOKEN` and `TRACER_PLUGIN_TOKEN` from the environment.
-  - Add the `tracer {}` block: `defaultConfig` with the tokens, `uploadMapping = false`, `dontFailOnUploadFailure = true` and `setDisabled(appToken.isBlank())`; `debug` with `environment = "github"`; `release` with `environment = "play"` (R2, contract "Project and environments").
+  - Add the `tracer {}` block: `defaultConfig` with the tokens, `uploadMapping = false`, `dontFailOnUploadFailure = true` and `isDisabled = appToken.isBlank()`; `debug` with `environment = "github"`; `release` with `environment = "play"` (R2, contract "Project and environments").
 - [ ] T004 Pass `TRACER_APP_TOKEN` and `TRACER_PLUGIN_TOKEN` as env **only** to the "Assemble, unit tests, lint" and "Release bundle for Google Play" steps of the `unit-tests` job in `.github/workflows/ci.yml`. Never pass them to the `ui-tests` job (SC-006). Push and confirm CI is green, with and without the secrets.
 
 **Checkpoint**: the app builds with the Tracer SDK on the classpath, and nothing is initialized yet.
