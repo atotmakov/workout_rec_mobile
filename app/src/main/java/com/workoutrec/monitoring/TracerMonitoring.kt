@@ -2,6 +2,7 @@ package com.workoutrec.monitoring
 
 import ru.ok.tracer.CoreTracerConfiguration
 import ru.ok.tracer.Severity
+import ru.ok.tracer.Tracer
 import ru.ok.tracer.TracerConfiguration
 import ru.ok.tracer.crash.report.CrashFreeConfiguration
 import ru.ok.tracer.crash.report.CrashReportConfiguration
