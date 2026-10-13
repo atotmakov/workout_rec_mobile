@@ -1,9 +1,12 @@
 package com.workoutrec
 
 import android.app.Application
+import android.content.Context
 import androidx.work.Configuration
 import androidx.work.WorkManager
 import com.workoutrec.diag.DeviceState
+import com.workoutrec.monitoring.MonitoringSettings
+import com.workoutrec.monitoring.SharedPreferencesStore
 import com.workoutrec.sync.BackgroundRun
 import com.workoutrec.sync.SyncWork
 import com.workoutrec.sync.SyncWorkerFactory
@@ -12,9 +15,20 @@ class WorkoutRecApplication : Application(), Configuration.Provider {
     lateinit var container: AppContainer
         private set
 
+    /** Feature 003: the Send diagnostics switch, read before Tracer starts (research R3). */
+    lateinit var monitoringSettings: MonitoringSettings
+        private set
+
+    override fun attachBaseContext(base: Context) {
+        super.attachBaseContext(base)
+        monitoringSettings = MonitoringSettings(
+            SharedPreferencesStore(base.getSharedPreferences(MonitoringSettings.FILE, Context.MODE_PRIVATE)),
+        )
+    }
+
     override fun onCreate() {
         super.onCreate()
-        container = AppContainer(this)
+        container = AppContainer(this, monitoringSettings)
         container.diagnosticLog.write("app process started; ${DeviceState.describe(this)}")
     }
 

@@ -52,6 +52,8 @@ android {
         versionName = "0.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "WEB_CLIENT_ID", "\"$webClientId\"")
+        // Feature 003: Tracer only starts in builds that have its token (research R2).
+        buildConfigField("boolean", "TRACER_ENABLED", tracerAppToken.isNotBlank().toString())
     }
 
     signingConfigs {

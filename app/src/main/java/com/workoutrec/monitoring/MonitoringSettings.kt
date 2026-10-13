@@ -18,14 +18,14 @@ class SharedPreferencesStore(private val prefs: SharedPreferences) : BooleanStor
 /** The Send diagnostics switch (FR-012, data-model "MonitoringSetting"). */
 class MonitoringSettings(private val store: BooleanStore) {
     var sendDiagnostics: Boolean
-        get() = false
-        set(value) {}
+        get() = store.get(KEY, true)
+        set(value) = store.put(KEY, value)
 
     /** The value this process started with; Tracer was configured from it. */
-    val startedWith: Boolean = false
+    val startedWith: Boolean = sendDiagnostics
 
     /** Turned on while this process started with it off: Tracer starts on the next launch. */
-    val appliesAfterRestart: Boolean get() = false
+    val appliesAfterRestart: Boolean get() = sendDiagnostics && !startedWith
 
     companion object {
         const val FILE = "monitoring"

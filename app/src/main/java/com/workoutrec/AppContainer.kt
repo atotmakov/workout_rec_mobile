@@ -22,6 +22,10 @@ import com.workoutrec.google.SheetsLogClient
 import com.workoutrec.setup.SpreadsheetSetupFlow
 import com.workoutrec.spreadsheet.SpreadsheetSetupService
 import com.workoutrec.diag.DiagnosticLog
+import com.workoutrec.monitoring.Monitoring
+import com.workoutrec.monitoring.MonitoringSettings
+import com.workoutrec.monitoring.NoMonitoring
+import com.workoutrec.monitoring.TracerMonitoring
 import com.workoutrec.sync.DataStoreSyncStatusStore
 import com.workoutrec.sync.LogSync
 import com.workoutrec.sync.SyncScheduler
@@ -43,8 +47,19 @@ private val Context.settingsDataStore: DataStore<Preferences> by preferencesData
 private val Context.syncDataStore: DataStore<Preferences> by preferencesDataStore(name = "sync")
 
 /** Manual dependency injection (research R1). */
-class AppContainer(context: Context) {
+class AppContainer(context: Context, val monitoringSettings: MonitoringSettings) {
     private val appContext = context.applicationContext
+
+    /**
+     * Feature 003: Tracer when this build has its token and the process started with Send
+     * diagnostics on; the switch is read again on every call (research R3).
+     */
+    val monitoring: Monitoring =
+        if (BuildConfig.TRACER_ENABLED && monitoringSettings.startedWith) {
+            TracerMonitoring { monitoringSettings.sendDiagnostics }
+        } else {
+            NoMonitoring
+        }
 
     val settingsStore: SettingsStore = DataStoreSettingsStore(appContext.settingsDataStore)
 
