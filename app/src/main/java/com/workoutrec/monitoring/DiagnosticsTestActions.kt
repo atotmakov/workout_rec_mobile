@@ -16,6 +16,7 @@ class DiagnosticsTestActions(
     private val monitoring: Monitoring,
     private val takeHeapDump: (tag: String) -> Unit = {},
     private val runDiskCheck: () -> Unit = {},
+    private val forceProfileNextStart: () -> Unit = {},
 ) {
     /** An unhandled crash on the main thread (US1, quickstart scenario 1). */
     fun crashNow() = runOnMain { throw DiagnosticsTestCrash() }
@@ -27,8 +28,11 @@ class DiagnosticsTestActions(
     fun sendTestError() = monitoring.nonFatal(NonFatalIssue.DIAGNOSTICS_TEST, DiagnosticsTestError())
 
     /** A memory snapshot, sent when the phone is idle (US3, scenario 6). */
-    fun memorySnapshotNow() {}
+    fun memorySnapshotNow() = takeHeapDump("manual")
 
     /** One disk-usage check (US4, scenario 7). */
-    fun diskCheckNow() {}
+    fun diskCheckNow() = runDiskCheck()
+
+    /** The next app start is profiled whatever the share of runs (US5, scenario 8). */
+    fun profileNextAppStart() {}
 }

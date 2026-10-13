@@ -310,7 +310,9 @@ private fun diagnosticsMenuState(container: AppContainer): DiagnosticsMenuState 
                 DiagnosticsTestAction.CRASH -> actions.crashNow()
                 DiagnosticsTestAction.FREEZE -> actions.freeze(10_000)
                 DiagnosticsTestAction.TEST_ERROR -> actions.sendTestError()
-                DiagnosticsTestAction.HEAP_DUMP, DiagnosticsTestAction.DISK_CHECK, DiagnosticsTestAction.PROFILE_NEXT_START -> {}
+                DiagnosticsTestAction.HEAP_DUMP -> actions.memorySnapshotNow()
+                DiagnosticsTestAction.DISK_CHECK -> actions.diskCheckNow()
+                DiagnosticsTestAction.PROFILE_NEXT_START -> {}
             }
         },
     )

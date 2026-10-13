@@ -15,6 +15,7 @@ class DiagnosticsTestActionsTest {
 
     private val heapDumps = mutableListOf<String>()
     private var diskChecks = 0
+    private var profileForced = 0
 
     private val actions = DiagnosticsTestActions(
         runOnMain = { posted += it },
@@ -22,6 +23,7 @@ class DiagnosticsTestActionsTest {
         monitoring = monitoring,
         takeHeapDump = { heapDumps += it },
         runDiskCheck = { diskChecks++ },
+        forceProfileNextStart = { profileForced++ },
     )
 
     @Test
@@ -62,5 +64,12 @@ class DiagnosticsTestActionsTest {
     fun `disk check now runs one disk check`() {
         actions.diskCheckNow()
         assertEquals(1, diskChecks)
+    }
+
+    // User Story 5, research R9
+    @Test
+    fun `profile next app start forces the next start to be profiled`() {
+        actions.profileNextAppStart()
+        assertEquals(1, profileForced)
     }
 }

@@ -91,13 +91,13 @@ US5 (P4).
 
 ### Tests for User Story 1 (write first, push red)
 
-- [ ] T013 [P] [US1] Add tests in `test/WorkoutRecApplicationTracerTest.kt` (JVM, no SDK). With a token and the switch on, the application's configuration plan comes from `MonitoringConfig` with crash and ANR on. With the switch off, the plan is empty.
-- [ ] T014 [P] [US1] Add a test in `test/monitoring/DiagnosticsTestActionsTest.kt`: `crashNow()` throws a `DiagnosticsTestCrash` from the main thread and `freeze(10 s)` blocks the main thread for the given duration. Use an injected main-thread runner and clock fakes.
+- [X] T013 [P] [US1] Add tests in `test/WorkoutRecApplicationTracerTest.kt` (JVM, no SDK). With a token and the switch on, the application's configuration plan comes from `MonitoringConfig` with crash and ANR on. With the switch off, the plan is empty.
+- [X] T014 [P] [US1] Add a test in `test/monitoring/DiagnosticsTestActionsTest.kt`: `crashNow()` throws a `DiagnosticsTestCrash` from the main thread and `freeze(10 s)` blocks the main thread for the given duration. Use an injected main-thread runner and clock fakes.
 
 ### Implementation for User Story 1
 
-- [ ] T015 [US1] Make `main/WorkoutRecApplication.kt` implement `HasTracerConfiguration`. Capture `startedWith` in `attachBaseContext`. `tracerConfiguration` returns `TracerMonitoring.configurations(MonitoringConfig.plan(...))`, which is read once per process (R3).
-- [ ] T016 [US1] Implement `crashNow()` and `freeze(duration)` in `main/monitoring/DiagnosticsTestActions.kt` (R10).
+- [X] T015 [US1] Make `main/WorkoutRecApplication.kt` implement `HasTracerConfiguration`. Capture `startedWith` in `attachBaseContext`. `tracerConfiguration` returns `TracerMonitoring.configurations(MonitoringConfig.plan(...))`, which is read once per process (R3).
+- [X] T016 [US1] Implement `crashNow()` and `freeze(duration)` in `main/monitoring/DiagnosticsTestActions.kt` (R10).
 - [ ] T017 [US1] Run quickstart scenarios 1–3 on the phone with the first master build after T001, and record the results in `specs/003-app-monitoring-tracer/quickstart-results.md`.
 
 **Checkpoint**: MVP. Crashes and freezes arrive. A temporary way to trigger them is in place until US6 adds the switch dialog (T016 actions can be reached from T035's dialog; until then from a debug intent, documented in the results file).
@@ -112,30 +112,30 @@ US5 (P4).
 
 ### Tests for User Story 2 (write first, push red)
 
-- [ ] T018 [P] [US2] Add tests in `test/monitoring/LogLineGuardTest.kt`. A line containing `@` or `ya29.` is not forwarded, and other lines are. Also feed every log line the existing tests produce (`AccountRepositoryTest`, `LogSyncErrorsTest`, `SetupViewModelSpreadsheetTest`) through the guard; all of them pass except any containing an email (FR-013, data-model "LogLineGuard").
-- [ ] T019 [P] [US2] Add tests in `test/monitoring/NonFatalLimiterTest.kt` (data-model "NonFatalLimiter"):
+- [X] T018 [P] [US2] Add tests in `test/monitoring/LogLineGuardTest.kt`. A line containing `@` or `ya29.` is not forwarded, and other lines are. Also feed every log line the existing tests produce (`AccountRepositoryTest`, `LogSyncErrorsTest`, `SetupViewModelSpreadsheetTest`) through the guard; all of them pass except any containing an email (FR-013, data-model "LogLineGuard").
+- [X] T019 [P] [US2] Add tests in `test/monitoring/NonFatalLimiterTest.kt` (data-model "NonFatalLimiter"):
   - "at most 1 event per issue per 30 min": the first event is allowed, a second for the same issue within 29 min is blocked, and one at 30 min is allowed.
   - Different issues are independent.
   - "20 per day" in total, and the 21st is blocked.
   - The counter resets on a new local day.
-- [ ] T020 [P] [US2] Add a test in `test/diag/DiagnosticLogTest.kt`: `write(line)` still appends to the file **and** passes guarded lines to `Monitoring.log` (FR-006, FR-008).
-- [ ] T021 [P] [US2] Add tests in `test/sync/LogSyncErrorsTest.kt`:
+- [X] T020 [P] [US2] Add a test in `test/diag/DiagnosticLogTest.kt`: `write(line)` still appends to the file **and** passes guarded lines to `Monitoring.log` (FR-006, FR-008).
+- [X] T021 [P] [US2] Add tests in `test/sync/LogSyncErrorsTest.kt`:
   - A failing sync reports `sync-failed` with the exception.
   - "no answer in 120 s" reports `sync-timeout`.
   - Cancellation reports nothing.
   - The `FakeMonitoring` receives these events.
-- [ ] T022 [P] [US2] Add a test in `test/setup/SetupViewModelSpreadsheetTest.kt`: a mismatch reports `spreadsheet-mismatch` with the reasons in its details, and a match reports nothing.
-- [ ] T023 [P] [US2] Add a test in `test/auth/AccountRepositoryTest.kt`: a failed or timed-out token request reports `token-failed` with the outcome name. A granted token or a cached one reports nothing.
+- [X] T022 [P] [US2] Add a test in `test/setup/SetupViewModelSpreadsheetTest.kt`: a mismatch reports `spreadsheet-mismatch` with the reasons in its details, and a match reports nothing.
+- [X] T023 [P] [US2] Add a test in `test/auth/AccountRepositoryTest.kt`: a failed or timed-out token request reports `token-failed` with the outcome name. A granted token or a cached one reports nothing.
 
 ### Implementation for User Story 2
 
-- [ ] T024 [P] [US2] Implement `main/monitoring/LogLineGuard.kt`.
-- [ ] T025 [P] [US2] Implement `main/monitoring/NonFatalLimiter.kt` with an injected clock and zone. Use it inside `TracerMonitoring.nonFatal`.
-- [ ] T026 [US2] Add a `monitoring: Monitoring = NoMonitoring` parameter to `main/diag/DiagnosticLog.kt`. `write` forwards lines that `LogLineGuard` allows.
-- [ ] T027 [US2] Report `sync-failed` and `sync-timeout` from `main/sync/LogSync.kt` at its existing `failed:` and `no answer` branches.
-- [ ] T028 [US2] Report `spreadsheet-mismatch` from `main/setup/SpreadsheetSetupFlow.kt` `checkExisting`, with a `SpreadsheetMismatch(reasons)` exception.
-- [ ] T029 [US2] Report `token-failed` from `main/auth/AccountRepository.kt` `accessToken` on failure outcomes.
-- [ ] T030 [US2] Wire `container.monitoring` into `DiagnosticLog`, `LogSync`, `SpreadsheetSetupFlow` and `AccountRepository` in `main/AppContainer.kt`.
+- [X] T024 [P] [US2] Implement `main/monitoring/LogLineGuard.kt`.
+- [X] T025 [P] [US2] Implement `main/monitoring/NonFatalLimiter.kt` with an injected clock and zone. Use it inside `TracerMonitoring.nonFatal`.
+- [X] T026 [US2] Add a `monitoring: Monitoring = NoMonitoring` parameter to `main/diag/DiagnosticLog.kt`. `write` forwards lines that `LogLineGuard` allows.
+- [X] T027 [US2] Report `sync-failed` and `sync-timeout` from `main/sync/LogSync.kt` at its existing `failed:` and `no answer` branches.
+- [X] T028 [US2] Report `spreadsheet-mismatch` from `main/setup/SpreadsheetSetupFlow.kt` `checkExisting`, with a `SpreadsheetMismatch(reasons)` exception.
+- [X] T029 [US2] Report `token-failed` from `main/auth/AccountRepository.kt` `accessToken` on failure outcomes.
+- [X] T030 [US2] Wire `container.monitoring` into `DiagnosticLog`, `LogSync`, `SpreadsheetSetupFlow` and `AccountRepository` in `main/AppContainer.kt`.
 - [ ] T031 [US2] Run quickstart scenarios 4–5 and record the results.
 
 **Checkpoint**: sync and setup problems arrive on their own, with context (SC-003).
@@ -150,19 +150,19 @@ US5 (P4).
 
 ### Tests for User Story 6 (write first, push red)
 
-- [ ] T032 [P] [US6] Add tests in `androidTest/home/SendDiagnosticsTest.kt`:
+- [X] T032 [P] [US6] Add tests in `androidTest/home/SendDiagnosticsTest.kt`:
   - The account menu shows **Send diagnostics** (test tag `account_send_diagnostics`), on by default.
   - Toggling it off saves `false`.
   - Turning it on when the process started with it off shows "Applies after restart" (RU «Включится после перезапуска»).
   - A long-press opens the dialog tagged `diagnostics_test_dialog` with the six actions from contracts/monitoring.md "UI".
-- [ ] T033 [P] [US6] Add tests in `test/monitoring/StoredReportsCleanerTest.kt`. When `ConfigPlan.deleteStoredReports` is true, the cleaner deletes the configured Tracer report folders (a temp-dir fake) and leaves the app's own files (`logs/sync.log`, databases, datastore) alone. When it is false, nothing is deleted.
-- [ ] T034 [P] [US6] Add a test in `test/monitoring/MonitoringGateTest.kt`: after `sendDiagnostics` turns off at runtime, `TracerMonitoring.enabled` is false at once, so `log`, `nonFatal` and `profile` become no-ops (R3).
+- [X] T033 [P] [US6] Add tests in `test/monitoring/StoredReportsCleanerTest.kt`. When `ConfigPlan.deleteStoredReports` is true, the cleaner deletes the configured Tracer report folders (a temp-dir fake) and leaves the app's own files (`logs/sync.log`, databases, datastore) alone. When it is false, nothing is deleted.
+- [X] T034 [P] [US6] Add a test in `test/monitoring/MonitoringGateTest.kt`: after `sendDiagnostics` turns off at runtime, `TracerMonitoring.enabled` is false at once, so `log`, `nonFatal` and `profile` become no-ops (R3).
 
 ### Implementation for User Story 6
 
-- [ ] T035 [US6] Add the switch row and the long-press **Diagnostics test** dialog to `AccountMenu` in `main/home/MainScreen.kt`. Add the strings to `res/values/strings.xml` and `res/values-ru/strings.xml`: "Send diagnostics" / «Отправлять диагностику», "Applies after restart" / «Включится после перезапуска», "Diagnostics test" / «Проверка диагностики», and the action labels.
-- [ ] T036 [US6] Implement `main/monitoring/StoredReportsCleaner.kt` and call it from `WorkoutRecApplication.attachBaseContext` when the plan says so. On every start, until scenario 0 is confirmed, also write the top-level entries of `filesDir`, `cacheDir` and `noBackupFilesDir` to the diagnostic log (plan phase 5).
-- [ ] T037 [US6] Make `TracerMonitoring.enabled` read `MonitoringSettings.sendDiagnostics` on every call, in `main/monitoring/TracerMonitoring.kt`.
+- [X] T035 [US6] Add the switch row and the long-press **Diagnostics test** dialog to `AccountMenu` in `main/home/MainScreen.kt`. Add the strings to `res/values/strings.xml` and `res/values-ru/strings.xml`: "Send diagnostics" / «Отправлять диагностику», "Applies after restart" / «Включится после перезапуска», "Diagnostics test" / «Проверка диагностики», and the action labels.
+- [X] T036 [US6] Implement `main/monitoring/StoredReportsCleaner.kt` and call it from `WorkoutRecApplication.attachBaseContext` when the plan says so. On every start, until scenario 0 is confirmed, also write the top-level entries of `filesDir`, `cacheDir` and `noBackupFilesDir` to the diagnostic log (plan phase 5).
+- [X] T037 [US6] Make `TracerMonitoring.enabled` read `MonitoringSettings.sendDiagnostics` on every call, in `main/monitoring/TracerMonitoring.kt`.
 - [ ] T038 [US6] Run quickstart scenario 0, and set the confirmed Tracer storage folders in `StoredReportsCleaner`. Then run scenarios 9–10 and record the results. Remove the folder-listing log line once the folders are confirmed.
 
 **Checkpoint**: the user controls whether anything leaves the phone.
@@ -175,7 +175,7 @@ US5 (P4).
 
 **Independent Test**: quickstart scenario 6. Diagnostics test → Memory snapshot now, and the next day a report appears under "Memory leaks".
 
-- [ ] T039 [P] [US3] Add a test in `test/monitoring/MonitoringConfigTest.kt`: the plan with the switch on includes `heap-dumps` enabled. Add another in `test/monitoring/DiagnosticsTestActionsTest.kt`: "Memory snapshot now" calls the adapter's `heapDumpNow("manual")`.
+- [X] T039 [P] [US3] Add a test in `test/monitoring/MonitoringConfigTest.kt`: the plan with the switch on includes `heap-dumps` enabled. Add another in `test/monitoring/DiagnosticsTestActionsTest.kt`: "Memory snapshot now" calls the adapter's `heapDumpNow("manual")`.
 - [ ] T040 [US3] Map `heap-dumps` to `HeapDumpConfiguration.build { }` and implement `heapDumpNow(tag)` with `HeapDumps.runNow(tag)` in `main/monitoring/TracerMonitoring.kt`. Wire the action in `main/monitoring/DiagnosticsTestActions.kt` (R7).
 - [ ] T041 [US3] Run quickstart scenario 6 and record the result.
 
@@ -187,7 +187,7 @@ US5 (P4).
 
 **Independent Test**: quickstart scenario 7. Diagnostics test → Disk check now; under 50 MB nothing is sent, which is expected.
 
-- [ ] T042 [P] [US4] Add a test in `test/monitoring/MonitoringConfigTest.kt`: `disk-usage` has `interestingSizeBytes = 50 * 1024 * 1024` and `probability = 1`. Add another in `test/monitoring/DiagnosticsTestActionsTest.kt`: "Disk check now" calls the adapter's `diskCheckNow()`.
+- [X] T042 [P] [US4] Add a test in `test/monitoring/MonitoringConfigTest.kt`: `disk-usage` has `interestingSizeBytes = 50 * 1024 * 1024` and `probability = 1`. Add another in `test/monitoring/DiagnosticsTestActionsTest.kt`: "Disk check now" calls the adapter's `diskCheckNow()`.
 - [ ] T043 [US4] Map `disk-usage` to `DiskUsageConfiguration.build { setInterestingSize(…); setProbability(1) }` and implement `diskCheckNow()` with `DiskUsage.runNow()` in `main/monitoring/TracerMonitoring.kt`. Wire the action in `main/monitoring/DiagnosticsTestActions.kt` (R8).
 - [ ] T044 [US4] Run quickstart scenario 7 and record the result.
 
@@ -223,7 +223,7 @@ US5 (P4).
 
 ## Phase 9: Polish & Cross-Cutting Concerns
 
-- [ ] T055 [P] Add a "Diagnostics" section to `docs/privacy.html` that names Tracer (OK.TECH) and lists what is sent, what is never sent (contracts/monitoring.md "Never sent"), the 90-day retention, and the Send diagnostics switch (FR-014). It must merge **before** the first master build that has `TRACER_APP_TOKEN`.
+- [X] T055 [P] Add a "Diagnostics" section to `docs/privacy.html` that names Tracer (OK.TECH) and lists what is sent, what is never sent (contracts/monitoring.md "Never sent"), the 90-day retention, and the Send diagnostics switch (FR-014). It must merge **before** the first master build that has `TRACER_APP_TOKEN`.
 - [ ] T056 [P] Update `README.md` with the Tracer secrets and the fact that builds without them have monitoring off.
 - [ ] T057 Run quickstart scenarios 11 (privacy sample, SC-005) and 13 (no CI events, SC-006). Then finish `specs/003-app-monitoring-tracer/quickstart-results.md` and mark the feature complete.
 

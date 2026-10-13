@@ -78,6 +78,8 @@ class AppContainer(context: Context, val monitoringSettings: MonitoringSettings)
         runOnMain = { Handler(Looper.getMainLooper()).post(it) },
         sleep = Thread::sleep,
         monitoring = monitoring,
+        takeHeapDump = { tag -> if (monitoring.enabled) TracerMonitoring.heapDumpNow(tag) },
+        runDiskCheck = { if (monitoring.enabled) TracerMonitoring.diskCheckNow() },
     )
 
     val settingsStore: SettingsStore = DataStoreSettingsStore(appContext.settingsDataStore)

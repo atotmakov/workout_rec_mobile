@@ -7,8 +7,10 @@ import ru.ok.tracer.TracerConfiguration
 import ru.ok.tracer.crash.report.CrashFreeConfiguration
 import ru.ok.tracer.crash.report.CrashReportConfiguration
 import ru.ok.tracer.crash.report.TracerCrashReport
+import ru.ok.tracer.disk.usage.DiskUsage
 import ru.ok.tracer.disk.usage.DiskUsageConfiguration
 import ru.ok.tracer.heap.dumps.HeapDumpConfiguration
+import ru.ok.tracer.heap.dumps.HeapDumps
 import ru.ok.tracer.profiler.sampling.SamplingProfilerConfiguration
 import ru.ok.tracer.profiler.systrace.SystraceProfilerConfiguration
 
@@ -58,6 +60,12 @@ class TracerMonitoring(
                 TracerModule.SystraceProfiler -> SystraceProfilerConfiguration.Builder().build()
             }
         }
+
+        /** A memory snapshot now, processed and sent when the phone is idle (US3, R7). */
+        fun heapDumpNow(tag: String) = safely { HeapDumps.runNow(tag) }
+
+        /** One disk-usage check now (US4, R8). */
+        fun diskCheckNow() = safely { DiskUsage.runNow() }
 
         /** Stops Tracer for the rest of this process (Send diagnostics turned off, R3 update). */
         fun disableNow() = safely { Tracer.disable() }
