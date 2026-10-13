@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Dark navy matching the icon artwork; the foreground layer covers it. -->
+    <color name="ic_launcher_background">#04141E</color>
+</resources>
