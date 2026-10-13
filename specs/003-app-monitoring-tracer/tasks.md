@@ -38,13 +38,13 @@ US5 (P4).
 **Purpose**: Tracer in the build, with CI unchanged when there is no token.
 
 - [ ] T001 User: create the Tracer organization and an Android project for `com.workoutrec` at apptracer.ru, and set the repo secrets `TRACER_APP_TOKEN` and `TRACER_PLUGIN_TOKEN` (quickstart prerequisites 1–2). It doesn't block T002–T004, which must also be green without the secrets.
-- [ ] T002 Add `tracer = "1.4.0"`, the plugin `ru-ok-tracer` (id `ru.ok.tracer`), the BOM `tracer-platform` and the modules `tracer-crash-report`, `tracer-heap-dumps`, `tracer-disk-usage`, `tracer-profiler-sampling` and `tracer-profiler-systrace` to `gradle/libs.versions.toml` (research R1).
-- [ ] T003 In `app/build.gradle.kts`:
+- [X] T002 Add `tracer = "1.4.0"`, the plugin `ru-ok-tracer` (id `ru.ok.tracer`), the BOM `tracer-platform` and the modules `tracer-crash-report`, `tracer-heap-dumps`, `tracer-disk-usage`, `tracer-profiler-sampling` and `tracer-profiler-systrace` to `gradle/libs.versions.toml` (research R1).
+- [X] T003 In `app/build.gradle.kts`:
   - Apply the plugin and add `implementation(platform(libs.tracer.platform))` plus the five modules.
   - Set `buildFeatures.resValues = true`.
   - Read `tracer.appToken` and `tracer.pluginToken` from `local.properties`, or `TRACER_APP_TOKEN` and `TRACER_PLUGIN_TOKEN` from the environment.
   - Add the `tracer {}` block: `defaultConfig` with the tokens, `uploadMapping = false`, `dontFailOnUploadFailure = true` and `isDisabled = appToken.isBlank()`; `debug` with `environment = "github"`; `release` with `environment = "play"` (R2, contract "Project and environments").
-- [ ] T004 Pass `TRACER_APP_TOKEN` and `TRACER_PLUGIN_TOKEN` as env **only** to the "Assemble, unit tests, lint" and "Release bundle for Google Play" steps of the `unit-tests` job in `.github/workflows/ci.yml`. Never pass them to the `ui-tests` job (SC-006). Push and confirm CI is green, with and without the secrets.
+- [X] T004 Pass `TRACER_APP_TOKEN` and `TRACER_PLUGIN_TOKEN` as env **only** to the "Assemble, unit tests, lint" and "Release bundle for Google Play" steps of the `unit-tests` job in `.github/workflows/ci.yml`. Never pass them to the `ui-tests` job (SC-006). Push and confirm CI is green, with and without the secrets.
 
 **Checkpoint**: the app builds with the Tracer SDK on the classpath, and nothing is initialized yet.
 
@@ -56,28 +56,28 @@ US5 (P4).
 
 ### Tests (write first, push red)
 
-- [ ] T005 [P] Add `FakeMonitoring` to `test/fakes/FakeMonitoring.kt`. It records `logs`, `nonFatals` (issue, error, details) and `profiles` (target, committed/aborted) and has a settable `enabled`.
-- [ ] T006 [P] Add tests in `test/monitoring/MonitoringSettingsTest.kt` against a fake key-value store:
+- [X] T005 [P] Add `FakeMonitoring` to `test/fakes/FakeMonitoring.kt`. It records `logs`, `nonFatals` (issue, error, details) and `profiles` (target, committed/aborted) and has a settable `enabled`.
+- [X] T006 [P] Add tests in `test/monitoring/MonitoringSettingsTest.kt` against a fake key-value store:
   - `sendDiagnostics` defaults to `true` on a fresh install.
   - It persists after setting.
   - `startedWith` is captured once at process start and doesn't change when the switch changes.
   - `appliesAfterRestart` is true only when `sendDiagnostics && !startedWith` (data-model "MonitoringSetting").
-- [ ] T007 [P] Add tests in `test/monitoring/MonitoringConfigTest.kt`:
+- [X] T007 [P] Add tests in `test/monitoring/MonitoringConfigTest.kt`:
   - Switch on with a token → the plan lists the modules `core` (debug upload on), `crash` (ANR on, non-fatal soft limit on), `crash-free`, `heap-dumps`, `disk-usage` (50 MB, probability 1), `sampling` and `systrace`.
   - Switch off → an empty list, plus a request to delete stored reports.
   - No token → an empty list and no delete (R2, R3, R8).
 
 ### Implementation (make green)
 
-- [ ] T008 [P] Create `main/monitoring/Monitoring.kt`:
+- [X] T008 [P] Create `main/monitoring/Monitoring.kt`:
   - The `Monitoring` interface (`enabled`, `log(line)`, `nonFatal(issue, error, details)`, `profile(target, block)`).
   - `NoMonitoring`.
   - The `NonFatalIssue` enum with keys `sync-failed` (ERROR), `sync-timeout` (WARNING), `spreadsheet-mismatch` (WARNING), `token-failed` (ERROR) and `diagnostics-test` (INFO). Keys come from contracts/monitoring.md "Events" and never change.
   - The `ProfileTarget` enum with `app-start`, `sync` and `today-open`.
-- [ ] T009 [P] Implement `main/monitoring/MonitoringSettings.kt` over `SharedPreferences` file `monitoring`, key `send_diagnostics`, default `true`. Read it synchronously, and set `startedWith` once from `Application.attachBaseContext` (R3).
-- [ ] T010 Implement `main/monitoring/MonitoringConfig.kt`. It is a pure decision (`ConfigPlan`: module list + `deleteStoredReports`), and a separate function maps the plan to Tracer `TracerConfiguration` builders. That mapping is the only SDK-touching part, and it goes in `main/monitoring/TracerMonitoring.kt`.
-- [ ] T011 Implement `TracerMonitoring` in `main/monitoring/TracerMonitoring.kt`. It holds the adapter calls `TracerCrashReport.log`, `TracerCrashReport.report(e, issueKey, severity)`, `SamplingProfiler`/`SystraceProfiler` `start`/`commit`/`abort` and `android.os.Trace` sections. Every call checks `enabled` first and wraps SDK exceptions so they never reach the caller (FR-015). This is the only file importing `ru.ok.tracer`.
-- [ ] T012 In `main/AppContainer.kt`, create `MonitoringSettings` and pick the `Monitoring`: `TracerMonitoring` when the token is present and `startedWith`, otherwise `NoMonitoring`. Expose it as `container.monitoring`.
+- [X] T009 [P] Implement `main/monitoring/MonitoringSettings.kt` over `SharedPreferences` file `monitoring`, key `send_diagnostics`, default `true`. Read it synchronously, and set `startedWith` once from `Application.attachBaseContext` (R3).
+- [X] T010 Implement `main/monitoring/MonitoringConfig.kt`. It is a pure decision (`ConfigPlan`: module list + `deleteStoredReports`), and a separate function maps the plan to Tracer `TracerConfiguration` builders. That mapping is the only SDK-touching part, and it goes in `main/monitoring/TracerMonitoring.kt`.
+- [X] T011 Implement `TracerMonitoring` in `main/monitoring/TracerMonitoring.kt`. It holds the adapter calls `TracerCrashReport.log`, `TracerCrashReport.report(e, issueKey, severity)`, `SamplingProfiler`/`SystraceProfiler` `start`/`commit`/`abort` and `android.os.Trace` sections. Every call checks `enabled` first and wraps SDK exceptions so they never reach the caller (FR-015). This is the only file importing `ru.ok.tracer`.
+- [X] T012 In `main/AppContainer.kt`, create `MonitoringSettings` and pick the `Monitoring`: `TracerMonitoring` when the token is present and `startedWith`, otherwise `NoMonitoring`. Expose it as `container.monitoring`.
 
 **Checkpoint**: green CI. Every later class receives a `Monitoring` (default `NoMonitoring`) as its constructor parameter.
 
