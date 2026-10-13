@@ -7,6 +7,9 @@ import com.workoutrec.data.SelectedAccount
 import com.workoutrec.data.SettingsStore
 import com.workoutrec.data.SpreadsheetBinding
 import com.workoutrec.google.ApiError
+import com.workoutrec.monitoring.Monitoring
+import com.workoutrec.monitoring.NoMonitoring
+import com.workoutrec.monitoring.NonFatalIssue
 import com.workoutrec.spreadsheet.SpreadsheetSetup
 import com.workoutrec.spreadsheet.SpreadsheetSnapshot
 import com.workoutrec.spreadsheet.StructureCheckResult
@@ -25,6 +28,8 @@ class SpreadsheetSetupFlow(
     private val now: () -> Instant,
     /** Diagnostic log, shared from the account menu. */
     private val log: (String) -> Unit = {},
+    /** Feature 003: a mismatch as a non-fatal event (FR-005). */
+    private val monitoring: Monitoring = NoMonitoring,
 ) : PostAuthStep {
 
     /** On launch with a binding: Ready at once, no network (FR-004); [refresh] checks in the background. */
@@ -74,7 +79,9 @@ class SpreadsheetSetupFlow(
             val check = setup.check(spreadsheetId)
             when (val result = check.result) {
                 is StructureCheckResult.Mismatch -> {
-                    log("setup: spreadsheet $spreadsheetId does not match: ${result.reasons.joinToString("; ")}")
+                    val reasons = result.reasons.joinToString("; ")
+                    log("setup: spreadsheet $spreadsheetId does not match: $reasons")
+                    monitoring.nonFatal(NonFatalIssue.SPREADSHEET_MISMATCH, SpreadsheetMismatch(reasons))
                     SetupState.AskRewrite(spreadsheetId)
                 }
                 StructureCheckResult.Match -> {
@@ -210,3 +217,6 @@ class SpreadsheetSetupFlow(
             SetupState.Error(step, e)
         }
 }
+
+/** Reported when an existing spreadsheet fails the structure check (feature 003 FR-005). */
+class SpreadsheetMismatch(reasons: String) : Exception("Spreadsheet does not match: $reasons")

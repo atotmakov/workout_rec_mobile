@@ -48,12 +48,17 @@ jobs:
       - name: Assemble, unit tests, lint
         env:
           GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
+          # Tracer tokens only for the published builds; the emulator job never gets them (SC-006).
+          TRACER_APP_TOKEN: ${{ secrets.TRACER_APP_TOKEN }}
+          TRACER_PLUGIN_TOKEN: ${{ secrets.TRACER_PLUGIN_TOKEN }}
         run: ./gradlew assembleDebug testDebugUnitTest lintDebug -PversionCode=${{ github.run_number }} --stacktrace
       - name: Release bundle for Google Play
         if: env.UPLOAD_KEYSTORE_BASE64 != ''
         env:
           GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
           UPLOAD_KEYSTORE_PASSWORD: ${{ secrets.UPLOAD_KEYSTORE_PASSWORD }}
+          TRACER_APP_TOKEN: ${{ secrets.TRACER_APP_TOKEN }}
+          TRACER_PLUGIN_TOKEN: ${{ secrets.TRACER_PLUGIN_TOKEN }}
         run: ./gradlew bundleRelease -PversionCode=${{ github.run_number }} --stacktrace
       - name: Upload release bundle
         if: success() && env.UPLOAD_KEYSTORE_BASE64 != ''

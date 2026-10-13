@@ -20,10 +20,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -35,25 +36,23 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import androidx.work.WorkManager
 import com.workoutrec.auth.CredentialManagerAccountPicker
 import com.workoutrec.diag.shareLogIntent
 import com.workoutrec.home.AutomationReminder
+import com.workoutrec.home.DiagnosticsMenuState
+import com.workoutrec.home.DiagnosticsTestAction
 import com.workoutrec.home.MainScreen
+import com.workoutrec.log.DayRoute
 import com.workoutrec.log.LogRoutes
 import com.workoutrec.log.LoggingRoute
+import com.workoutrec.log.PastWorkoutRoute
 import com.workoutrec.log.PickerRoute
 import com.workoutrec.log.SyncDiagnosticsLine
 import com.workoutrec.log.SyncStatusLine
-import com.workoutrec.log.zone
-import com.workoutrec.sync.SyncWork
-import androidx.work.WorkManager
 import com.workoutrec.log.TodayRoute
-import com.workoutrec.log.DayRoute
-import com.workoutrec.log.PastWorkoutRoute
 import com.workoutrec.log.WorkoutsRoute
-import java.time.LocalDate
-import com.workoutrec.sync.SyncStatus
-import com.workoutrec.workout.DisplayModel
+import com.workoutrec.log.zone
 import com.workoutrec.setup.AutomationGuideScreen
 import com.workoutrec.setup.Browser
 import com.workoutrec.setup.ChooseAccountScreen
@@ -64,7 +63,11 @@ import com.workoutrec.setup.SetupAction
 import com.workoutrec.setup.SetupProgressScreen
 import com.workoutrec.setup.SetupState
 import com.workoutrec.setup.SetupViewModel
+import com.workoutrec.sync.SyncStatus
+import com.workoutrec.sync.SyncWork
 import com.workoutrec.ui.theme.WorkoutRecTheme
+import com.workoutrec.workout.DisplayModel
+import java.time.LocalDate
 import kotlinx.coroutines.launch
 
 object Routes {
@@ -80,6 +83,11 @@ class MainActivity : ComponentActivity() {
         setContent {
             WorkoutRecTheme {
                 AppNavHost(container)
+            }
+            // Feature 003 FR-011: the app start ends with the first frame of the first screen.
+            LaunchedEffect(Unit) {
+                withFrameNanos { }
+                (application as WorkoutRecApplication).appStartProfile.shown()
             }
         }
     }
@@ -155,6 +163,7 @@ private fun AppNavHost(container: AppContainer) {
                     // Research R13: try to sync first, so the warning counts only what is really left.
                     onMenuOpened = container.syncScheduler::requestSync,
                     onShareLog = { context.startActivity(shareLogIntent(context, container.diagnosticLog)) },
+                    diagnostics = diagnosticsMenuState(container),
                 ) { modifier ->
                     TodayRoute(
                         container = container,
@@ -287,4 +296,30 @@ private fun SetupRoute(viewModel: SetupViewModel, state: SetupState, accountEmai
 @Composable
 private fun Progress() {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+}
+
+/** Feature 003: the Send diagnostics switch and its test actions, for the account menu. */
+@Composable
+private fun diagnosticsMenuState(container: AppContainer): DiagnosticsMenuState {
+    val settings = container.monitoringSettings
+    var send by remember { mutableStateOf(settings.sendDiagnostics) }
+    val actions = container.diagnosticsTestActions
+    return DiagnosticsMenuState(
+        sendDiagnostics = send,
+        appliesAfterRestart = send && !settings.startedWith,
+        onSendDiagnosticsChange = { on ->
+            container.monitoringControl.setSendDiagnostics(on)
+            send = on
+        },
+        onTestAction = { action ->
+            when (action) {
+                DiagnosticsTestAction.CRASH -> actions.crashNow()
+                DiagnosticsTestAction.FREEZE -> actions.freeze(10_000)
+                DiagnosticsTestAction.TEST_ERROR -> actions.sendTestError()
+                DiagnosticsTestAction.HEAP_DUMP -> actions.memorySnapshotNow()
+                DiagnosticsTestAction.DISK_CHECK -> actions.diskCheckNow()
+                DiagnosticsTestAction.PROFILE_NEXT_START -> actions.profileNextAppStart()
+            }
+        },
+    )
 }

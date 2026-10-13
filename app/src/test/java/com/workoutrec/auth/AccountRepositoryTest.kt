@@ -3,8 +3,10 @@ package com.workoutrec.auth
 import com.workoutrec.data.SelectedAccount
 import com.workoutrec.fakes.FakeAccountPicker
 import com.workoutrec.fakes.FakeApiAuthorizer
+import com.workoutrec.fakes.FakeMonitoring
 import com.workoutrec.fakes.FakeSettingsStore
 import com.workoutrec.google.ApiError
+import com.workoutrec.monitoring.NonFatalIssue
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -140,5 +142,34 @@ class AccountRepositoryTest {
         val repo = AccountRepository(FakeApiAuthorizer().apply { hang = true }, FakeSettingsStore(account), log = { logged += it })
         runCatching { repo.accessToken(forceRefresh = false) }
         assertEquals(listOf("token: requesting", "token: no answer in 20 s"), logged)
+    }
+
+    // Feature 003 FR-005: a failed token request reaches monitoring.
+    @Test
+    fun `a token request without an answer reports token-failed`() = runTest {
+        val monitoring = FakeMonitoring()
+        val repo = AccountRepository(FakeApiAuthorizer().apply { hang = true }, FakeSettingsStore(account), monitoring = monitoring)
+        runCatching { repo.accessToken(forceRefresh = false) }
+        val event = monitoring.nonFatals.single()
+        assertEquals(NonFatalIssue.TOKEN_FAILED, event.issue)
+        assertEquals("no answer in 20 s", event.details)
+    }
+
+    @Test
+    fun `a refused token request reports token-failed`() = runTest {
+        val monitoring = FakeMonitoring()
+        val repo = AccountRepository(FakeApiAuthorizer(AuthOutcome.Denied), FakeSettingsStore(account), monitoring = monitoring)
+        runCatching { repo.accessToken(forceRefresh = false) }
+        assertEquals(listOf(NonFatalIssue.TOKEN_FAILED), monitoring.nonFatals.map { it.issue })
+        assertEquals("Denied", monitoring.nonFatals.single().details)
+    }
+
+    @Test
+    fun `granted and cached tokens report nothing`() = runTest {
+        val monitoring = FakeMonitoring()
+        val repo = AccountRepository(FakeApiAuthorizer(AuthOutcome.Granted("t1")), FakeSettingsStore(account), monitoring = monitoring)
+        repo.accessToken(forceRefresh = false)
+        repo.accessToken(forceRefresh = false)
+        assertTrue(monitoring.nonFatals.isEmpty())
     }
 }

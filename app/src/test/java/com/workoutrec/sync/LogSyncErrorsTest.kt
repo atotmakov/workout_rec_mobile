@@ -1,15 +1,19 @@
 package com.workoutrec.sync
 
 import com.workoutrec.fakes.FakeLogSyncStore
+import com.workoutrec.fakes.FakeMonitoring
 import com.workoutrec.fakes.FakeSheetsLogApi
 import com.workoutrec.fakes.FakeSyncStatusStore
 import com.workoutrec.google.ApiError
 import com.workoutrec.google.MissingTabException
+import com.workoutrec.monitoring.NonFatalIssue
 import com.workoutrec.workout.ChangeKind
 import com.workoutrec.workout.PendingChange
 import com.workoutrec.workout.Reps
 import com.workoutrec.workout.SetKey
 import com.workoutrec.workout.Weight
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -115,5 +119,45 @@ class LogSyncErrorsTest {
         store.pending += set
         logging.run()
         assertEquals(listOf("sync: start", "sync: 1 pending", "sync: done, wrote 1 new, 0 edited, 0 deleted"), logged)
+    }
+
+    // Feature 003 FR-005: handled sync errors reach monitoring as non-fatal events.
+    private val monitoring = FakeMonitoring()
+    private val monitoredSync = LogSync(store, sheets, status, spreadsheetId = { "s1" }, now = { 7L }, monitoring = monitoring)
+
+    @Test
+    fun `a failed run reports sync-failed with the error`() = runTest {
+        store.pending += set
+        sheets.failNext("read", ApiError.ServiceUnavailable(503))
+        monitoredSync.run()
+        val event = monitoring.nonFatals.single()
+        assertEquals(NonFatalIssue.SYNC_FAILED, event.issue)
+        assertEquals(ApiError.ServiceUnavailable(503), event.error)
+    }
+
+    @Test
+    fun `a run without an answer reports sync-timeout`() = runTest {
+        store.pending += set
+        sheets.hangOn = "read"
+        monitoredSync.run()
+        assertEquals(listOf(NonFatalIssue.SYNC_TIMEOUT), monitoring.nonFatals.map { it.issue })
+    }
+
+    @Test
+    fun `a cancelled run reports nothing`() = runTest {
+        store.pending += set
+        sheets.hangOn = "read"
+        val job = launch { monitoredSync.run() }
+        runCurrent()
+        job.cancel()
+        job.join()
+        assertTrue(monitoring.nonFatals.isEmpty())
+    }
+
+    @Test
+    fun `a successful run reports nothing`() = runTest {
+        store.pending += set
+        monitoredSync.run()
+        assertTrue(monitoring.nonFatals.isEmpty())
     }
 }

@@ -1,5 +1,6 @@
 package com.workoutrec.diag
 
+import com.workoutrec.fakes.FakeMonitoring
 import java.io.File
 import java.time.ZoneOffset
 import org.junit.Assert.assertEquals
@@ -53,5 +54,16 @@ class DiagnosticLogTest {
     fun `a failing write never breaks the app`() {
         val notADirectory = tmp.newFile("plain")
         log(File(notADirectory, "sync.log")).write("lost")
+    }
+
+    // Feature 003 FR-006, FR-008: lines go to the file as before and, guarded, to monitoring.
+    @Test
+    fun `lines are also passed to monitoring, except ones with an email or token`() {
+        val monitoring = FakeMonitoring()
+        val log = DiagnosticLog(File(tmp.root, "logs/sync.log"), now = { at }, zone = { ZoneOffset.UTC }, monitoring = monitoring)
+        log.write("sync: start")
+        log.write("account: a@example.com")
+        assertEquals(listOf("sync: start"), monitoring.logs)
+        assertTrue(log.read().contains("account: a@example.com"))
     }
 }

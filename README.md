@@ -34,6 +34,18 @@ Optional repository secret `DEBUG_KEYSTORE_BASE64` (a base64-encoded debug keyst
 each run uses a fresh debug key, so an installed build must be uninstalled before installing the
 next one, and Google sign-in only works for the key whose SHA-1 is registered in Google Cloud.
 
+Optional repository secrets for Google Play: `UPLOAD_KEYSTORE_BASE64` and
+`UPLOAD_KEYSTORE_PASSWORD` (the upload key, PKCS12, alias `upload`). With them CI also builds
+`workout-rec-build-<run>.aab` and attaches it to the release.
+
+Optional repository secrets for app monitoring (feature 003): `TRACER_APP_TOKEN` and
+`TRACER_PLUGIN_TOKEN` from the Tracer project (apptracer.ru) for `com.workoutrec`. CI passes them
+only to the build that is published, never to the emulator tests. Builds without them (local
+builds, forks, the emulator job) have Tracer disabled and send nothing. Locally they can be set
+as `tracer.appToken` and `tracer.pluginToken` in `local.properties`. In the app, **Send
+diagnostics** in the account menu turns monitoring off; a long-press on it opens test actions
+that produce one report of each kind.
+
 ## Google Cloud setup
 
 Needed only to sign in on a real device (task T007; research R12 in

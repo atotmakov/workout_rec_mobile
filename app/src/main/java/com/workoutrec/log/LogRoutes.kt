@@ -9,15 +9,20 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -25,27 +30,26 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.workoutrec.AppContainer
 import com.workoutrec.R
+import com.workoutrec.monitoring.ProfileTarget
+import com.workoutrec.monitoring.ScreenProfile
 import com.workoutrec.setup.Browser
 import com.workoutrec.sync.RefreshPolicy
 import com.workoutrec.sync.SyncStatus
 import com.workoutrec.workout.DisplayModel
-import com.workoutrec.workout.History
-import java.time.DateTimeException
-import java.time.LocalDate
-import java.time.ZoneId
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.testTag
 import com.workoutrec.workout.DisplaySet
+import com.workoutrec.workout.History
 import com.workoutrec.workout.Parsed
 import com.workoutrec.workout.Reps
 import com.workoutrec.workout.SetValues
 import com.workoutrec.workout.Weight
+import java.time.DateTimeException
+import java.time.LocalDate
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.Dispatchers
 
 /** Navigation routes of the logging screens (contracts/screens.md "Navigation"). */
 object LogRoutes {
@@ -73,6 +77,13 @@ fun TodayRoute(
     onPastWorkout: () -> Unit = {},
     header: @Composable () -> Unit = {},
 ) {
+    // Feature 003 FR-011: opening Today until its first frame; leaving earlier drops the profile.
+    val openProfile = remember { ScreenProfile { container.monitoring.beginProfile(ProfileTarget.TODAY_OPEN) }.also { it.entered() } }
+    LaunchedEffect(Unit) {
+        withFrameNanos { }
+        openProfile.shown()
+    }
+    DisposableEffect(Unit) { onDispose { openProfile.left() } }
     val sets by container.workoutRepository.displaySets.collectAsState(initial = emptyList())
     val status by container.syncStatusStore.status.collectAsState(initial = SyncStatus())
     val zone = status.zone()
