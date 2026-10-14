@@ -132,7 +132,7 @@ jobs:
     needs: [script-tests, unit-tests, ui-tests]
     # Only green builds of master; ui-tests also runs on red unit tests, so check every result.
     if: >-
-      github.event_name == 'push' && github.ref == 'refs/heads/master' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/master' &&
       needs.script-tests.result == 'success' &&
       needs.unit-tests.result == 'success' &&
       needs.ui-tests.result == 'success'
