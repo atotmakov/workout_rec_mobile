@@ -52,8 +52,6 @@ class WorkoutRecApplication : Application(), Configuration.Provider, HasTracerCo
         container = AppContainer(this, monitoringSettings)
         appStartProfile.entered()
         container.diagnosticLog.write("app process started; ${DeviceState.describe(this)}")
-        // Until quickstart scenario 0 confirms where Tracer keeps unsent reports (plan phase 5).
-        container.diagnosticLog.write("storage: cache ${cacheDir.list()?.sorted()}, no backup ${noBackupFilesDir.list()?.sorted()}")
     }
 
     /** Background sync runs through the app's own sync (research R2). */
