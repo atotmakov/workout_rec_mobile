@@ -49,7 +49,8 @@ android {
         targetSdk = 36
         // CI passes -PversionCode=<run number> so each published APK installs over the previous one.
         versionCode = (project.findProperty("versionCode") as String?)?.toInt() ?: 1
-        versionName = "0.1.0"
+        // The build number is the last part, so Tracer and the phone's app info show which release it is.
+        versionName = "0.1.$versionCode"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "WEB_CLIENT_ID", "\"$webClientId\"")
         // Feature 003: Tracer only starts in builds that have its token (research R2).

@@ -11,8 +11,8 @@ environment name is a change to this contract (saved console filters and alerts 
 | Google Play bundle (release build type, CI with token) | `play` | yes |
 | Any build without `TRACER_APP_TOKEN` (local, forks, CI emulator job) | — | Tracer disabled (`isDisabled`) |
 
-App version in reports = `versionName` (`0.1.0`) and `versionCode` (CI build number), so "build
-N" in the console is the GitHub release `build-N`.
+App version in reports = `versionName` (`0.1.N`) and `versionCode` (`N`), where N is the CI build number, so
+`0.1.N` in the console is the GitHub release `build-N`.
 
 ## Events
 
