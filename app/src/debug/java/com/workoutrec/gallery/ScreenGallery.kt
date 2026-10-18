@@ -1,0 +1,387 @@
+package com.workoutrec.gallery
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewParameter
+import androidx.compose.ui.tooling.preview.PreviewParameterProvider
+import com.workoutrec.R
+import com.workoutrec.automation.AutomationStatus
+import com.workoutrec.data.SelectedAccount
+import com.workoutrec.google.ApiError
+import com.workoutrec.home.AutomationReminder
+import com.workoutrec.home.MainScreen
+import com.workoutrec.home.SignOutDialog
+import com.workoutrec.home.SwitchAccountDialog
+import com.workoutrec.log.DayDetailScreen
+import com.workoutrec.log.DoneSet
+import com.workoutrec.log.DraftSet
+import com.workoutrec.log.EditSetDialog
+import com.workoutrec.log.ExerciseLoggingScreen
+import com.workoutrec.log.ExercisePicker
+import com.workoutrec.log.LoggingActions
+import com.workoutrec.log.LoggingState
+import com.workoutrec.log.PastDaysScreen
+import com.workoutrec.log.PastWorkoutDialog
+import com.workoutrec.log.PastWorkoutEditor
+import com.workoutrec.log.PastWorkoutState
+import com.workoutrec.log.PlanSetsDialog
+import com.workoutrec.log.SetRowState
+import com.workoutrec.log.SyncDiagnosticsLine
+import com.workoutrec.log.SyncNoticeList
+import com.workoutrec.log.SyncStatusLine
+import com.workoutrec.log.TodayScreen
+import com.workoutrec.setup.AutomationGuideScreen
+import com.workoutrec.setup.ChooseAccountScreen
+import com.workoutrec.setup.GuideStep
+import com.workoutrec.setup.RewriteDialog
+import com.workoutrec.setup.SetupMessage
+import com.workoutrec.setup.SetupProgressScreen
+import com.workoutrec.sync.BackgroundRun
+import com.workoutrec.sync.FailReason
+import com.workoutrec.sync.NoticeKind
+import com.workoutrec.sync.SyncNotice
+import com.workoutrec.sync.SyncPhase
+import com.workoutrec.ui.theme.WorkoutRecTheme
+import com.workoutrec.workout.DaySummary
+import com.workoutrec.workout.DisplaySet
+import com.workoutrec.workout.Exercise
+import com.workoutrec.workout.ExerciseGroup
+import com.workoutrec.workout.InvalidReason
+import com.workoutrec.workout.LastTime
+import com.workoutrec.workout.Record
+import com.workoutrec.workout.Reps
+import com.workoutrec.workout.SetKey
+import com.workoutrec.workout.SetRef
+import com.workoutrec.workout.SetValues
+import com.workoutrec.workout.SyncState
+import com.workoutrec.workout.Weight
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.ZoneId
+
+/**
+ * Every screen and state of the app with sample data, for the redesign: Android Studio shows them
+ * as previews, and `ScreenGalleryTest` renders them to PNGs. No account, network or database.
+ *
+ * Screens shown inside a route (top bar, Today's header) are framed here the way `LogRoutes` and
+ * `MainActivity` frame them, so a screenshot looks like the real screen.
+ */
+data class GalleryScreen(
+    /** File-name friendly, unique; the number orders the gallery. */
+    val name: String,
+    /** A popup the test opens by tapping, since the screen keeps it closed in its own state. */
+    val open: GalleryOpen? = null,
+    val content: @Composable () -> Unit,
+) {
+    override fun toString() = name
+}
+
+enum class GalleryOpen { ACCOUNT_MENU, DIAGNOSTICS_TEST_DIALOG }
+
+object ScreenGallery {
+    val screens: List<GalleryScreen> = listOf(
+        // Setup
+        GalleryScreen("01-welcome") { ChooseAccountScreen(message = null, onChooseAccount = {}) },
+        GalleryScreen("02-welcome-account-required") { ChooseAccountScreen(message = SetupMessage.AccountRequired, onChooseAccount = {}) },
+        GalleryScreen("03-welcome-access-revoked") { ChooseAccountScreen(message = SetupMessage.AccessRevoked, onChooseAccount = {}) },
+        GalleryScreen("04-setup-working") { SetupProgressScreen(error = null, onRetry = {}) },
+        GalleryScreen("05-setup-error-offline") { SetupProgressScreen(error = ApiError.Offline, onRetry = {}) },
+        GalleryScreen("06-setup-error-access") { SetupProgressScreen(error = ApiError.AccessDenied("403"), onRetry = {}) },
+        GalleryScreen("07-setup-rewrite-dialog") { SetupProgressScreen(error = null, onRetry = {}); RewriteDialog(onAnswer = {}) },
+        GalleryScreen("08-guide-step1-api-setting") { AutomationGuideScreen(step = GuideStep.ApiSetting, onOpen = {}, onContinue = {}) },
+        GalleryScreen("09-guide-step2-private-tab") {
+            AutomationGuideScreen(step = GuideStep.Enable, onOpen = {}, onContinue = {}, accountEmail = Samples.ACCOUNT.email)
+        },
+        GalleryScreen("10-guide-step2-copy-link") {
+            AutomationGuideScreen(step = GuideStep.Enable, onOpen = {}, onContinue = {}, accountEmail = Samples.ACCOUNT.email, privateTab = false, onCopyLink = {})
+        },
+        // Today (the main screen)
+        GalleryScreen("11-today-empty") { TodayFrame(groups = emptyList()) },
+        GalleryScreen("12-today-workout") { TodayFrame(groups = Samples.todayGroups()) },
+        GalleryScreen("13-today-not-synced") {
+            TodayFrame(groups = Samples.todayGroups(lastNotSynced = true), pendingCount = 2, phase = SyncPhase.Running, showDiagnostics = true)
+        },
+        GalleryScreen("14-today-sync-failing") {
+            TodayFrame(groups = Samples.todayGroups(lastNotSynced = true), pendingCount = 2, phase = SyncPhase.Failing(FailReason.NETWORK))
+        },
+        GalleryScreen("15-today-needs-sign-in") { TodayFrame(groups = Samples.todayGroups(), pendingCount = 1, phase = SyncPhase.NeedsSignIn) },
+        GalleryScreen("16-today-automation-reminder") { TodayFrame(groups = Samples.todayGroups(), automation = AutomationStatus.NotEnabled) },
+        GalleryScreen("17-today-sync-notices") { TodayFrame(groups = Samples.todayGroups(), notices = Samples.notices()) },
+        GalleryScreen("18-account-menu", open = GalleryOpen.ACCOUNT_MENU) { TodayFrame(groups = Samples.todayGroups(), pendingCount = 1) },
+        GalleryScreen("19-diagnostics-test-dialog", open = GalleryOpen.DIAGNOSTICS_TEST_DIALOG) { TodayFrame(groups = Samples.todayGroups()) },
+        GalleryScreen("20-sign-out-dialog") {
+            TodayFrame(groups = Samples.todayGroups(lastNotSynced = true), pendingCount = 2)
+            SignOutDialog(onConfirm = {}, onCancel = {}, unsyncedCount = 2)
+        },
+        GalleryScreen("21-switch-account-dialog") {
+            TodayFrame(groups = Samples.todayGroups(lastNotSynced = true), pendingCount = 2)
+            SwitchAccountDialog(unsyncedCount = 2, onConfirm = {}, onCancel = {})
+        },
+        // Adding an exercise and logging sets
+        GalleryScreen("22-picker") {
+            RouteFrame(stringResource(R.string.picker_title)) { modifier ->
+                ExercisePicker(exercises = Samples.exercises(), recent = Samples.recent(), onPick = {}, onOpenDrills = {}, modifier = modifier)
+            }
+        },
+        GalleryScreen("23-picker-empty") {
+            RouteFrame(stringResource(R.string.picker_title)) { modifier ->
+                ExercisePicker(exercises = emptyList(), recent = emptyList(), onPick = {}, onOpenDrills = {}, modifier = modifier)
+            }
+        },
+        GalleryScreen("24-plan-sets-dialog") {
+            RouteFrame(stringResource(R.string.picker_title)) { modifier ->
+                ExercisePicker(exercises = Samples.exercises(), recent = Samples.recent(), onPick = {}, onOpenDrills = {}, modifier = modifier)
+            }
+            PlanSetsDialog(initial = 3, onConfirm = {}, onDismiss = {})
+        },
+        GalleryScreen("25-logging-start") { LoggingFrame(Samples.loggingStart()) },
+        GalleryScreen("26-logging-in-progress") { LoggingFrame(Samples.loggingInProgress()) },
+        GalleryScreen("27-logging-invalid-value") { LoggingFrame(Samples.loggingInvalid()) },
+        // History and corrections
+        GalleryScreen("28-past-days") {
+            RouteFrame(stringResource(R.string.past_days_title)) { modifier -> PastDaysScreen(Samples.pastDays(), onOpenDay = {}, modifier = modifier) }
+        },
+        GalleryScreen("29-day-detail") {
+            RouteFrame(Samples.DAY_TITLE) { modifier -> DayDetailScreen(Samples.dayGroups(), onEditSet = {}, modifier = modifier) }
+        },
+        GalleryScreen("30-edit-set-dialog") {
+            RouteFrame(Samples.DAY_TITLE) { modifier -> DayDetailScreen(Samples.dayGroups(), onEditSet = {}, modifier = modifier) }
+            EditSetDialog(set = Samples.dayGroups().first().sets.first(), exercises = Samples.exercises(), onSave = { _, _, _ -> }, onDelete = {}, onDismiss = {}, zone = Samples.ZONE)
+        },
+        GalleryScreen("31-past-workout-dialog") {
+            RouteFrame(stringResource(R.string.past_workout_title)) { }
+            PastWorkoutDialog(initialDate = Samples.YESTERDAY, onStart = { _, _, _ -> null }, onDismiss = {})
+        },
+        GalleryScreen("32-past-workout-editor") {
+            RouteFrame(stringResource(R.string.past_workout_title)) { modifier ->
+                Box(modifier) {
+                    PastWorkoutEditor(Samples.pastWorkout(), Samples.exercises(), onAddSet = {}, onRemoveSet = {}, onSave = {}, onCancel = {}, zone = Samples.ZONE)
+                }
+            }
+        },
+    )
+}
+
+/** The main screen with Today and its header, as `MainActivity` and `TodayRoute` build it. */
+@Composable
+private fun TodayFrame(
+    groups: List<ExerciseGroup>,
+    pendingCount: Int = 0,
+    phase: SyncPhase = SyncPhase.Idle,
+    showDiagnostics: Boolean = false,
+    automation: AutomationStatus? = null,
+    notices: List<Pair<Long, SyncNotice>> = emptyList(),
+) {
+    MainScreen(account = Samples.ACCOUNT, onSwitchAccount = {}, onSignOut = {}, unsyncedCount = pendingCount) { modifier ->
+        TodayScreen(groups, onAddExercise = {}, onOpenExercise = {}, modifier = modifier) {
+            automation?.let { AutomationReminder(status = it, onFix = {}) }
+            SyncStatusLine(pendingCount = pendingCount, phase = phase, onSignIn = {})
+            if (showDiagnostics) {
+                SyncDiagnosticsLine(workStates = listOf("ENQUEUED"), lastRun = BackgroundRun(Samples.at(10, 2) * 1000, "synced"), zone = Samples.ZONE)
+            }
+            SyncNoticeList(notices, onDismiss = {})
+            Row {
+                TextButton(onClick = {}) { Text(stringResource(R.string.menu_workouts)) }
+                TextButton(onClick = {}) { Text(stringResource(R.string.menu_past_workout)) }
+            }
+        }
+    }
+}
+
+/** A screen under a top bar with "←", as the routes in `LogRoutes` show it. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun RouteFrame(title: String, content: @Composable (Modifier) -> Unit) {
+    Scaffold(topBar = { TopAppBar(title = { Text(title) }, navigationIcon = { TextButton(onClick = {}) { Text("←") } }) }) { padding ->
+        content(Modifier.padding(padding))
+    }
+}
+
+@Composable
+private fun LoggingFrame(state: LoggingState) {
+    RouteFrame(state.exercise) { modifier -> ExerciseLoggingScreen(state, NoLoggingActions, modifier) }
+}
+
+private object NoLoggingActions : LoggingActions {
+    override fun onWeightChange(index: Int, text: String) {}
+    override fun onRepsChange(index: Int, text: String) {}
+    override fun onStepWeight(index: Int, direction: Int) {}
+    override fun onStepReps(index: Int, direction: Int) {}
+    override fun onConfirm(index: Int) {}
+    override fun onAddSet() {}
+}
+
+/** Sample workouts; exercise names follow the screen's language, like a real spreadsheet would. */
+private object Samples {
+    val ZONE: ZoneId = ZoneId.of("Europe/Moscow")
+    val TODAY: LocalDate = LocalDate.of(2026, 10, 16)
+    val YESTERDAY: LocalDate = TODAY.minusDays(1)
+    const val DAY_TITLE = "Oct 14, 2026"
+    val ACCOUNT = SelectedAccount(email = "alex.example@gmail.com", displayName = "Alex Example", photoUrl = null)
+
+    /** Epoch seconds, the unit of set times (`SetKey`, `DraftSet`). */
+    fun at(hour: Int, minute: Int, day: LocalDate = TODAY): Long =
+        LocalDateTime.of(day, java.time.LocalTime.of(hour, minute)).atZone(ZONE).toEpochSecond()
+
+    @Composable
+    private fun ru(): Boolean = LocalConfiguration.current.locales[0].language == "ru"
+
+    @Composable
+    fun name(en: String, ru: String): String = if (ru()) ru else en
+
+    private fun w(kg: Double) = Weight.ofHundredths(Math.round(kg * 100))
+
+    private fun set(time: Long, exercise: String, kg: Double, reps: Int, synced: Boolean = true, row: Int = 0): DisplaySet {
+        val key = SetKey(time, exercise, w(kg), Reps(reps))
+        return DisplaySet(key, if (synced) SyncState.SYNCED else SyncState.NOT_SYNCED, if (synced) SetRef.Row(row, key) else SetRef.Pending("p$row"))
+    }
+
+    @Composable
+    fun bench() = name("Bench press", "Жим лёжа")
+
+    @Composable
+    fun row() = name("Bent-over row", "Тяга штанги в наклоне")
+
+    @Composable
+    fun squat() = name("Squat", "Приседания")
+
+    @Composable
+    fun todayGroups(lastNotSynced: Boolean = false): List<ExerciseGroup> {
+        val bench = bench()
+        val row = row()
+        val squat = squat()
+        return listOf(
+            ExerciseGroup(bench, listOf(set(at(9, 5), bench, 60.0, 10, row = 1), set(at(9, 9), bench, 70.0, 8, row = 2), set(at(9, 13), bench, 72.5, 6, row = 3))),
+            ExerciseGroup(row, listOf(set(at(9, 20), row, 50.0, 12, row = 4), set(at(9, 24), row, 55.0, 10, row = 5))),
+            ExerciseGroup(squat, listOf(set(at(9, 35), squat, 80.0, 8, synced = !lastNotSynced, row = 6), set(at(9, 40), squat, 85.0, 6, synced = !lastNotSynced, row = 7))),
+        )
+    }
+
+    @Composable
+    fun notices(): List<Pair<Long, SyncNotice>> {
+        val bench = bench()
+        return listOf(
+            1L to SyncNotice(NoticeKind.CONFLICT_DROPPED, SetKey(at(9, 9), bench, w(70.0), Reps(8))),
+            2L to SyncNotice(NoticeKind.WORKOUT_ROW_NOT_UPDATED, SetKey(at(9, 13), bench, w(72.5), Reps(6))),
+        )
+    }
+
+    @Composable
+    fun exercises(): List<Exercise> {
+        val chest = name("Chest", "Грудь")
+        val back = name("Back", "Спина")
+        val legs = name("Legs", "Ноги")
+        return listOf(
+            Exercise(bench(), chest),
+            Exercise(name("Incline dumbbell press", "Жим гантелей на наклонной"), chest),
+            Exercise(name("Dips", "Отжимания на брусьях"), chest),
+            Exercise(row(), back),
+            Exercise(name("Pull-up", "Подтягивания"), back),
+            Exercise(name("Lat pulldown", "Тяга верхнего блока"), back),
+            Exercise(squat(), legs),
+            Exercise(name("Leg press", "Жим ногами"), legs),
+            Exercise(name("Romanian deadlift", "Румынская тяга"), legs),
+        )
+    }
+
+    @Composable
+    fun recent(): List<String> = listOf(bench(), squat())
+
+    @Composable
+    fun loggingStart(): LoggingState {
+        val bench = bench()
+        val last = LastTime(LocalDate.of(2026, 10, 13), listOf(SetKey(at(9, 0, TODAY.minusDays(3)), bench, w(70.0), Reps(8)), SetKey(at(9, 4, TODAY.minusDays(3)), bench, w(70.0), Reps(7))))
+        val suggested = SetRowState("70", "8", null, null, canConfirm = true, weightSuggested = true, repsSuggested = true)
+        return LoggingState(bench, done = emptyList(), rows = listOf(suggested, suggested, suggested), lastTime = last, record = Record(w(75.0), Reps(5)))
+    }
+
+    @Composable
+    fun loggingInProgress(): LoggingState {
+        val start = loggingStart()
+        val bench = start.exercise
+        return start.copy(
+            done = listOf(
+                DoneSet(SetKey(at(9, 5), bench, w(70.0), Reps(8)), SyncState.SYNCED),
+                DoneSet(SetKey(at(9, 9), bench, w(72.5), Reps(6)), SyncState.NOT_SYNCED),
+            ),
+            rows = listOf(SetRowState("72.5", "6", null, null, canConfirm = true)),
+        )
+    }
+
+    @Composable
+    fun loggingInvalid(): LoggingState = loggingStart().copy(
+        rows = listOf(
+            SetRowState("70,555", "8", InvalidReason.TOO_MANY_DECIMALS, null, canConfirm = false),
+            SetRowState("70", "0", null, InvalidReason.TOO_SMALL, canConfirm = false),
+        ),
+    )
+
+    fun pastDays(): List<DaySummary> = listOf(
+        DaySummary(TODAY.minusDays(2), exerciseCount = 4, setCount = 14),
+        DaySummary(TODAY.minusDays(4), exerciseCount = 3, setCount = 11),
+        DaySummary(TODAY.minusDays(7), exerciseCount = 5, setCount = 17),
+        DaySummary(TODAY.minusDays(9), exerciseCount = 3, setCount = 9),
+    )
+
+    @Composable
+    fun dayGroups(): List<ExerciseGroup> {
+        val day = TODAY.minusDays(2)
+        val pull = name("Pull-up", "Подтягивания")
+        val press = name("Leg press", "Жим ногами")
+        return listOf(
+            ExerciseGroup(pull, listOf(set(at(18, 5, day), pull, 0.0, 10, row = 1), set(at(18, 9, day), pull, 0.0, 8, row = 2), set(at(18, 13, day), pull, 5.0, 6, row = 3))),
+            ExerciseGroup(press, listOf(set(at(18, 25, day), press, 120.0, 12, row = 4), set(at(18, 30, day), press, 140.0, 10, synced = false, row = 5))),
+        )
+    }
+
+    @Composable
+    fun pastWorkout(): PastWorkoutState {
+        val bench = bench()
+        return PastWorkoutState(
+            date = YESTERDAY,
+            dayHasSets = true,
+            sets = listOf(
+                DraftSet(SetValues(bench, w(60.0), Reps(10)), at(18, 0, YESTERDAY)),
+                DraftSet(SetValues(bench, w(65.0), Reps(8)), at(18, 15, YESTERDAY)),
+                DraftSet(SetValues(bench, w(70.0), Reps(6)), at(18, 30, YESTERDAY)),
+            ),
+        )
+    }
+}
+
+class GalleryScreens : PreviewParameterProvider<GalleryScreen> {
+    override val values = ScreenGallery.screens.asSequence()
+}
+
+/**
+ * [screen] as the app shows it: the app theme over the window background of `themes.xml`, with no
+ * Compose background or content color of its own, so screens without a Scaffold look as on a phone.
+ */
+@Composable
+fun GalleryWindow(screen: GalleryScreen) {
+    WorkoutRecTheme {
+        Box(Modifier.fillMaxSize().background(colorResource(R.color.window_background))) { screen.content() }
+    }
+}
+
+/** Every gallery screen in Android Studio; switch the preview to dark or Russian in its toolbar. */
+@Preview(name = "Light", showSystemUi = true)
+@Preview(name = "Dark", showSystemUi = true, uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES)
+@Composable
+private fun GalleryPreview(@PreviewParameter(GalleryScreens::class) screen: GalleryScreen) {
+    GalleryWindow(screen)
+}

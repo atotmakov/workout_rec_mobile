@@ -22,6 +22,8 @@ tracer = "1.4.0"
 junit = "4.13.2"
 androidxTestExtJunit = "1.2.1"
 androidxTestRunner = "1.6.2"
+robolectric = "4.15.1"
+roborazzi = "1.43.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -59,6 +61,11 @@ junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-test-ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidxTestExtJunit" }
 androidx-test-runner = { group = "androidx.test", name = "runner", version.ref = "androidxTestRunner" }
 
+# Screen gallery: screens rendered to PNGs on the JVM, for the redesign.
+robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
+roborazzi = { group = "io.github.takahirom.roborazzi", name = "roborazzi", version.ref = "roborazzi" }
+roborazzi-compose = { group = "io.github.takahirom.roborazzi", name = "roborazzi-compose", version.ref = "roborazzi" }
+
 # Tracer (apptracer.ru) app monitoring, feature 003 research R1; versions come from the BOM.
 tracer-platform = { group = "ru.ok.tracer", name = "tracer-platform", version.ref = "tracer" }
 tracer-crash-report = { group = "ru.ok.tracer", name = "tracer-crash-report" }
@@ -74,3 +81,4 @@ kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "ko
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 tracer = { id = "ru.ok.tracer", version.ref = "tracer" }
+roborazzi = { id = "io.github.takahirom.roborazzi", version.ref = "roborazzi" }

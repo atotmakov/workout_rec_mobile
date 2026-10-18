@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.tracer)
+    alias(libs.plugins.roborazzi)
 }
 
 val localProperties = Properties().apply {
@@ -111,6 +112,8 @@ android {
 
     testOptions {
         unitTests.isReturnDefaultValues = true
+        // The screen gallery renders with Robolectric, which needs the app's resources.
+        unitTests.isIncludeAndroidResources = true
     }
 
     lint {
@@ -179,6 +182,11 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.okhttp.mockwebserver)
+    testImplementation(platform(libs.androidx.compose.bom))
+    testImplementation(libs.androidx.compose.ui.test.junit4)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.roborazzi)
+    testImplementation(libs.roborazzi.compose)
 
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.androidx.test.runner)
