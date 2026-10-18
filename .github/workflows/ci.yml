@@ -51,7 +51,15 @@ jobs:
           # Tracer tokens only for the published builds; the emulator job never gets them (SC-006).
           TRACER_APP_TOKEN: ${{ secrets.TRACER_APP_TOKEN }}
           TRACER_PLUGIN_TOKEN: ${{ secrets.TRACER_PLUGIN_TOKEN }}
-        run: ./gradlew assembleDebug testDebugUnitTest lintDebug -PversionCode=${{ github.run_number }} --stacktrace
+        # roborazzi.test.record: the screen gallery test also writes its PNGs (uploaded below).
+        run: ./gradlew assembleDebug testDebugUnitTest lintDebug -PversionCode=${{ github.run_number }} -Proborazzi.test.record=true --stacktrace
+      - name: Upload screen gallery
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: screen-gallery
+          path: app/build/outputs/gallery/
+          if-no-files-found: ignore
       - name: Release bundle for Google Play
         if: env.UPLOAD_KEYSTORE_BASE64 != ''
         env:
