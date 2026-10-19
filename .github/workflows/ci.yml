@@ -146,6 +146,8 @@ jobs:
       needs.ui-tests.result == 'success'
     permissions:
       contents: write
+      # Lets the job sign in to Google Cloud as the Play publisher service account, no key file.
+      id-token: write
     steps:
       - uses: actions/download-artifact@v8
         with:
@@ -174,3 +176,32 @@ jobs:
             --target "$GITHUB_SHA" \
             --title "Workout Rec build $BUILD" \
             --notes "Debug-signed APK from commit $GITHUB_SHA (all CI checks green). Install on Android 8.0+ by opening the APK on the phone and allowing installs from this source. The .aab, when present, is the upload-key-signed bundle for Google Play."
+      # Play internal testing: needs the PLAY_WIF_PROVIDER / PLAY_SERVICE_ACCOUNT repo variables
+      # (Workload Identity Federation in GCP project workout-rec-510520). Skipped until they are set.
+      - name: Sign in to Google Play
+        id: play-auth
+        if: vars.PLAY_SERVICE_ACCOUNT != '' && hashFiles('aab/*.aab') != ''
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ vars.PLAY_WIF_PROVIDER }}
+          service_account: ${{ vars.PLAY_SERVICE_ACCOUNT }}
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/androidpublisher
+      - name: Release to Google Play internal testing
+        if: steps.play-auth.outcome == 'success'
+        env:
+          TOKEN: ${{ steps.play-auth.outputs.access_token }}
+          BUILD: ${{ github.run_number }}
+        run: |
+          api=https://androidpublisher.googleapis.com/androidpublisher/v3/applications/com.workoutrec
+          auth=(-H "Authorization: Bearer $TOKEN")
+          edit=$(curl -fsS -X POST "${auth[@]}" "$api/edits" | jq -r .id)
+          code=$(curl -fsS -X POST "${auth[@]}" -H "Content-Type: application/octet-stream" \
+            --data-binary @"workout-rec-build-$BUILD.aab" \
+            "https://androidpublisher.googleapis.com/upload/androidpublisher/v3/applications/com.workoutrec/edits/$edit/bundles?uploadType=media" \
+            | jq -r .versionCode)
+          jq -n --arg code "$code" --arg name "build $BUILD" \
+            '{track: "internal", releases: [{name: $name, versionCodes: [$code], status: "completed"}]}' \
+            | curl -fsS -X PUT "${auth[@]}" -H "Content-Type: application/json" --data @- "$api/edits/$edit/tracks/internal" >/dev/null
+          curl -fsS -X POST "${auth[@]}" "$api/edits/$edit:commit" >/dev/null
+          echo "Released version code $code to internal testing"
