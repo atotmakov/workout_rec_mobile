@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -36,7 +37,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import androidx.work.WorkManager
 import com.workoutrec.auth.CredentialManagerAccountPicker
 import com.workoutrec.diag.shareLogIntent
 import com.workoutrec.home.AutomationReminder
@@ -48,11 +48,10 @@ import com.workoutrec.log.LogRoutes
 import com.workoutrec.log.LoggingRoute
 import com.workoutrec.log.PastWorkoutRoute
 import com.workoutrec.log.PickerRoute
-import com.workoutrec.log.SyncDiagnosticsLine
-import com.workoutrec.log.SyncStatusLine
+import com.workoutrec.log.LocalSyncSignIn
+import com.workoutrec.log.SyncStatusAction
 import com.workoutrec.log.TodayRoute
 import com.workoutrec.log.WorkoutsRoute
-import com.workoutrec.log.zone
 import com.workoutrec.setup.AutomationGuideScreen
 import com.workoutrec.setup.Browser
 import com.workoutrec.setup.ChooseAccountScreen
@@ -63,8 +62,6 @@ import com.workoutrec.setup.SetupAction
 import com.workoutrec.setup.SetupProgressScreen
 import com.workoutrec.setup.SetupState
 import com.workoutrec.setup.SetupViewModel
-import com.workoutrec.sync.SyncStatus
-import com.workoutrec.sync.SyncWork
 import com.workoutrec.ui.theme.WorkoutRecTheme
 import com.workoutrec.workout.DisplayModel
 import java.time.LocalDate
@@ -124,102 +121,90 @@ private fun AppNavHost(container: AppContainer) {
         }
     }
 
-    NavHost(navController = navController, startDestination = Routes.SETUP) {
-        composable(Routes.SETUP) {
-            val setupAccount by container.settingsStore.account.collectAsState(initial = null)
-            val context = LocalContext.current
-            SetupRoute(viewModel, state, accountEmail = setupAccount?.email, onShareLog = {
-                context.startActivity(shareLogIntent(context, container.diagnosticLog))
-            }, onReady = {
-                navController.navigate(Routes.HOME) { popUpTo(Routes.SETUP) { inclusive = true } }
-            })
-        }
-        composable(Routes.HOME) {
-            val account by container.settingsStore.account.collectAsState(initial = null)
-            val reminder by viewModel.reminder.collectAsState()
-            LaunchedEffect(Unit) { viewModel.refreshStatus() }
-            val context = LocalContext.current
-            account?.let {
-                val pending by container.workoutRepository.pending.collectAsState(initial = emptyList())
-                val syncStatus by container.syncStatusStore.status.collectAsState(initial = SyncStatus())
-                val scope = rememberCoroutineScope()
-                val workInfos by remember { WorkManager.getInstance(context).getWorkInfosForUniqueWorkFlow(SyncWork.NAME) }
-                    .collectAsState(initial = emptyList())
-                // The phone's sets belong to this account's spreadsheet; they go when the account does.
-                val clearWorkoutData: suspend () -> Unit = {
-                    container.workoutRepository.clearAll()
-                    container.syncStatusStore.clear()
-                }
-                MainScreen(
-                    account = it,
-                    onSwitchAccount = {
-                        scope.launch {
-                            clearWorkoutData()
-                            viewModel.switchAccount(CredentialManagerAccountPicker(context, BuildConfig.WEB_CLIENT_ID))
-                        }
-                    },
-                    onSignOut = { scope.launch { clearWorkoutData(); viewModel.signOut() } },
-                    unsyncedCount = DisplayModel.pendingCount(pending),
-                    // Research R13: try to sync first, so the warning counts only what is really left.
-                    onMenuOpened = container.syncScheduler::requestSync,
-                    onShareLog = { context.startActivity(shareLogIntent(context, container.diagnosticLog)) },
-                    diagnostics = diagnosticsMenuState(container),
-                ) { modifier ->
-                    TodayRoute(
-                        container = container,
-                        onAddExercise = { navController.navigate(LogRoutes.PICKER) },
-                        onOpenExercise = { navController.navigate(LogRoutes.logging(it, sets = 0)) },
-                        onOpenWorkouts = { navController.navigate(LogRoutes.WORKOUTS) },
-                        onPastWorkout = { navController.navigate(LogRoutes.PAST_WORKOUT) },
-                        modifier = modifier,
-                        header = {
-                            reminder?.let { r ->
-                                AutomationReminder(status = r.status, onFix = { viewModel.onAction(SetupAction.FixAutomation) })
-                            }
-                            SyncStatusLine(
-                                pendingCount = DisplayModel.pendingCount(pending),
-                                phase = syncStatus.phase,
-                                onSignIn = { viewModel.start() },
-                            )
-                            if (DisplayModel.pendingCount(pending) > 0) {
-                                SyncDiagnosticsLine(
-                                    workStates = workInfos.filter { !it.state.isFinished }.map { it.state.name },
-                                    lastRun = syncStatus.background,
-                                    zone = syncStatus.zone(),
-                                )
+    CompositionLocalProvider(LocalSyncSignIn provides { viewModel.start() }) {
+        NavHost(navController = navController, startDestination = Routes.SETUP) {
+            composable(Routes.SETUP) {
+                val setupAccount by container.settingsStore.account.collectAsState(initial = null)
+                val context = LocalContext.current
+                SetupRoute(viewModel, state, accountEmail = setupAccount?.email, onShareLog = {
+                    context.startActivity(shareLogIntent(context, container.diagnosticLog))
+                }, onReady = {
+                    navController.navigate(Routes.HOME) { popUpTo(Routes.SETUP) { inclusive = true } }
+                })
+            }
+            composable(Routes.HOME) {
+                val account by container.settingsStore.account.collectAsState(initial = null)
+                val reminder by viewModel.reminder.collectAsState()
+                LaunchedEffect(Unit) { viewModel.refreshStatus() }
+                val context = LocalContext.current
+                account?.let {
+                    val pending by container.workoutRepository.pending.collectAsState(initial = emptyList())
+                    val scope = rememberCoroutineScope()
+                    // The phone's sets belong to this account's spreadsheet; they go when the account does.
+                    val clearWorkoutData: suspend () -> Unit = {
+                        container.workoutRepository.clearAll()
+                        container.syncStatusStore.clear()
+                    }
+                    MainScreen(
+                        account = it,
+                        onSwitchAccount = {
+                            scope.launch {
+                                clearWorkoutData()
+                                viewModel.switchAccount(CredentialManagerAccountPicker(context, BuildConfig.WEB_CLIENT_ID))
                             }
                         },
-                    )
+                        onSignOut = { scope.launch { clearWorkoutData(); viewModel.signOut() } },
+                        unsyncedCount = DisplayModel.pendingCount(pending),
+                        // Research R13: try to sync first, so the warning counts only what is really left.
+                        onMenuOpened = container.syncScheduler::requestSync,
+                        onShareLog = { context.startActivity(shareLogIntent(context, container.diagnosticLog)) },
+                        diagnostics = diagnosticsMenuState(container),
+                        syncStatus = { SyncStatusAction(container) },
+                    ) { modifier ->
+                        TodayRoute(
+                            container = container,
+                            onAddExercise = { navController.navigate(LogRoutes.PICKER) },
+                            onOpenExercise = { navController.navigate(LogRoutes.logging(it, sets = 0)) },
+                            onOpenWorkouts = { navController.navigate(LogRoutes.WORKOUTS) },
+                            onPastWorkout = { navController.navigate(LogRoutes.PAST_WORKOUT) },
+                            modifier = modifier,
+                            header = {
+                                reminder?.let { r ->
+                                    AutomationReminder(status = r.status, onFix = { viewModel.onAction(SetupAction.FixAutomation) })
+                                }
+                            },
+                        )
+                    }
                 }
             }
-        }
-        composable(LogRoutes.PAST_WORKOUT) {
-            PastWorkoutRoute(container, onDone = { navController.popBackStack() })
-        }
-        composable(LogRoutes.WORKOUTS) {
-            WorkoutsRoute(container, onBack = { navController.popBackStack() }, onOpenDay = { navController.navigate(LogRoutes.day(it)) })
-        }
-        composable(LogRoutes.DAY, arguments = listOf(navArgument("date") { type = NavType.StringType })) { entry ->
-            DayRoute(container, LocalDate.parse(entry.arguments?.getString("date")), onBack = { navController.popBackStack() })
-        }
-        composable(LogRoutes.PICKER) {
-            PickerRoute(container, onBack = { navController.popBackStack() }, onStart = { exercise, sets ->
-                navController.navigate(LogRoutes.logging(exercise, sets)) { popUpTo(Routes.HOME) }
-            })
-        }
-        composable(
-            LogRoutes.LOGGING,
-            arguments = listOf(
-                navArgument("exercise") { type = NavType.StringType },
-                navArgument("sets") { type = NavType.IntType; defaultValue = 0 },
-            ),
-        ) { entry ->
-            LoggingRoute(
-                container = container,
-                exercise = entry.arguments?.getString("exercise").orEmpty(),
-                plannedSets = entry.arguments?.getInt("sets") ?: 0,
-                onBack = { navController.popBackStack() },
-            )
+            composable(LogRoutes.PAST_WORKOUT) {
+                PastWorkoutRoute(container, onDone = { navController.popBackStack() })
+            }
+            composable(LogRoutes.WORKOUTS) {
+                WorkoutsRoute(container, onBack = { navController.popBackStack() }, onOpenDay = { navController.navigate(LogRoutes.day(it)) })
+            }
+            composable(LogRoutes.DAY, arguments = listOf(navArgument("date") { type = NavType.StringType })) { entry ->
+                DayRoute(container, LocalDate.parse(entry.arguments?.getString("date")), onBack = { navController.popBackStack() })
+            }
+            composable(LogRoutes.PICKER) {
+                PickerRoute(container, onBack = { navController.popBackStack() }, onStart = { exercise, sets ->
+                    navController.navigate(LogRoutes.logging(exercise, sets)) { popUpTo(Routes.HOME) }
+                })
+            }
+            composable(
+                LogRoutes.LOGGING,
+                arguments = listOf(
+                    navArgument("exercise") { type = NavType.StringType },
+                    navArgument("sets") { type = NavType.IntType; defaultValue = 0 },
+                ),
+            ) { entry ->
+                LoggingRoute(
+                    container = container,
+                    exercise = entry.arguments?.getString("exercise").orEmpty(),
+                    plannedSets = entry.arguments?.getInt("sets") ?: 0,
+                    onBack = { navController.popBackStack() },
+                )
+            }
         }
     }
 }

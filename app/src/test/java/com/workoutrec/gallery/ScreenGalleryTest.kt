@@ -13,6 +13,7 @@ import com.github.takahirom.roborazzi.RobolectricDeviceQualifiers
 import com.github.takahirom.roborazzi.captureScreenRoboImage
 import com.workoutrec.home.AccountAvatarTag
 import com.workoutrec.home.SendDiagnosticsTag
+import com.workoutrec.log.SyncIconTags
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -59,6 +60,7 @@ class ScreenGalleryTest(private val variant: Variant, private val screen: Galler
                 settle()
                 compose.onNodeWithTag(SendDiagnosticsTag).performTouchInput { longClick() }
             }
+            GalleryOpen.SYNC_DETAILS -> compose.onNodeWithTag(SyncIconTags.BUTTON).performClick()
             null -> {}
         }
         settle()

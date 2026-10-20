@@ -40,9 +40,8 @@ import com.workoutrec.log.PastWorkoutEditor
 import com.workoutrec.log.PastWorkoutState
 import com.workoutrec.log.PlanSetsDialog
 import com.workoutrec.log.SetRowState
-import com.workoutrec.log.SyncDiagnosticsLine
 import com.workoutrec.log.SyncNoticeList
-import com.workoutrec.log.SyncStatusLine
+import com.workoutrec.log.SyncStatusButton
 import com.workoutrec.log.TodayScreen
 import com.workoutrec.setup.AutomationGuideScreen
 import com.workoutrec.setup.ChooseAccountScreen
@@ -50,7 +49,6 @@ import com.workoutrec.setup.GuideStep
 import com.workoutrec.setup.RewriteDialog
 import com.workoutrec.setup.SetupMessage
 import com.workoutrec.setup.SetupProgressScreen
-import com.workoutrec.sync.BackgroundRun
 import com.workoutrec.sync.FailReason
 import com.workoutrec.sync.NoticeKind
 import com.workoutrec.sync.SyncNotice
@@ -90,7 +88,7 @@ data class GalleryScreen(
     override fun toString() = name
 }
 
-enum class GalleryOpen { ACCOUNT_MENU, DIAGNOSTICS_TEST_DIALOG }
+enum class GalleryOpen { ACCOUNT_MENU, DIAGNOSTICS_TEST_DIALOG, SYNC_DETAILS }
 
 object ScreenGallery {
     val screens: List<GalleryScreen> = listOf(
@@ -112,13 +110,24 @@ object ScreenGallery {
         // Today (the main screen)
         GalleryScreen("11-today-empty") { TodayFrame(groups = emptyList()) },
         GalleryScreen("12-today-workout") { TodayFrame(groups = Samples.todayGroups()) },
-        GalleryScreen("13-today-not-synced") {
-            TodayFrame(groups = Samples.todayGroups(lastNotSynced = true), pendingCount = 2, phase = SyncPhase.Running, showDiagnostics = true)
+        GalleryScreen("12a-sync-details-synced", open = GalleryOpen.SYNC_DETAILS) { TodayFrame(groups = Samples.todayGroups()) },
+        GalleryScreen("13-today-not-synced") { TodayFrame(groups = Samples.todayGroups(lastNotSynced = true), pendingCount = 2) },
+        GalleryScreen("13a-sync-details-waiting", open = GalleryOpen.SYNC_DETAILS) {
+            TodayFrame(groups = Samples.todayGroups(lastNotSynced = true), pendingCount = 2)
+        },
+        GalleryScreen("13b-today-syncing") {
+            TodayFrame(groups = Samples.todayGroups(lastNotSynced = true), pendingCount = 2, phase = SyncPhase.Running)
         },
         GalleryScreen("14-today-sync-failing") {
             TodayFrame(groups = Samples.todayGroups(lastNotSynced = true), pendingCount = 2, phase = SyncPhase.Failing(FailReason.NETWORK))
         },
+        GalleryScreen("14a-sync-details-failing", open = GalleryOpen.SYNC_DETAILS) {
+            TodayFrame(groups = Samples.todayGroups(lastNotSynced = true), pendingCount = 2, phase = SyncPhase.Failing(FailReason.NETWORK))
+        },
         GalleryScreen("15-today-needs-sign-in") { TodayFrame(groups = Samples.todayGroups(), pendingCount = 1, phase = SyncPhase.NeedsSignIn) },
+        GalleryScreen("15a-sync-details-sign-in", open = GalleryOpen.SYNC_DETAILS) {
+            TodayFrame(groups = Samples.todayGroups(), pendingCount = 1, phase = SyncPhase.NeedsSignIn)
+        },
         GalleryScreen("16-today-automation-reminder") { TodayFrame(groups = Samples.todayGroups(), automation = AutomationStatus.NotEnabled) },
         GalleryScreen("17-today-sync-notices") { TodayFrame(groups = Samples.todayGroups(), notices = Samples.notices()) },
         GalleryScreen("18-account-menu", open = GalleryOpen.ACCOUNT_MENU) { TodayFrame(groups = Samples.todayGroups(), pendingCount = 1) },
@@ -149,17 +158,17 @@ object ScreenGallery {
             PlanSetsDialog(initial = 3, onConfirm = {}, onDismiss = {})
         },
         GalleryScreen("25-logging-start") { LoggingFrame(Samples.loggingStart()) },
-        GalleryScreen("26-logging-in-progress") { LoggingFrame(Samples.loggingInProgress()) },
+        GalleryScreen("26-logging-in-progress") { LoggingFrame(Samples.loggingInProgress(), pendingCount = 1) },
         GalleryScreen("27-logging-invalid-value") { LoggingFrame(Samples.loggingInvalid()) },
         // History and corrections
         GalleryScreen("28-past-days") {
             RouteFrame(stringResource(R.string.past_days_title)) { modifier -> PastDaysScreen(Samples.pastDays(), onOpenDay = {}, modifier = modifier) }
         },
         GalleryScreen("29-day-detail") {
-            RouteFrame(Samples.DAY_TITLE) { modifier -> DayDetailScreen(Samples.dayGroups(), onEditSet = {}, modifier = modifier) }
+            RouteFrame(Samples.DAY_TITLE, pendingCount = 1) { modifier -> DayDetailScreen(Samples.dayGroups(), onEditSet = {}, modifier = modifier) }
         },
         GalleryScreen("30-edit-set-dialog") {
-            RouteFrame(Samples.DAY_TITLE) { modifier -> DayDetailScreen(Samples.dayGroups(), onEditSet = {}, modifier = modifier) }
+            RouteFrame(Samples.DAY_TITLE, pendingCount = 1) { modifier -> DayDetailScreen(Samples.dayGroups(), onEditSet = {}, modifier = modifier) }
             EditSetDialog(set = Samples.dayGroups().first().sets.first(), exercises = Samples.exercises(), onSave = { _, _, _ -> }, onDelete = {}, onDismiss = {}, zone = Samples.ZONE)
         },
         GalleryScreen("31-past-workout-dialog") {
@@ -182,17 +191,18 @@ private fun TodayFrame(
     groups: List<ExerciseGroup>,
     pendingCount: Int = 0,
     phase: SyncPhase = SyncPhase.Idle,
-    showDiagnostics: Boolean = false,
     automation: AutomationStatus? = null,
     notices: List<Pair<Long, SyncNotice>> = emptyList(),
 ) {
-    MainScreen(account = Samples.ACCOUNT, onSwitchAccount = {}, onSignOut = {}, unsyncedCount = pendingCount) { modifier ->
+    MainScreen(
+        account = Samples.ACCOUNT,
+        onSwitchAccount = {},
+        onSignOut = {},
+        unsyncedCount = pendingCount,
+        syncStatus = { SampleSyncStatus(pendingCount, phase) },
+    ) { modifier ->
         TodayScreen(groups, onAddExercise = {}, onOpenExercise = {}, modifier = modifier) {
             automation?.let { AutomationReminder(status = it, onFix = {}) }
-            SyncStatusLine(pendingCount = pendingCount, phase = phase, onSignIn = {})
-            if (showDiagnostics) {
-                SyncDiagnosticsLine(workStates = listOf("ENQUEUED"), lastRun = BackgroundRun(Samples.at(10, 2) * 1000, "synced"), zone = Samples.ZONE)
-            }
             SyncNoticeList(notices, onDismiss = {})
             Row {
                 TextButton(onClick = {}) { Text(stringResource(R.string.menu_workouts)) }
@@ -202,18 +212,38 @@ private fun TodayFrame(
     }
 }
 
-/** A screen under a top bar with "←", as the routes in `LogRoutes` show it. */
+@Composable
+private fun SampleSyncStatus(pendingCount: Int, phase: SyncPhase) {
+    SyncStatusButton(
+        pendingCount = pendingCount,
+        phase = phase,
+        lastSuccessAt = Samples.at(9, 30) * 1000,
+        zone = Samples.ZONE,
+        onSyncNow = {},
+        onSignIn = {},
+    )
+}
+
+/** A screen under a top bar with "←" and the sync icon, as the routes in `LogRoutes` show it. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun RouteFrame(title: String, content: @Composable (Modifier) -> Unit) {
-    Scaffold(topBar = { TopAppBar(title = { Text(title) }, navigationIcon = { TextButton(onClick = {}) { Text("←") } }) }) { padding ->
+private fun RouteFrame(title: String, pendingCount: Int = 0, content: @Composable (Modifier) -> Unit) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(title) },
+                navigationIcon = { TextButton(onClick = {}) { Text("←") } },
+                actions = { SampleSyncStatus(pendingCount, SyncPhase.Idle) },
+            )
+        },
+    ) { padding ->
         content(Modifier.padding(padding))
     }
 }
 
 @Composable
-private fun LoggingFrame(state: LoggingState) {
-    RouteFrame(state.exercise) { modifier -> ExerciseLoggingScreen(state, NoLoggingActions, modifier) }
+private fun LoggingFrame(state: LoggingState, pendingCount: Int = 0) {
+    RouteFrame(state.exercise, pendingCount) { modifier -> ExerciseLoggingScreen(state, NoLoggingActions, modifier) }
 }
 
 private object NoLoggingActions : LoggingActions {
