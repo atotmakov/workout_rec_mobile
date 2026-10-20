@@ -138,7 +138,13 @@
     <string name="past_workout_error_future">Дата не может быть в будущем.</string>
     <string name="past_workout_error_duration">Длительность — от 1 до 600 минут.</string>
     <string name="past_workout_error_format">Введите дату как 2026-01-31, а время как 18:00.</string>
-    <string name="sync_background_details">Фоновая синхронизация: %1$s · последний запуск %2$s</string>
+    <!-- Redesign 1a: top-bar sync icon -->
+    <string name="sync_icon_synced">Все подходы в таблице</string>
+    <string name="sync_icon_running">Синхронизация…</string>
+    <string name="sync_icon_sign_in">Войти</string>
+    <string name="sync_now">Синхронизировать</string>
+    <string name="sync_last_success">Последняя синхронизация: %1$s</string>
+    <string name="sync_never">Ещё не синхронизировано</string>
     <string name="account_send_diagnostics">Отправлять диагностику</string>
     <string name="account_send_diagnostics_restart">Включится после перезапуска</string>
     <string name="diagnostics_test_title">Проверка диагностики</string>

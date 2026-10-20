@@ -49,6 +49,8 @@ fun MainScreen(
     onShareLog: () -> Unit = {},
     /** Feature 003: the Send diagnostics switch and its hidden test actions. */
     diagnostics: DiagnosticsMenuState = DiagnosticsMenuState(),
+    /** The sync status icon, shown left of the avatar (redesign brief 1a). */
+    syncStatus: @Composable () -> Unit = {},
     content: @Composable (Modifier) -> Unit = {},
 ) {
     Scaffold(
@@ -60,6 +62,7 @@ fun MainScreen(
                     var menuOpen by remember { mutableStateOf(false) }
                     var confirmSignOut by remember { mutableStateOf(false) }
                     var confirmSwitch by remember { mutableStateOf(false) }
+                    syncStatus()
                     Box(modifier = Modifier.padding(end = 8.dp)) {
                         AccountAvatar(account = account, onClick = { menuOpen = true; onMenuOpened() })
                         AccountMenu(

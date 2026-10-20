@@ -18,6 +18,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
@@ -60,6 +61,33 @@ object LogRoutes {
     fun day(date: LocalDate) = "day/$date"
     const val LOGGING = "log/{exercise}?sets={sets}"
     fun logging(exercise: String, sets: Int) = "log/${android.net.Uri.encode(exercise)}?sets=$sets"
+}
+
+/** Signs in again when sync needs it; `MainActivity` provides it for every screen's sync icon. */
+val LocalSyncSignIn = staticCompositionLocalOf<() -> Unit> { {} }
+
+/** The top-bar sync icon with this phone's sync state (redesign brief 1a). */
+@Composable
+fun SyncStatusAction(container: AppContainer) {
+    val status by container.syncStatusStore.status.collectAsState(initial = SyncStatus())
+    val pending by container.workoutRepository.pending.collectAsState(initial = emptyList())
+    val scope = rememberCoroutineScope()
+    SyncStatusButton(
+        pendingCount = DisplayModel.pendingCount(pending),
+        phase = status.phase,
+        lastSuccessAt = status.lastSuccessAt,
+        zone = status.zone(),
+        onSyncNow = {
+            scope.launch {
+                // Off the main thread: a sync parses the whole log (research R7).
+                withContext(Dispatchers.Default) {
+                    container.diagnosticLog.write("sync now tapped")
+                    container.syncScheduler.runNow()
+                }
+            }
+        },
+        onSignIn = LocalSyncSignIn.current,
+    )
 }
 
 /** Day grouping uses the spreadsheet's time zone once known (research R8). */
@@ -129,7 +157,15 @@ fun WorkoutsRoute(container: AppContainer, onBack: () -> Unit, onOpenDay: (Local
     val status by container.syncStatusStore.status.collectAsState(initial = SyncStatus())
     val zone = status.zone()
     val days = remember(sets, zone) { DisplayModel.pastDays(sets, LocalDate.now(zone), zone) }
-    Scaffold(topBar = { TopAppBar(title = { Text(stringResource(R.string.past_days_title)) }, navigationIcon = { TextButton(onClick = onBack) { Text("←") } }) }) { padding ->
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.past_days_title)) },
+                navigationIcon = { TextButton(onClick = onBack) { Text("←") } },
+                actions = { SyncStatusAction(container) },
+            )
+        },
+    ) { padding ->
         PastDaysScreen(days, onOpenDay, Modifier.padding(padding))
     }
 }
@@ -143,7 +179,15 @@ fun DayRoute(container: AppContainer, date: LocalDate, onBack: () -> Unit) {
     val groups = remember(sets, date, zone) { DisplayModel.day(sets, date, zone) }
     var editing by remember { mutableStateOf<DisplaySet?>(null) }
     val locale = LocalConfiguration.current.locales[0]
-    Scaffold(topBar = { TopAppBar(title = { Text(date.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale))) }, navigationIcon = { TextButton(onClick = onBack) { Text("←") } }) }) { padding ->
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(date.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale))) },
+                navigationIcon = { TextButton(onClick = onBack) { Text("←") } },
+                actions = { SyncStatusAction(container) },
+            )
+        },
+    ) { padding ->
         DayDetailScreen(groups, onEditSet = { editing = it }, modifier = Modifier.padding(padding))
     }
     editing?.let { set -> EditSetRoute(container, set, zone, onDone = { editing = null }) }
@@ -193,6 +237,7 @@ fun PickerRoute(container: AppContainer, onBack: () -> Unit, onStart: (exercise:
             TopAppBar(
                 title = { Text(stringResource(R.string.picker_title)) },
                 navigationIcon = { TextButton(onClick = onBack) { Text("←") } },
+                actions = { SyncStatusAction(container) },
             )
         },
     ) { padding ->
@@ -241,7 +286,13 @@ fun LoggingRoute(container: AppContainer, exercise: String, plannedSets: Int, on
     val syncStatus by container.syncStatusStore.status.collectAsState(initial = SyncStatus())
     editing?.let { set -> EditSetRoute(container, set, syncStatus.zone(), onDone = { editing = null }) }
     Scaffold(
-        topBar = { TopAppBar(title = { Text(exercise) }, navigationIcon = { TextButton(onClick = onBack) { Text("←") } }) },
+        topBar = {
+            TopAppBar(
+                title = { Text(exercise) },
+                navigationIcon = { TextButton(onClick = onBack) { Text("←") } },
+                actions = { SyncStatusAction(container) },
+            )
+        },
     ) { padding ->
         ExerciseLoggingScreen(
             state = state,
@@ -274,7 +325,15 @@ fun PastWorkoutRoute(container: AppContainer, onDone: () -> Unit) {
     )
     val state by viewModel.state.collectAsState()
     val exercises by container.workoutRepository.exercises.collectAsState(initial = emptyList())
-    Scaffold(topBar = { TopAppBar(title = { Text(stringResource(R.string.past_workout_title)) }, navigationIcon = { TextButton(onClick = onDone) { Text("←") } }) }) { padding ->
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.past_workout_title)) },
+                navigationIcon = { TextButton(onClick = onDone) { Text("←") } },
+                actions = { SyncStatusAction(container) },
+            )
+        },
+    ) { padding ->
         Box(Modifier.padding(padding)) {
             if (state.date == null) {
                 PastWorkoutDialog(
