@@ -42,7 +42,6 @@ import com.workoutrec.workout.DaySummary
 import com.workoutrec.workout.DisplaySet
 import com.workoutrec.workout.Exercise
 import com.workoutrec.workout.ExerciseGroup
-import com.workoutrec.workout.SyncState
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -109,9 +108,6 @@ fun DayDetailScreen(groups: List<ExerciseGroup>, onEditSet: (DisplaySet) -> Unit
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     Text(setText(set.key, locale))
-                    if (set.syncState == SyncState.NOT_SYNCED) {
-                        Text(stringResource(R.string.set_not_synced), style = MaterialTheme.typography.bodySmall)
-                    }
                 }
             }
         }

@@ -4,6 +4,15 @@ UI contract for Compose UI tests: screens, what they show, actions and test tags
 string resources in `values/` (EN) and `values-ru/` (RU) (FR-016). The top bar with the account
 avatar and the automation reminder from feature 001 stay on the main screen.
 
+## Sync icon — every top bar (FR-010, redesign brief 1a)
+
+| Element | Tag | Behaviour |
+|---------|-----|-----------|
+| Icon left of the avatar (main screen) or at the end of the top bar: cloud with a check (all synced), cloud with an up arrow and a count badge (sets waiting), turning arrows (sync running); the waiting icon is red when sync is failing or sign-in is needed | `sync_icon` | tap → details |
+| Details popup: status or reason, "Last synced …" / "Not synced yet", Sync now (Sign in when sign-in is needed) | `sync_icon_details` | Sync now runs a sync; Sign in → consent (R3) |
+
+Sets themselves show no sync state (redesign brief 1b).
+
 ## Navigation
 
 ```text
@@ -21,7 +30,6 @@ Main (Today) ──Add exercise──▶ Exercise picker ──pick──▶ Pla
 | Today's exercises, each with its sets ("17,5 × 15"), in first-set order | `today_exercise_<index>` | tap → Exercise logging for that exercise |
 | Empty state ("No sets today") | `today_empty` | |
 | Add exercise button | `add_exercise` | → Exercise picker |
-| Sync status line: "N sets not synced" / "Sync failing: <reason>" / "Sign in again" | `sync_status` | hidden when nothing is pending and sync is OK; "Sign in again" tap → consent (R3) |
 | Notices (conflicts, workout row not updated) | `sync_notice_<id>` | dismiss button |
 | Menu: Workouts, Enter past workout | `menu_workouts`, `menu_past_workout` | |
 
@@ -48,7 +56,7 @@ workout, the dialog asks how many sets to add, and the new rows are added to tha
 | Exercise name, muscle group | `logging_title` | |
 | Last time: date and sets, or "First time" | `last_time` | |
 | Record "40 kg × 8" | `record` | hidden when no history |
-| Set row *i* | `set_row_<i>` | weight and reps with − / +, number tap → keyboard; Confirm button; done rows show sync state |
+| Set row *i* | `set_row_<i>` | weight and reps with − / +, number tap → keyboard; Confirm button; done rows show weight × reps, tap → Edit set dialog |
 | Weight / reps values | `set_weight_<i>`, `set_reps_<i>` | suggested values use the "suggested" style (gray, semantics `suggested=true`); changed or confirmed use the normal style |
 | Steppers | `set_weight_minus_<i>`, `set_weight_plus_<i>`, `set_reps_minus_<i>`, `set_reps_plus_<i>` | ±0.5 kg (≥ 0), ±1 rep (≥ 1) |
 | Confirm set | `set_confirm_<i>` | disabled when a value is invalid; error text below the field |
@@ -64,7 +72,7 @@ Day detail.
 
 ## Day detail — `day_detail` (FR-013, FR-013a)
 
-Exercises with their sets and sync state; tap a set → Edit set dialog.
+Exercises with their sets; tap a set → Edit set dialog.
 
 ## Edit set dialog — `edit_set` (FR-013, FR-013a, FR-015)
 

@@ -26,3 +26,9 @@ Screen numbers refer to the screen gallery (`ScreenGalleryTest`).
   the last sync time, a **Sync now** button, and **Sign in** when sign-in is needed.
 - The technical background-sync line moves out of the UI; it stays in the shared sync log
   (account menu → share log).
+
+### 1b. No sync label on single sets (logging 26, day detail 29)
+
+- The per-set labels "In the spreadsheet" and "Not in the spreadsheet yet" are removed;
+  the sync icon (1a) already tells whether anything waits.
+- A done set shows only weight × reps; tapping it still opens the edit dialog.

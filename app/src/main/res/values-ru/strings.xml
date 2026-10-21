@@ -68,8 +68,6 @@
     <string name="weight_plus">Больше вес</string>
     <string name="reps_minus">Меньше повторений</string>
     <string name="reps_plus">Больше повторений</string>
-    <string name="set_not_synced">Ещё не в таблице</string>
-    <string name="set_synced">В таблице</string>
     <string name="error_empty">Введите значение</string>
     <string name="error_not_a_number">Это не число</string>
     <string name="error_weight_negative">Вес не может быть отрицательным</string>

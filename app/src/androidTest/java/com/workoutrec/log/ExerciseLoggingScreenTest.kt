@@ -78,11 +78,12 @@ class ExerciseLoggingScreenTest {
     }
 
     @Test
-    fun doneSetsShowTheirSyncState() {
+    fun doneSetsShowOnlyWeightAndReps() {
+        // Redesign brief 1b: sync state is in the top-bar icon, not on each set
         val key = SetKey(1, "squat", Weight.ofHundredths(4000), Reps(8))
         val state = LoggingState(exercise = "squat", done = listOf(DoneSet(key, SyncState.NOT_SYNCED)), rows = emptyList())
         compose.setContent { ExerciseLoggingScreen(state = state, actions = actions) }
         compose.onNodeWithTag(LoggingTags.done(0)).assertTextContains("× 8", substring = true)
-        compose.onNodeWithText(context.getString(R.string.set_not_synced)).assertIsDisplayed()
+        compose.onNodeWithText("spreadsheet", substring = true, ignoreCase = true).assertDoesNotExist()
     }
 }
