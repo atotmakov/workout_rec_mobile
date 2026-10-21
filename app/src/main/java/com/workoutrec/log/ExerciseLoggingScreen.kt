@@ -30,7 +30,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.workoutrec.R
 import com.workoutrec.workout.InvalidReason
-import com.workoutrec.workout.SyncState
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.Locale
@@ -85,17 +84,12 @@ fun ExerciseLoggingScreen(
             header()
         }
         itemsIndexed(state.done) { i, done ->
-            Row(
-                Modifier.fillMaxWidth().testTag(LoggingTags.done(i)).semantics(mergeDescendants = true) {}.clickable { actions.onEditDone(i) },
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text(setText(done.key, locale), style = MaterialTheme.typography.bodyLarge)
-                Text(
-                    stringResource(if (done.syncState == SyncState.SYNCED) R.string.set_synced else R.string.set_not_synced),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+            // Sync state is in the top-bar icon (redesign brief 1b), not on each set.
+            Text(
+                setText(done.key, locale),
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.fillMaxWidth().testTag(LoggingTags.done(i)).clickable { actions.onEditDone(i) },
+            )
         }
         itemsIndexed(state.rows) { i, row -> SetRow(i, row, actions) }
         item {

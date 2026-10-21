@@ -98,14 +98,14 @@ logged, with their original times.
 1. **Given** the phone is offline, **When** the user opens the exercise list, **Then** the list
    from the last successful download is shown.
 2. **Given** the phone is offline, **When** the user logs sets, **Then** each set is saved and
-   marked "not synced yet"; no error blocks logging.
+   counted as waiting in the sync icon; no error blocks logging.
 3. **Given** unsynced sets exist and the app was closed or the phone restarted, **When** the phone
    is online again, **Then** the sets are synced without the user opening the app or doing
    anything, within the time in SC-003.
 4. **Given** a sync was interrupted halfway, **When** sync runs again, **Then** no set is
    written twice and none is missing.
-5. **Given** unsynced sets exist, **When** the user looks at the main screen, **Then** they see how
-   many sets are waiting to be synced, and that the count drops to zero after sync.
+5. **Given** unsynced sets exist, **When** the user looks at any screen with a top bar, **Then** the
+   sync icon shows how many sets are waiting to be synced, and turns to "all synced" after sync.
 
 ---
 
@@ -174,7 +174,7 @@ values, no deleted set, and no other row changed.
    applied, the user is told which set it was, and the app shows the current values. A deletion
    whose row is already gone is simply done, without a message.
 7. **Given** the phone is offline, **When** the user edits or deletes a synced set, **Then** the
-   change is saved on the phone, shown as "not synced yet", and applied on the next sync.
+   change is saved on the phone, counted as waiting in the sync icon, and applied on the next sync.
 8. **Given** today's workout, **When** the user picks an exercise already in it, **Then** the new
    sets are added to that exercise.
 
@@ -279,8 +279,10 @@ the last at 19:00, and that the next daily run adds a 60-minute workout row.
   MUST NOT block or slow down logging.
 - **FR-009**: Sync MUST write each set exactly once, including when a sync is interrupted and
   repeated.
-- **FR-010**: The app MUST show each set's sync state (synced / not synced yet) and, on the main
-  screen, the number of sets waiting to be synced and whether sync is failing.
+- **FR-010**: The app MUST show the sync state in one icon in the top bar of every screen that has
+  one: all synced, the number of sets waiting, or a sync running; a failing sync or a needed
+  sign-in shows the waiting icon in a warning colour. Tapping it shows the reason, the last sync
+  time and Sync now (or Sign in). Single sets carry no sync label (redesign brief 1a, 1b).
 - **FR-011**: When an exercise is picked, the app MUST show the most recent earlier day's sets for
   it and its record — one value, as highlighted in the rec tab: the heaviest weight and the most
   reps done at that weight (e.g. 40 kg × 8) — based on the log tab plus sets
