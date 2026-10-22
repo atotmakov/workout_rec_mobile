@@ -1,5 +1,13 @@
 package com.workoutrec.workout.data
 
+import java.time.LocalDate
+import com.workoutrec.workout.ShownPayment
+import com.workoutrec.workout.PendingPayment
+import com.workoutrec.workout.PaymentRow
+import com.workoutrec.money.MoneySummary
+import com.workoutrec.money.MoneyStore
+import com.workoutrec.money.MoneyError
+import com.workoutrec.automation.AutomationStatus
 import kotlinx.coroutines.flow.first
 import com.workoutrec.workout.ShownExercise
 import com.workoutrec.workout.ExerciseUpdate
@@ -34,7 +42,7 @@ class WorkoutRepository(
     private val dao: WorkoutDao,
     private val clock: () -> Long = System::currentTimeMillis,
     private val newId: () -> String = { UUID.randomUUID().toString() },
-) : LoggingStore, LogSyncStore, PastWorkoutStore {
+) : LoggingStore, LogSyncStore, PastWorkoutStore, MoneyStore {
 
     private val cachedExercises: Flow<List<Exercise>> = dao.exercises().map { list -> list.map { Exercise(it.name, it.muscleGroup) } }
 
@@ -124,6 +132,33 @@ class WorkoutRepository(
 
     override suspend fun exerciseChangesNow(): List<ExerciseChange> = dao.exerciseChangesNow().map { it.toDomain() }
 
+    // Feature 004 US4: payments and the downloaded money tab.
+
+    /** Downloaded and waiting payments, newest first (FR-009). */
+    val payments: Flow<List<ShownPayment>> = combine(dao.paymentRows(), dao.pendingPayments()) { rows, pending ->
+        DisplayModel.payments(rows.map { it.toDomain() }, pending.map { it.toDomain() })
+    }
+
+    val hasPendingPayment: Flow<Boolean> = dao.pendingPayments().map { it.isNotEmpty() }
+
+    val moneySummary: Flow<MoneySummary?> = dao.moneySummary().map { it?.toDomain() }
+
+    /** Saved on the phone first, appended to the money tab by the sync (FR-009b). */
+    suspend fun addPayment(date: LocalDate, workouts: Int, sumHundredths: Long) =
+        dao.insertPayment(PendingPaymentEntity(newId(), date.toString(), workouts, sumHundredths, clock()))
+
+    override suspend fun paymentsNow(): List<PendingPayment> = dao.pendingPaymentsNow().map { it.toDomain() }
+
+    override suspend fun moneySummaryNow(): MoneySummary? = dao.moneySummaryNow()?.toDomain()
+
+    override suspend fun replaceMoney(rows: List<PaymentRow>, summary: MoneySummary) =
+        dao.replacePayments(
+            rows.map { PaymentRowEntity(it.rowIndex, it.date.toString(), it.workouts, it.sumHundredths) },
+            MoneySummaryEntity(1, summary.balance, summary.lastDailyRun, summary.automation.name, summary.downloadedAt, summary.error.name),
+        )
+
+    override suspend fun moneyFailed(error: MoneyError) = dao.moneyFailed(error.name)
+
     override suspend fun commit(
         exercises: List<Exercise>,
         rows: List<LogRow>,
@@ -131,6 +166,7 @@ class WorkoutRepository(
         notices: List<SyncNotice>,
         doneExerciseIds: Collection<String>,
         renamesBack: Map<String, String>,
+        donePaymentIds: Collection<String>,
     ) {
         val created = clock()
         dao.commitSync(
@@ -142,11 +178,24 @@ class WorkoutRepository(
             },
             doneExerciseIds.toList(),
             renamesBack,
+            donePaymentIds.toList(),
         )
     }
 
     override suspend fun keepOnlyNewSets() = dao.keepOnlyNewSets()
 }
+
+internal fun PaymentRowEntity.toDomain() = PaymentRow(rowIndex, LocalDate.parse(date), workouts, sumHundredths)
+
+internal fun PendingPaymentEntity.toDomain() = PendingPayment(id, LocalDate.parse(date), workouts, sumHundredths, createdAt)
+
+internal fun MoneySummaryEntity.toDomain() = MoneySummary(
+    balance,
+    lastDailyRun,
+    runCatching { AutomationStatus.valueOf(automation) }.getOrDefault(AutomationStatus.ScriptMissing),
+    downloadedAt,
+    runCatching { MoneyError.valueOf(error) }.getOrDefault(MoneyError.OTHER),
+)
 
 internal fun PendingExerciseChangeEntity.toDomain() =
     ExerciseChange(id, ExerciseChangeKind.valueOf(kind), name, muscleGroup, lastSeenName, lastSeenGroup, createdAt)

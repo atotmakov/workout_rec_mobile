@@ -9,12 +9,15 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Density
 import androidx.navigation.NavController
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph
@@ -54,18 +57,28 @@ fun BottomBar(navController: NavHostController) {
 /** The bar itself; [selected] is highlighted. */
 @Composable
 fun TabBar(selected: Tab?, onSelect: (Tab) -> Unit) {
+    // SC-006: at the largest font sizes four labels no longer fit a 360 dp phone; the labels
+    // stop growing at 1.3× so they stay readable, the rest of the app follows the system size.
+    val density = LocalDensity.current
+    val labelDensity = Density(density.density, fontScale = density.fontScale.coerceAtMost(MAX_LABEL_FONT_SCALE))
     NavigationBar(Modifier.testTag(BarTags.BAR)) {
         Tab.entries.forEach { tab ->
             NavigationBarItem(
                 selected = tab == selected,
                 onClick = { onSelect(tab) },
                 icon = { Icon(painterResource(tab.icon), contentDescription = null) },
-                label = { Text(stringResource(tab.label), maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                label = {
+                    CompositionLocalProvider(LocalDensity provides labelDensity) {
+                        Text(stringResource(tab.label), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                },
                 modifier = Modifier.testTag(tab.testTag),
             )
         }
     }
 }
+
+private const val MAX_LABEL_FONT_SCALE = 1.3f
 
 /** "Log today" from an exercise (feature 004 US3 scenario 5): Today, with that exercise's plan sets dialog. */
 fun NavController.logToday(exercise: String) {

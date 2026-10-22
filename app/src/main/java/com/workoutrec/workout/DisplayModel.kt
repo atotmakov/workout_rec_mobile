@@ -81,6 +81,21 @@ object DisplayModel {
         changes.filter { it.kind == ExerciseChangeKind.RENAME && it.lastSeenName != null && it.lastSeenName != it.name }
             .associate { it.lastSeenName!! to it.name }
 
+    /** Feature 004: newest first; the same day: waiting first, then the lower sheet rows (added later). */
+    fun payments(rows: List<PaymentRow>, pending: List<PendingPayment>): List<ShownPayment> {
+        val waiting = pending.sortedByDescending { it.createdAt }
+            .map { PaymentLine(it.date, 0, 0, ShownPayment(it.date, it.workouts.toDouble(), it.sumHundredths, pending = true)) }
+        val stored = rows.map { PaymentLine(it.date, 1, it.rowIndex, ShownPayment(it.date, it.workouts, it.sumHundredths, pending = false)) }
+        return (waiting + stored)
+            .sortedWith(compareByDescending<PaymentLine> { it.date }.thenBy { it.group }.thenByDescending { it.rowIndex })
+            .map { it.shown }
+    }
+
+    private data class PaymentLine(val date: LocalDate, val group: Int, val rowIndex: Int, val shown: ShownPayment)
+
+    fun totals(payments: List<ShownPayment>): MoneyTotals =
+        MoneyTotals(payments.sumOf { it.workouts ?: 0.0 }, payments.sumOf { it.sumHundredths ?: 0L })
+
     private fun SetKey.renamed(renames: Map<String, String>) = renames[exercise]?.let { copy(exercise = it) } ?: this
 
     private fun PendingChange.toDisplay() = DisplaySet(key, SyncState.NOT_SYNCED, SetRef.Pending(id))

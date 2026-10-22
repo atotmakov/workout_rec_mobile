@@ -60,6 +60,12 @@ data class DrillsWrite(
     val isEmpty: Boolean get() = deletes.isEmpty() && renames.isEmpty() && replaces.isEmpty() && appends.isEmpty()
 }
 
+/** A money row to append: date serial, workouts paid for, sum (feature 004 FR-009b). */
+data class MoneyAppend(val serial: Double, val workouts: Int, val sum: Double)
+
+/** Feature 004: the money part of call 22. */
+data class MoneyWrite(val moneySheetId: Int, val appends: List<MoneyAppend>)
+
 /** The spreadsheet has no `log` or `drills` tab (contracts/sheets-log.md, failure `Structure`). */
 class MissingTabException(val tab: String) : Exception("Missing tab $tab")
 
@@ -74,6 +80,7 @@ interface SheetsLogApi {
         edits: List<LogEdit>,
         appends: List<LogAppend>,
         drills: DrillsWrite? = null,
+        money: MoneyWrite? = null,
     )
 }
 
@@ -152,9 +159,11 @@ class SheetsLogClient(
         edits: List<LogEdit>,
         appends: List<LogAppend>,
         drills: DrillsWrite?,
+        money: MoneyWrite?,
     ) {
         val drillsPart = drills?.takeUnless { it.isEmpty }
-        if (deletes.isEmpty() && edits.isEmpty() && appends.isEmpty() && drillsPart == null) return
+        val moneyPart = money?.takeUnless { it.appends.isEmpty() }
+        if (deletes.isEmpty() && edits.isEmpty() && appends.isEmpty() && drillsPart == null && moneyPart == null) return
         val byRow: List<Pair<Int, JsonObject>> =
             deletes.map { it to deleteRow(logSheetId, it) } + edits.map { it.rowIndex to editRow(logSheetId, it) }
         val drillsByRow: List<Pair<Int, JsonObject>> = drillsPart?.let { d ->
@@ -169,6 +178,7 @@ class SheetsLogClient(
             }
             if (appends.isNotEmpty()) add(appendRows(logSheetId, appends))
             drillsPart?.appends?.takeIf { it.isNotEmpty() }?.let { add(appendDrills(drillsPart.drillsSheetId, it)) }
+            moneyPart?.let { add(appendMoney(it)) }
         }
         val url = spreadsheets().addPathSegment("$spreadsheetId:batchUpdate").build()
         val body = buildJsonObject { put("requests", requests) }.toString().toJsonBody()
@@ -225,6 +235,14 @@ class SheetsLogClient(
         putJsonObject("appendCells") {
             put("sheetId", sheetId)
             putJsonArray("rows") { drills.forEach { add(rowData(listOf(text(it.muscleGroup), text(it.name)))) } }
+            put("fields", "userEnteredValue")
+        }
+    }
+
+    private fun appendMoney(money: MoneyWrite) = buildJsonObject {
+        putJsonObject("appendCells") {
+            put("sheetId", money.moneySheetId)
+            putJsonArray("rows") { money.appends.forEach { add(rowData(listOf(number(it.serial), number(it.workouts), number(it.sum)))) } }
             put("fields", "userEnteredValue")
         }
     }

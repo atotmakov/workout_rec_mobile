@@ -1,5 +1,19 @@
 package com.workoutrec.gallery
 
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.width
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.dp
+import com.workoutrec.money.BalanceNote
+import com.workoutrec.money.BalanceNoteState
+import com.workoutrec.money.MoneyError
+import com.workoutrec.money.MoneyScreen
+import com.workoutrec.money.MoneyState
+import com.workoutrec.money.PaymentDialog
+import com.workoutrec.workout.DisplayModel
+import com.workoutrec.workout.ShownPayment
 import com.workoutrec.exercises.ExerciseDetailScreen
 import com.workoutrec.exercises.ExerciseDialog
 import com.workoutrec.exercises.ExerciseRules
@@ -9,7 +23,6 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import com.workoutrec.home.AccountActions
 import com.workoutrec.log.HistoryScreen
-import com.workoutrec.nav.PlaceholderTabScreen
 import com.workoutrec.nav.Tab
 import com.workoutrec.nav.TabBar
 import androidx.compose.foundation.background
@@ -210,6 +223,15 @@ object ScreenGallery {
             }
         },
         // Feature 004: tabs not built yet
+        // Feature 004 SC-006: the bar on a 360 dp phone at the largest font size
+        GalleryScreen("42-tabs-large-font") {
+            val density = LocalDensity.current
+            Box(Modifier.width(360.dp).fillMaxHeight()) {
+                CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale = 2f)) {
+                    TodayFrame(groups = Samples.todayGroups())
+                }
+            }
+        },
         // Feature 004 US3: Exercises tab
         GalleryScreen("50-exercises") {
             BarFrame(Tab.EXERCISES) { modifier ->
@@ -261,9 +283,15 @@ object ScreenGallery {
                 onDismiss = {},
             )
         },
-        GalleryScreen("41-money-coming-soon") {
-            BarFrame(Tab.MONEY) { modifier -> PlaceholderTabScreen(R.string.tab_money, modifier, actions = { SampleAccountActions() }) }
+        // Feature 004 US4: Money tab
+        GalleryScreen("60-money") { MoneyFrame(Samples.moneyState(balance = 11.0, newPayment = true)) },
+        GalleryScreen("61-money-owed") { MoneyFrame(Samples.moneyState(balance = -2.0)) },
+        GalleryScreen("62-money-automation-off") { MoneyFrame(Samples.moneyState(balance = 11.0, note = BalanceNote.Off)) },
+        GalleryScreen("63-payment-dialog") {
+            MoneyFrame(Samples.moneyState(balance = 11.0))
+            PaymentDialog(today = Samples.TODAY, defaultWorkouts = 8, defaultSum = 800_000, onSave = { _, _, _ -> }, onDismiss = {})
         },
+        GalleryScreen("64-money-empty") { MoneyFrame(Samples.moneyState(balance = null, payments = false, error = MoneyError.MISSING_TAB)) },
     )
 }
 
@@ -299,6 +327,13 @@ private fun TodayFrame(
 private fun BarFrame(tab: Tab, content: @Composable (Modifier) -> Unit) {
     Scaffold(contentWindowInsets = WindowInsets(0), bottomBar = { TabBar(selected = tab, onSelect = {}) }) { padding ->
         content(Modifier.padding(padding).consumeWindowInsets(padding))
+    }
+}
+
+@Composable
+private fun MoneyFrame(state: MoneyState) {
+    BarFrame(Tab.MONEY) { modifier ->
+        MoneyScreen(state, Samples.ZONE, onAdd = {}, onRefresh = {}, onEnableAutomation = {}, modifier = modifier, actions = { SampleAccountActions(pendingCount = if (state.payments.any { it.pending }) 1 else 0) })
     }
 }
 
@@ -437,6 +472,29 @@ private object Samples {
         val logged = setOf(bench(), row(), squat())
         return exercises().map { ShownExercise(it.name, it.muscleGroup, pending = false, deletable = it.name !in logged) } +
             ShownExercise(name("Face pull", "Тяга к лицу"), name("Shoulders", "Плечи"), pending = true, deletable = true)
+    }
+
+    fun moneyState(
+        balance: Double?,
+        newPayment: Boolean = false,
+        note: BalanceNote = BalanceNote.Calculated(at(3, 0) * 1000),
+        payments: Boolean = true,
+        error: MoneyError = MoneyError.NONE,
+    ): MoneyState {
+        val shown = if (!payments) emptyList() else listOfNotNull(
+            ShownPayment(TODAY, 8.0, 800_000, pending = true).takeIf { newPayment },
+            ShownPayment(TODAY.minusDays(30), 8.0, 800_000, pending = false),
+            ShownPayment(TODAY.minusDays(62), 12.0, 1_150_000, pending = false),
+            ShownPayment(TODAY.minusDays(95), 8.0, 800_000, pending = false),
+        )
+        return MoneyState(
+            balance = balance,
+            note = BalanceNoteState(note, newPaymentsWaiting = newPayment && note !is BalanceNote.Off),
+            downloadedAt = at(9, 40) * 1000,
+            error = error,
+            payments = shown,
+            totals = DisplayModel.totals(shown),
+        )
     }
 
     @Composable

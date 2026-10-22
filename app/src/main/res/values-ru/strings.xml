@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">Workout Rec</string>
 
     <!-- US1: account -->
@@ -156,7 +156,6 @@
     <string name="tab_history">История</string>
     <string name="tab_exercises">Упражнения</string>
     <string name="tab_money">Деньги</string>
-    <string name="tab_placeholder">Скоро</string>
     <!-- Feature 004 US3: Exercises tab -->
     <string name="exercises_empty">Упражнений пока нет. Добавьте те, что вы делаете.</string>
     <string name="exercise_add">Добавить упражнение</string>
@@ -176,4 +175,41 @@
     <string name="exercise_waiting">Ещё не в таблице</string>
     <string name="notice_exercise_change_dropped">«%1$s» изменили в таблице раньше, чем туда дошло ваше изменение; оставлена версия из таблицы.</string>
     <string name="notice_exercise_in_use">У «%1$s» есть подходы в журнале, поэтому оно не удалено.</string>
+    <!-- Feature 004 US4: Money tab -->
+    <!-- The number is shown in large type above this label; the label only agrees with it. -->
+    <plurals name="money_left" tools:ignore="ImpliedQuantity">
+        <item quantity="one">оплаченная тренировка осталась</item>
+        <item quantity="few">оплаченные тренировки остались</item>
+        <item quantity="many">оплаченных тренировок осталось</item>
+        <item quantity="other">оплаченной тренировки осталось</item>
+    </plurals>
+    <!-- The number is shown in large type above this label; the label only agrees with it. -->
+    <plurals name="money_owed" tools:ignore="ImpliedQuantity">
+        <item quantity="one">тренировка в долг</item>
+        <item quantity="few">тренировки в долг</item>
+        <item quantity="many">тренировок в долг</item>
+        <item quantity="other">тренировки в долг</item>
+    </plurals>
+    <string name="money_balance_unknown">Баланса пока нет</string>
+    <string name="money_note_daily">Баланс считается раз в день; последний раз — %1$s.</string>
+    <string name="money_note_daily_unknown">Баланс считается раз в день.</string>
+    <string name="money_note_stopped">Ежедневный расчёт, похоже, остановился; баланс на %1$s.</string>
+    <string name="money_note_off">Баланс не обновляется: ежедневная автоматизация таблицы выключена.</string>
+    <string name="money_note_new_payments">Новые оплаты учтутся при следующем ежедневном расчёте.</string>
+    <string name="money_enable_automation">Включить автоматизацию</string>
+    <string name="money_downloaded">Обновлено %1$s</string>
+    <string name="money_totals">Всего оплачено: тренировок %1$s, %2$s</string>
+    <string name="money_payment">тренировок: %1$s · %2$s</string>
+    <string name="money_payments_title">Оплаты</string>
+    <string name="money_empty">Оплат пока нет. Они берутся из вкладки money в таблице, или добавьте здесь.</string>
+    <string name="money_error_missing_tab">В таблице нет вкладки money или balance.</string>
+    <string name="money_error_network">Нет связи; показано то, что скачано раньше.</string>
+    <string name="money_error_other">Не удалось скачать вкладку money; показано то, что скачано раньше.</string>
+    <string name="money_add">Добавить оплату</string>
+    <string name="payment_title">Новая оплата</string>
+    <string name="payment_date">Дата</string>
+    <string name="payment_workouts">Оплачено тренировок</string>
+    <string name="payment_sum">Сумма</string>
+    <string name="payment_workouts_error">Целое число от 1 до 999</string>
+    <string name="payment_sum_error">Число от 0, не больше 2 знаков после запятой</string>
 </resources>

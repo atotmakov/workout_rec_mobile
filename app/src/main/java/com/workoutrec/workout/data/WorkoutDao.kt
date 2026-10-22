@@ -105,8 +105,10 @@ abstract class WorkoutDao {
         notices: List<SyncNoticeEntity>,
         doneExerciseIds: List<String> = emptyList(),
         renamesBack: Map<String, String> = emptyMap(),
+        donePaymentIds: List<String> = emptyList(),
     ) {
         replaceCaches(exercises, rows)
+        if (donePaymentIds.isNotEmpty()) deletePayments(donePaymentIds)
         if (doneIds.isNotEmpty()) deletePending(doneIds)
         if (notices.isNotEmpty()) insertNotices(notices)
         if (doneExerciseIds.isNotEmpty()) deleteExerciseChanges(doneExerciseIds)
@@ -197,6 +199,18 @@ abstract class WorkoutDao {
 
     @Upsert
     protected abstract suspend fun upsertMoneySummary(summary: MoneySummaryEntity)
+
+    @Query("SELECT * FROM money_summary WHERE id = 1")
+    abstract suspend fun moneySummaryNow(): MoneySummaryEntity?
+
+    /** A failed money download keeps what is stored and records why (research R6). */
+    @Transaction
+    open suspend fun moneyFailed(error: String) {
+        upsertMoneySummary(
+            moneySummaryNow()?.copy(error = error)
+                ?: MoneySummaryEntity(balance = null, lastDailyRun = null, automation = "ScriptMissing", downloadedAt = 0, error = error),
+        )
+    }
 
     /** One money download (feature 004 research R6): rows and summary together. */
     @Transaction

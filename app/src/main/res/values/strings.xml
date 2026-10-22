@@ -150,7 +150,6 @@
     <string name="tab_history">History</string>
     <string name="tab_exercises">Exercises</string>
     <string name="tab_money">Money</string>
-    <string name="tab_placeholder">Coming soon</string>
     <!-- Feature 004 US3: Exercises tab -->
     <string name="exercises_empty">No exercises yet. Add the ones you do.</string>
     <string name="exercise_add">Add exercise</string>
@@ -170,4 +169,35 @@
     <string name="exercise_waiting">Not in the spreadsheet yet</string>
     <string name="notice_exercise_change_dropped">%1$s was changed in the spreadsheet before your change reached it; the spreadsheet version is kept.</string>
     <string name="notice_exercise_in_use">%1$s has sets in the log, so it was not deleted.</string>
+    <!-- Feature 004 US4: Money tab -->
+    <plurals name="money_left">
+        <item quantity="one">paid workout left</item>
+        <item quantity="other">paid workouts left</item>
+    </plurals>
+    <plurals name="money_owed">
+        <item quantity="one">workout owed</item>
+        <item quantity="other">workouts owed</item>
+    </plurals>
+    <string name="money_balance_unknown">No balance yet</string>
+    <string name="money_note_daily">The balance is calculated once a day; last at %1$s.</string>
+    <string name="money_note_daily_unknown">The balance is calculated once a day.</string>
+    <string name="money_note_stopped">The daily calculation seems stopped; the balance is from %1$s.</string>
+    <string name="money_note_off">The balance is not updated: the spreadsheet’s daily automation is off.</string>
+    <string name="money_note_new_payments">New payments are counted at the next daily calculation.</string>
+    <string name="money_enable_automation">Enable automation</string>
+    <string name="money_downloaded">Updated %1$s</string>
+    <string name="money_totals">Paid in total: %1$s workouts, %2$s</string>
+    <string name="money_payment">%1$s workouts · %2$s</string>
+    <string name="money_payments_title">Payments</string>
+    <string name="money_empty">No payments yet. They come from the spreadsheet’s money tab, or add one here.</string>
+    <string name="money_error_missing_tab">The spreadsheet has no money or balance tab.</string>
+    <string name="money_error_network">No connection; showing what was downloaded before.</string>
+    <string name="money_error_other">Couldn’t download the money tab; showing what was downloaded before.</string>
+    <string name="money_add">Add payment</string>
+    <string name="payment_title">New payment</string>
+    <string name="payment_date">Date</string>
+    <string name="payment_workouts">Workouts paid for</string>
+    <string name="payment_sum">Sum</string>
+    <string name="payment_workouts_error">A whole number from 1 to 999</string>
+    <string name="payment_sum_error">A number from 0, up to 2 decimals</string>
 </resources>
