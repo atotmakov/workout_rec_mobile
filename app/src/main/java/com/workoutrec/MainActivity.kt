@@ -1,5 +1,12 @@
 package com.workoutrec
 
+import androidx.navigation.NavDestination.Companion.hierarchy
+import com.workoutrec.home.AccountActions
+import com.workoutrec.nav.PlaceholderTabScreen
+import com.workoutrec.nav.Tab
+import com.workoutrec.nav.TabRoutes
+import com.workoutrec.nav.TabScaffold
+import com.workoutrec.nav.mainTabs
 import android.app.Activity
 import android.os.Bundle
 import android.widget.Toast
@@ -113,96 +120,132 @@ private fun AppNavHost(container: AppContainer) {
 
     val state by viewModel.state.collectAsState()
     val backStack by navController.currentBackStackEntryAsState()
-    // Leave home whenever setup needs the user again (e.g. reminder tapped, spreadsheet deleted).
+    // Leave the tabs whenever setup needs the user again (e.g. reminder tapped, spreadsheet deleted).
     LaunchedEffect(state, backStack) {
-        val onHome = backStack?.destination?.route == Routes.HOME
-        if (onHome && state != SetupState.Ready) {
-            navController.navigate(Routes.SETUP) { popUpTo(Routes.HOME) { inclusive = true } }
+        val inTabs = backStack?.destination?.hierarchy?.any { it.route == TabRoutes.MAIN } == true
+        if (inTabs && state != SetupState.Ready) {
+            navController.navigate(Routes.SETUP) { popUpTo(TabRoutes.MAIN) { inclusive = true } }
+            // Feature 004 research R1: the next account starts on fresh tabs.
+            Tab.entries.forEach { navController.clearBackStack(it.route) }
+        }
+    }
+
+    val account by container.settingsStore.account.collectAsState(initial = null)
+    val pending by container.workoutRepository.pending.collectAsState(initial = emptyList())
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    // The phone's sets belong to this account's spreadsheet; they go when the account does.
+    val clearWorkoutData: suspend () -> Unit = {
+        container.workoutRepository.clearAll()
+        container.syncStatusStore.clear()
+    }
+    val onSwitchAccount: () -> Unit = {
+        scope.launch {
+            clearWorkoutData()
+            viewModel.switchAccount(CredentialManagerAccountPicker(context, BuildConfig.WEB_CLIENT_ID))
+        }
+    }
+    val onSignOut: () -> Unit = { scope.launch { clearWorkoutData(); viewModel.signOut() } }
+    val onShareLog: () -> Unit = { context.startActivity(shareLogIntent(context, container.diagnosticLog)) }
+    // The sync icon and the avatar on every tab's first screen (feature 004 spec edge case).
+    val accountActions: @Composable () -> Unit = {
+        account?.let {
+            AccountActions(
+                account = it,
+                onSwitchAccount = onSwitchAccount,
+                onSignOut = onSignOut,
+                unsyncedCount = DisplayModel.pendingCount(pending),
+                // Research R13: try to sync first, so the warning counts only what is really left.
+                onMenuOpened = container.syncScheduler::requestSync,
+                onShareLog = onShareLog,
+                diagnostics = diagnosticsMenuState(container),
+                syncStatus = { SyncStatusAction(container) },
+            )
         }
     }
 
     CompositionLocalProvider(LocalSyncSignIn provides { viewModel.start() }) {
-        NavHost(navController = navController, startDestination = Routes.SETUP) {
-            composable(Routes.SETUP) {
-                val setupAccount by container.settingsStore.account.collectAsState(initial = null)
-                val context = LocalContext.current
-                SetupRoute(viewModel, state, accountEmail = setupAccount?.email, onShareLog = {
-                    context.startActivity(shareLogIntent(context, container.diagnosticLog))
-                }, onReady = {
-                    navController.navigate(Routes.HOME) { popUpTo(Routes.SETUP) { inclusive = true } }
-                })
-            }
-            composable(Routes.HOME) {
-                val account by container.settingsStore.account.collectAsState(initial = null)
-                val reminder by viewModel.reminder.collectAsState()
-                LaunchedEffect(Unit) { viewModel.refreshStatus() }
-                val context = LocalContext.current
-                account?.let {
-                    val pending by container.workoutRepository.pending.collectAsState(initial = emptyList())
-                    val scope = rememberCoroutineScope()
-                    // The phone's sets belong to this account's spreadsheet; they go when the account does.
-                    val clearWorkoutData: suspend () -> Unit = {
-                        container.workoutRepository.clearAll()
-                        container.syncStatusStore.clear()
-                    }
-                    MainScreen(
-                        account = it,
-                        onSwitchAccount = {
-                            scope.launch {
-                                clearWorkoutData()
-                                viewModel.switchAccount(CredentialManagerAccountPicker(context, BuildConfig.WEB_CLIENT_ID))
-                            }
-                        },
-                        onSignOut = { scope.launch { clearWorkoutData(); viewModel.signOut() } },
-                        unsyncedCount = DisplayModel.pendingCount(pending),
-                        // Research R13: try to sync first, so the warning counts only what is really left.
-                        onMenuOpened = container.syncScheduler::requestSync,
-                        onShareLog = { context.startActivity(shareLogIntent(context, container.diagnosticLog)) },
-                        diagnostics = diagnosticsMenuState(container),
-                        syncStatus = { SyncStatusAction(container) },
-                    ) { modifier ->
-                        TodayRoute(
-                            container = container,
-                            onAddExercise = { navController.navigate(LogRoutes.PICKER) },
-                            onOpenExercise = { navController.navigate(LogRoutes.logging(it, sets = 0)) },
-                            onOpenWorkouts = { navController.navigate(LogRoutes.WORKOUTS) },
-                            onPastWorkout = { navController.navigate(LogRoutes.PAST_WORKOUT) },
-                            modifier = modifier,
-                            header = {
-                                reminder?.let { r ->
-                                    AutomationReminder(status = r.status, onFix = { viewModel.onAction(SetupAction.FixAutomation) })
-                                }
-                            },
-                        )
-                    }
+        TabScaffold(navController) { modifier ->
+            NavHost(navController = navController, startDestination = Routes.SETUP, modifier = modifier) {
+                composable(Routes.SETUP) {
+                    val setupAccount by container.settingsStore.account.collectAsState(initial = null)
+                    SetupRoute(viewModel, state, accountEmail = setupAccount?.email, onShareLog = onShareLog, onReady = {
+                        navController.navigate(TabRoutes.MAIN) { popUpTo(Routes.SETUP) { inclusive = true } }
+                    })
                 }
-            }
-            composable(LogRoutes.PAST_WORKOUT) {
-                PastWorkoutRoute(container, onDone = { navController.popBackStack() })
-            }
-            composable(LogRoutes.WORKOUTS) {
-                WorkoutsRoute(container, onBack = { navController.popBackStack() }, onOpenDay = { navController.navigate(LogRoutes.day(it)) })
-            }
-            composable(LogRoutes.DAY, arguments = listOf(navArgument("date") { type = NavType.StringType })) { entry ->
-                DayRoute(container, LocalDate.parse(entry.arguments?.getString("date")), onBack = { navController.popBackStack() })
-            }
-            composable(LogRoutes.PICKER) {
-                PickerRoute(container, onBack = { navController.popBackStack() }, onStart = { exercise, sets ->
-                    navController.navigate(LogRoutes.logging(exercise, sets)) { popUpTo(Routes.HOME) }
-                })
-            }
-            composable(
-                LogRoutes.LOGGING,
-                arguments = listOf(
-                    navArgument("exercise") { type = NavType.StringType },
-                    navArgument("sets") { type = NavType.IntType; defaultValue = 0 },
-                ),
-            ) { entry ->
-                LoggingRoute(
-                    container = container,
-                    exercise = entry.arguments?.getString("exercise").orEmpty(),
-                    plannedSets = entry.arguments?.getInt("sets") ?: 0,
-                    onBack = { navController.popBackStack() },
+                mainTabs(
+                    today = {
+                        composable(Routes.HOME) {
+                            val reminder by viewModel.reminder.collectAsState()
+                            LaunchedEffect(Unit) { viewModel.refreshStatus() }
+                            account?.let {
+                                MainScreen(
+                                    account = it,
+                                    onSwitchAccount = onSwitchAccount,
+                                    onSignOut = onSignOut,
+                                    unsyncedCount = DisplayModel.pendingCount(pending),
+                                    onMenuOpened = container.syncScheduler::requestSync,
+                                    onShareLog = onShareLog,
+                                    diagnostics = diagnosticsMenuState(container),
+                                    syncStatus = { SyncStatusAction(container) },
+                                ) { modifier ->
+                                    TodayRoute(
+                                        container = container,
+                                        onAddExercise = { navController.navigate(LogRoutes.PICKER) },
+                                        onOpenExercise = { navController.navigate(LogRoutes.logging(it, sets = 0)) },
+                                        modifier = modifier,
+                                        header = {
+                                            reminder?.let { r ->
+                                                AutomationReminder(status = r.status, onFix = { viewModel.onAction(SetupAction.FixAutomation) })
+                                            }
+                                        },
+                                    )
+                                }
+                            }
+                        }
+                        composable(LogRoutes.PICKER) {
+                            PickerRoute(container, onBack = { navController.popBackStack() }, onStart = { exercise, sets ->
+                                navController.navigate(LogRoutes.logging(exercise, sets)) { popUpTo(Routes.HOME) }
+                            })
+                        }
+                        composable(
+                            LogRoutes.LOGGING,
+                            arguments = listOf(
+                                navArgument("exercise") { type = NavType.StringType },
+                                navArgument("sets") { type = NavType.IntType; defaultValue = 0 },
+                            ),
+                        ) { entry ->
+                            LoggingRoute(
+                                container = container,
+                                exercise = entry.arguments?.getString("exercise").orEmpty(),
+                                plannedSets = entry.arguments?.getInt("sets") ?: 0,
+                                onBack = { navController.popBackStack() },
+                            )
+                        }
+                    },
+                    history = {
+                        composable(LogRoutes.WORKOUTS) {
+                            WorkoutsRoute(
+                                container,
+                                onOpenDay = { navController.navigate(LogRoutes.day(it)) },
+                                onPastWorkout = { navController.navigate(LogRoutes.PAST_WORKOUT) },
+                                actions = accountActions,
+                            )
+                        }
+                        composable(LogRoutes.DAY, arguments = listOf(navArgument("date") { type = NavType.StringType })) { entry ->
+                            DayRoute(container, LocalDate.parse(entry.arguments?.getString("date")), onBack = { navController.popBackStack() })
+                        }
+                        // Back to the past days after Save or Cancel (spec US2 scenario 2).
+                        composable(LogRoutes.PAST_WORKOUT) {
+                            PastWorkoutRoute(container, onDone = { navController.popBackStack() })
+                        }
+                    },
+                    exercises = {
+                        composable(TabRoutes.EXERCISES) { PlaceholderTabScreen(R.string.tab_exercises, actions = accountActions) }
+                    },
+                    money = {
+                        composable(TabRoutes.MONEY) { PlaceholderTabScreen(R.string.tab_money, actions = accountActions) }
+                    },
                 )
             }
         }

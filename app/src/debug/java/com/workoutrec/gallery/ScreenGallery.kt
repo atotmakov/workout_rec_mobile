@@ -1,5 +1,12 @@
 package com.workoutrec.gallery
 
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
+import com.workoutrec.home.AccountActions
+import com.workoutrec.log.HistoryScreen
+import com.workoutrec.nav.PlaceholderTabScreen
+import com.workoutrec.nav.Tab
+import com.workoutrec.nav.TabBar
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -142,17 +149,17 @@ object ScreenGallery {
         },
         // Adding an exercise and logging sets
         GalleryScreen("22-picker") {
-            RouteFrame(stringResource(R.string.picker_title)) { modifier ->
+            RouteFrame(stringResource(R.string.picker_title), tab = Tab.TODAY) { modifier ->
                 ExercisePicker(exercises = Samples.exercises(), recent = Samples.recent(), onPick = {}, onOpenDrills = {}, modifier = modifier)
             }
         },
         GalleryScreen("23-picker-empty") {
-            RouteFrame(stringResource(R.string.picker_title)) { modifier ->
+            RouteFrame(stringResource(R.string.picker_title), tab = Tab.TODAY) { modifier ->
                 ExercisePicker(exercises = emptyList(), recent = emptyList(), onPick = {}, onOpenDrills = {}, modifier = modifier)
             }
         },
         GalleryScreen("24-plan-sets-dialog") {
-            RouteFrame(stringResource(R.string.picker_title)) { modifier ->
+            RouteFrame(stringResource(R.string.picker_title), tab = Tab.TODAY) { modifier ->
                 ExercisePicker(exercises = Samples.exercises(), recent = Samples.recent(), onPick = {}, onOpenDrills = {}, modifier = modifier)
             }
             PlanSetsDialog(initial = 3, onConfirm = {}, onDismiss = {})
@@ -162,13 +169,28 @@ object ScreenGallery {
         GalleryScreen("27-logging-invalid-value") { LoggingFrame(Samples.loggingInvalid()) },
         // History and corrections
         GalleryScreen("28-past-days") {
-            RouteFrame(stringResource(R.string.past_days_title)) { modifier -> PastDaysScreen(Samples.pastDays(), onOpenDay = {}, modifier = modifier) }
+            BarFrame(Tab.HISTORY) { modifier ->
+                HistoryScreen(Samples.pastDays(), onOpenDay = {}, onPastWorkout = {}, modifier = modifier, actions = { SampleAccountActions() })
+            }
+        },
+        GalleryScreen("28a-history-empty") {
+            BarFrame(Tab.HISTORY) { modifier ->
+                HistoryScreen(emptyList(), onOpenDay = {}, onPastWorkout = {}, modifier = modifier, actions = { SampleAccountActions() })
+            }
         },
         GalleryScreen("29-day-detail") {
-            RouteFrame(Samples.DAY_TITLE, pendingCount = 1) { modifier -> DayDetailScreen(Samples.dayGroups(), onEditSet = {}, modifier = modifier) }
+            BarFrame(Tab.HISTORY) { barModifier ->
+                Box(barModifier) {
+                    RouteFrame(Samples.DAY_TITLE, pendingCount = 1) { modifier -> DayDetailScreen(Samples.dayGroups(), onEditSet = {}, modifier = modifier) }
+                }
+            }
         },
         GalleryScreen("30-edit-set-dialog") {
-            RouteFrame(Samples.DAY_TITLE, pendingCount = 1) { modifier -> DayDetailScreen(Samples.dayGroups(), onEditSet = {}, modifier = modifier) }
+            BarFrame(Tab.HISTORY) { barModifier ->
+                Box(barModifier) {
+                    RouteFrame(Samples.DAY_TITLE, pendingCount = 1) { modifier -> DayDetailScreen(Samples.dayGroups(), onEditSet = {}, modifier = modifier) }
+                }
+            }
             EditSetDialog(set = Samples.dayGroups().first().sets.first(), exercises = Samples.exercises(), onSave = { _, _, _ -> }, onDelete = {}, onDismiss = {}, zone = Samples.ZONE)
         },
         GalleryScreen("31-past-workout-dialog") {
@@ -182,6 +204,13 @@ object ScreenGallery {
                 }
             }
         },
+        // Feature 004: tabs not built yet
+        GalleryScreen("40-exercises-coming-soon") {
+            BarFrame(Tab.EXERCISES) { modifier -> PlaceholderTabScreen(R.string.tab_exercises, modifier, actions = { SampleAccountActions() }) }
+        },
+        GalleryScreen("41-money-coming-soon") {
+            BarFrame(Tab.MONEY) { modifier -> PlaceholderTabScreen(R.string.tab_money, modifier, actions = { SampleAccountActions() }) }
+        },
     )
 }
 
@@ -194,22 +223,36 @@ private fun TodayFrame(
     automation: AutomationStatus? = null,
     notices: List<Pair<Long, SyncNotice>> = emptyList(),
 ) {
-    MainScreen(
-        account = Samples.ACCOUNT,
-        onSwitchAccount = {},
-        onSignOut = {},
-        unsyncedCount = pendingCount,
-        syncStatus = { SampleSyncStatus(pendingCount, phase) },
-    ) { modifier ->
-        TodayScreen(groups, onAddExercise = {}, onOpenExercise = {}, modifier = modifier) {
-            automation?.let { AutomationReminder(status = it, onFix = {}) }
-            SyncNoticeList(notices, onDismiss = {})
-            Row {
-                TextButton(onClick = {}) { Text(stringResource(R.string.menu_workouts)) }
-                TextButton(onClick = {}) { Text(stringResource(R.string.menu_past_workout)) }
+    BarFrame(Tab.TODAY) { barModifier ->
+        Box(barModifier) {
+            MainScreen(
+                account = Samples.ACCOUNT,
+                onSwitchAccount = {},
+                onSignOut = {},
+                unsyncedCount = pendingCount,
+                syncStatus = { SampleSyncStatus(pendingCount, phase) },
+            ) { modifier ->
+                TodayScreen(groups, onAddExercise = {}, onOpenExercise = {}, modifier = modifier) {
+                    automation?.let { AutomationReminder(status = it, onFix = {}) }
+                    SyncNoticeList(notices, onDismiss = {})
+                }
             }
         }
     }
+}
+
+/** A tab's screen with the bottom bar under it, as `TabScaffold` shows it (feature 004). */
+@Composable
+private fun BarFrame(tab: Tab, content: @Composable (Modifier) -> Unit) {
+    Scaffold(contentWindowInsets = WindowInsets(0), bottomBar = { TabBar(selected = tab, onSelect = {}) }) { padding ->
+        content(Modifier.padding(padding).consumeWindowInsets(padding))
+    }
+}
+
+/** The sync icon and the avatar, as on every tab's first screen. */
+@Composable
+private fun SampleAccountActions(pendingCount: Int = 0) {
+    AccountActions(account = Samples.ACCOUNT, onSwitchAccount = {}, onSignOut = {}, syncStatus = { SampleSyncStatus(pendingCount, SyncPhase.Idle) })
 }
 
 @Composable
@@ -227,7 +270,11 @@ private fun SampleSyncStatus(pendingCount: Int, phase: SyncPhase) {
 /** A screen under a top bar with "←" and the sync icon, as the routes in `LogRoutes` show it. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun RouteFrame(title: String, pendingCount: Int = 0, content: @Composable (Modifier) -> Unit) {
+private fun RouteFrame(title: String, pendingCount: Int = 0, tab: Tab? = null, content: @Composable (Modifier) -> Unit) {
+    if (tab != null) {
+        BarFrame(tab) { barModifier -> Box(barModifier) { RouteFrame(title, pendingCount, content = content) } }
+        return
+    }
     Scaffold(
         topBar = {
             TopAppBar(

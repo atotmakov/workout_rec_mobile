@@ -59,44 +59,72 @@ fun MainScreen(
             TopAppBar(
                 title = { Text(stringResource(R.string.app_name)) },
                 actions = {
-                    var menuOpen by remember { mutableStateOf(false) }
-                    var confirmSignOut by remember { mutableStateOf(false) }
-                    var confirmSwitch by remember { mutableStateOf(false) }
-                    syncStatus()
-                    Box(modifier = Modifier.padding(end = 8.dp)) {
-                        AccountAvatar(account = account, onClick = { menuOpen = true; onMenuOpened() })
-                        AccountMenu(
-                            account = account,
-                            expanded = menuOpen,
-                            onDismiss = { menuOpen = false },
-                            onSwitchAccount = {
-                                menuOpen = false
-                                if (unsyncedCount > 0) confirmSwitch = true else onSwitchAccount()
-                            },
-                            onSignOut = { menuOpen = false; confirmSignOut = true },
-                            onShareLog = { menuOpen = false; onShareLog() },
-                            diagnostics = diagnostics.copy(onTestAction = { menuOpen = false; diagnostics.onTestAction(it) }),
-                        )
-                    }
-                    if (confirmSignOut) {
-                        SignOutDialog(
-                            onConfirm = { confirmSignOut = false; onSignOut() },
-                            onCancel = { confirmSignOut = false },
-                            unsyncedCount = unsyncedCount,
-                        )
-                    }
-                    if (confirmSwitch) {
-                        SwitchAccountDialog(
-                            unsyncedCount = unsyncedCount,
-                            onConfirm = { confirmSwitch = false; onSwitchAccount() },
-                            onCancel = { confirmSwitch = false },
-                        )
-                    }
+                    AccountActions(
+                        account = account,
+                        onSwitchAccount = onSwitchAccount,
+                        onSignOut = onSignOut,
+                        unsyncedCount = unsyncedCount,
+                        onMenuOpened = onMenuOpened,
+                        onShareLog = onShareLog,
+                        diagnostics = diagnostics,
+                        syncStatus = syncStatus,
+                    )
                 },
             )
         },
     ) { padding ->
         content(Modifier.padding(padding))
+    }
+}
+
+/**
+ * The sync icon and the account avatar with its menu, for the top bar of every tab's first
+ * screen (feature 004 spec edge case "Account menu and sync icon").
+ */
+@Composable
+fun AccountActions(
+    account: SelectedAccount,
+    onSwitchAccount: () -> Unit,
+    onSignOut: () -> Unit,
+    unsyncedCount: Int = 0,
+    onMenuOpened: () -> Unit = {},
+    onShareLog: () -> Unit = {},
+    diagnostics: DiagnosticsMenuState = DiagnosticsMenuState(),
+    /** The sync status icon, shown left of the avatar (redesign brief 1a). */
+    syncStatus: @Composable () -> Unit = {},
+) {
+    var menuOpen by remember { mutableStateOf(false) }
+    var confirmSignOut by remember { mutableStateOf(false) }
+    var confirmSwitch by remember { mutableStateOf(false) }
+    syncStatus()
+    Box(modifier = Modifier.padding(end = 8.dp)) {
+        AccountAvatar(account = account, onClick = { menuOpen = true; onMenuOpened() })
+        AccountMenu(
+            account = account,
+            expanded = menuOpen,
+            onDismiss = { menuOpen = false },
+            onSwitchAccount = {
+                menuOpen = false
+                if (unsyncedCount > 0) confirmSwitch = true else onSwitchAccount()
+            },
+            onSignOut = { menuOpen = false; confirmSignOut = true },
+            onShareLog = { menuOpen = false; onShareLog() },
+            diagnostics = diagnostics.copy(onTestAction = { menuOpen = false; diagnostics.onTestAction(it) }),
+        )
+    }
+    if (confirmSignOut) {
+        SignOutDialog(
+            onConfirm = { confirmSignOut = false; onSignOut() },
+            onCancel = { confirmSignOut = false },
+            unsyncedCount = unsyncedCount,
+        )
+    }
+    if (confirmSwitch) {
+        SwitchAccountDialog(
+            unsyncedCount = unsyncedCount,
+            onConfirm = { confirmSwitch = false; onSwitchAccount() },
+            onCancel = { confirmSwitch = false },
+        )
     }
 }
 
