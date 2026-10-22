@@ -73,4 +73,30 @@ class WorkoutDaoV2Test {
         assertEquals(0, dao.paymentRows().first().size)
         assertNull(dao.moneySummary().first())
     }
+
+    private fun set(id: String, kind: String, exercise: String) = PendingChangeEntity(
+        id = id, kind = kind, time = 1, exercise = exercise, weightHundredths = 2000, reps = 10,
+        lastSeenTime = null, lastSeenExercise = null, lastSeenWeightHundredths = null, lastSeenReps = null,
+        rowHint = null, createdAt = 1, draftId = null,
+    )
+
+    // Research R13 with feature 004: a new spreadsheet keeps new exercises, not renames or deletes.
+    @Test
+    fun aNewSpreadsheetKeepsOnlyAddedExercises() = runTest {
+        dao.upsertExerciseChange(exerciseChange("a", 1))
+        dao.upsertExerciseChange(PendingExerciseChangeEntity("r", "RENAME", "Bench", "Chest", "Bench press", "Chest", 2))
+        dao.upsertExerciseChange(PendingExerciseChangeEntity("d", "DELETE", "Plank", "Core", "Plank", "Core", 3))
+        dao.keepOnlyNewSets()
+        assertEquals(listOf("a"), dao.exerciseChangesNow().map { it.id })
+    }
+
+    // Research R5: a dropped rename gives the waiting sets their old name back; handled changes go.
+    @Test
+    fun commitRemovesHandledExerciseChangesAndRenamesSetsBack() = runTest {
+        dao.upsertExerciseChange(exerciseChange("a", 1))
+        dao.upsertPendingAll(listOf(set("n", "NEW", "Bench"), set("e", "EDIT", "Bench"), set("x", "DELETE", "Bench")))
+        dao.commitSync(emptyList(), emptyList(), emptyList(), emptyList(), doneExerciseIds = listOf("a"), renamesBack = mapOf("Bench" to "Bench press"))
+        assertEquals(0, dao.exerciseChangesNow().size)
+        assertEquals(mapOf("n" to "Bench press", "e" to "Bench press", "x" to "Bench"), dao.pendingNow().associate { it.id to it.exercise })
+    }
 }

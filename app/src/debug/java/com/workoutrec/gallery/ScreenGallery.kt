@@ -1,5 +1,10 @@
 package com.workoutrec.gallery
 
+import com.workoutrec.exercises.ExerciseDetailScreen
+import com.workoutrec.exercises.ExerciseDialog
+import com.workoutrec.exercises.ExerciseRules
+import com.workoutrec.exercises.ExercisesScreen
+import com.workoutrec.workout.ShownExercise
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import com.workoutrec.home.AccountActions
@@ -205,8 +210,56 @@ object ScreenGallery {
             }
         },
         // Feature 004: tabs not built yet
-        GalleryScreen("40-exercises-coming-soon") {
-            BarFrame(Tab.EXERCISES) { modifier -> PlaceholderTabScreen(R.string.tab_exercises, modifier, actions = { SampleAccountActions() }) }
+        // Feature 004 US3: Exercises tab
+        GalleryScreen("50-exercises") {
+            BarFrame(Tab.EXERCISES) { modifier ->
+                ExercisesScreen(Samples.shownExercises(), onOpen = {}, onAdd = {}, onRefresh = {}, modifier = modifier, actions = { SampleAccountActions(pendingCount = 1) })
+            }
+        },
+        GalleryScreen("51-exercise-detail") {
+            BarFrame(Tab.EXERCISES) { modifier ->
+                ExerciseDetailScreen(
+                    Samples.shownExercises().first { it.pending },
+                    lastTime = null,
+                    record = null,
+                    onLogToday = {},
+                    onRename = {},
+                    onDelete = {},
+                    onBack = {},
+                    modifier = modifier,
+                    actions = { SampleSyncStatus(1, SyncPhase.Idle) },
+                )
+            }
+        },
+        GalleryScreen("52-exercise-detail-in-use") {
+            BarFrame(Tab.EXERCISES) { modifier ->
+                ExerciseDetailScreen(
+                    Samples.shownExercises().first(),
+                    lastTime = Samples.benchLastTime(),
+                    record = Record(Weight.ofHundredths(7500), Reps(5)),
+                    onLogToday = {},
+                    onRename = {},
+                    onDelete = {},
+                    onBack = {},
+                    modifier = modifier,
+                    actions = { SampleSyncStatus(0, SyncPhase.Idle) },
+                )
+            }
+        },
+        GalleryScreen("53-exercise-dialog-error") {
+            BarFrame(Tab.EXERCISES) { modifier ->
+                ExercisesScreen(Samples.shownExercises(), onOpen = {}, onAdd = {}, onRefresh = {}, modifier = modifier, actions = { SampleAccountActions(pendingCount = 1) })
+            }
+            val shown = Samples.shownExercises()
+            ExerciseDialog(
+                title = stringResource(R.string.exercise_add_title),
+                initialName = Samples.squat(),
+                initialGroup = shown.first { it.name == Samples.squat() }.muscleGroup,
+                groups = shown.map { it.muscleGroup }.distinct(),
+                check = { name, group -> ExerciseRules.check(name, group, shown) },
+                onSave = { _, _ -> },
+                onDismiss = {},
+            )
         },
         GalleryScreen("41-money-coming-soon") {
             BarFrame(Tab.MONEY) { modifier -> PlaceholderTabScreen(R.string.tab_money, modifier, actions = { SampleAccountActions() }) }
@@ -377,6 +430,18 @@ private object Samples {
 
     @Composable
     fun recent(): List<String> = listOf(bench(), squat())
+
+    /** The drills list as the Exercises tab shows it, with one exercise added on the phone. */
+    @Composable
+    fun shownExercises(): List<ShownExercise> {
+        val logged = setOf(bench(), row(), squat())
+        return exercises().map { ShownExercise(it.name, it.muscleGroup, pending = false, deletable = it.name !in logged) } +
+            ShownExercise(name("Face pull", "Тяга к лицу"), name("Shoulders", "Плечи"), pending = true, deletable = true)
+    }
+
+    @Composable
+    fun benchLastTime(): LastTime =
+        LastTime(Samples.YESTERDAY.minusDays(1), listOf(70.0 to 8, 70.0 to 7).map { (kg, r) -> SetKey(at(9, 0), bench(), w(kg), Reps(r)) })
 
     @Composable
     fun loggingStart(): LoggingState {

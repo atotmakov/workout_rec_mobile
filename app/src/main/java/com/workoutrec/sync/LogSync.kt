@@ -1,6 +1,7 @@
 package com.workoutrec.sync
 
 import com.workoutrec.google.ApiError
+import com.workoutrec.google.DrillsWrite
 import com.workoutrec.google.LogAndDrills
 import com.workoutrec.google.LogAppend
 import com.workoutrec.google.LogEdit
@@ -13,6 +14,7 @@ import com.workoutrec.monitoring.Profile
 import com.workoutrec.monitoring.ProfileTarget
 import com.workoutrec.workout.ChangeKind
 import com.workoutrec.workout.Exercise
+import com.workoutrec.workout.ExerciseChange
 import com.workoutrec.workout.LogRow
 import com.workoutrec.workout.PendingChange
 import com.workoutrec.workout.Reps
@@ -27,17 +29,36 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.withTimeout
 
-enum class NoticeKind { CONFLICT_DROPPED, WORKOUT_ROW_NOT_UPDATED }
+enum class NoticeKind { CONFLICT_DROPPED, WORKOUT_ROW_NOT_UPDATED, EXERCISE_CHANGE_DROPPED, EXERCISE_IN_USE }
 
 /** A message about a sync result (data-model.md `sync_notice`). */
-data class SyncNotice(val kind: NoticeKind, val key: SetKey)
+data class SyncNotice(val kind: NoticeKind, val key: SetKey) {
+    companion object {
+        /** Feature 004: a notice about an exercise; only the name is used. */
+        fun exercise(kind: NoticeKind, name: String) = SyncNotice(kind, SetKey(0, name, Weight.ofHundredths(0), Reps(0)))
+    }
+}
 
 /** The phone data the sync reads and writes (implemented by `WorkoutRepository`). */
 interface LogSyncStore {
     suspend fun pendingNow(): List<PendingChange>
 
-    /** One transaction: replace caches, remove handled changes, add notices (data-model "Sync run"). */
-    suspend fun commit(exercises: List<Exercise>, rows: List<LogRow>, doneIds: Collection<String>, notices: List<SyncNotice>)
+    /** Feature 004: waiting exercise changes, oldest first. */
+    suspend fun exerciseChangesNow(): List<ExerciseChange> = emptyList()
+
+    /**
+     * One transaction: replace caches, remove handled changes, add notices (data-model "Sync run");
+     * feature 004: remove handled exercise changes and give waiting sets of a dropped rename their
+     * old name back ([renamesBack]: new → old).
+     */
+    suspend fun commit(
+        exercises: List<Exercise>,
+        rows: List<LogRow>,
+        doneIds: Collection<String>,
+        notices: List<SyncNotice>,
+        doneExerciseIds: Collection<String> = emptyList(),
+        renamesBack: Map<String, String> = emptyMap(),
+    )
 
     /** The bound spreadsheet changed: drop caches, edits, deletes and notices; keep new sets (research R13). */
     suspend fun keepOnlyNewSets()
@@ -100,7 +121,10 @@ class LogSync(
 
         var read = profile.section("read").use { sheets.readLogAndDrills(id) }
         var rows = rowsOf(read, zone)
+        // Feature 004 research R5: exercise changes first, so a dropped rename's sets keep the old name.
+        val exercisePlan = ExercisePlan.of(store.exerciseChangesNow().sortedBy { it.createdAt }, read.drills, read.log)
         val pending = store.pendingNow().filter { it.draftId == null }.sortedBy { it.createdAt }
+            .map { change -> exercisePlan.renamesBack[change.key.exercise]?.takeIf { change.kind != ChangeKind.DELETE }?.let { change.copy(key = change.key.copy(exercise = it)) } ?: change }
         log("sync: ${pending.size} pending")
 
         // Step 4 (research R5): a new set already in the log was written by an earlier run.
@@ -116,7 +140,7 @@ class LogSync(
         val targeted = mutableSetOf<Int>()
         val deletes = mutableListOf<Int>()
         val edits = mutableListOf<LogEdit>()
-        val notices = mutableListOf<SyncNotice>()
+        val notices = exercisePlan.notices.toMutableList()
         pending.filter { it.kind != ChangeKind.NEW }.forEach { change ->
             val lastSeen = change.lastSeen ?: change.key
             val free = rows.filter { it.rowIndex !in targeted }
@@ -147,7 +171,8 @@ class LogSync(
         }
 
         // Step 5: one atomic write, then a fresh read for the caches.
-        val wrote = appends.isNotEmpty() || deletes.isNotEmpty() || edits.isNotEmpty()
+        val wrote = appends.isNotEmpty() || deletes.isNotEmpty() || edits.isNotEmpty() || exercisePlan.writes
+        val exercisesDone = exercisePlan.done.toMutableList()
         if (wrote) {
             profile.section("write").use {
                 sheets.writeLog(
@@ -156,8 +181,12 @@ class LogSync(
                     deletes = deletes,
                     edits = edits,
                     appends = appends.map { it.key.toAppend(zone) },
+                    drills = exercisePlan.takeIf { it.writes }?.let { plan ->
+                        DrillsWrite(sheet.drillsSheetId ?: 0, sheet.recSheetId, plan.deletes, plan.renames, plan.replaces, plan.appends)
+                    },
                 )
                 done += written + appends.map { it.id }
+                exercisesDone += exercisePlan.written
                 read = sheets.readLogAndDrills(id)
                 rows = rowsOf(read, zone)
             }
@@ -165,10 +194,10 @@ class LogSync(
 
         // Step 6.
         profile.section("commit").use {
-            store.commit(read.drills.map { Exercise(it.name, it.muscleGroup) }, rows, done, notices)
+            store.commit(read.drills.map { Exercise(it.name, it.muscleGroup) }, rows, done, notices, exercisesDone, exercisePlan.renamesBack)
             status.markSuccess(now())
         }
-        log("sync: done, wrote ${appends.size} new, ${edits.size} edited, ${deletes.size} deleted")
+        log("sync: done, wrote ${appends.size} new, ${edits.size} edited, ${deletes.size} deleted, ${exercisePlan.written.size} exercise changes")
         return SyncOutcome.Synced(wrote)
     }
 

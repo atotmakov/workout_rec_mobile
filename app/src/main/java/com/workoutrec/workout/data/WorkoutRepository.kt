@@ -1,5 +1,11 @@
 package com.workoutrec.workout.data
 
+import kotlinx.coroutines.flow.first
+import com.workoutrec.workout.ShownExercise
+import com.workoutrec.workout.ExerciseUpdate
+import com.workoutrec.workout.ExerciseCoalescer
+import com.workoutrec.workout.ExerciseChangeKind
+import com.workoutrec.workout.ExerciseChange
 import com.workoutrec.log.LoggingStore
 import com.workoutrec.log.PastWorkoutStore
 import com.workoutrec.sync.LogSyncStore
@@ -30,18 +36,29 @@ class WorkoutRepository(
     private val newId: () -> String = { UUID.randomUUID().toString() },
 ) : LoggingStore, LogSyncStore, PastWorkoutStore {
 
-    val exercises: Flow<List<Exercise>> = dao.exercises().map { list -> list.map { Exercise(it.name, it.muscleGroup) } }
+    private val cachedExercises: Flow<List<Exercise>> = dao.exercises().map { list -> list.map { Exercise(it.name, it.muscleGroup) } }
+
+    private val exerciseChanges: Flow<List<ExerciseChange>> = dao.exerciseChanges().map { list -> list.map { it.toDomain() } }
 
     val pending: Flow<List<PendingChange>> = dao.pending().map { list -> list.map { it.toDomain() } }
+
+    /** Cached log with pending changes applied (research R9) and waiting renames (feature 004). */
+    override val displaySets: Flow<List<DisplaySet>> =
+        combine(dao.logRows(), pending, exerciseChanges) { rows, changes, exerciseChanges ->
+            DisplayModel.sets(rows.map { it.toDomain() }, changes, DisplayModel.renames(exerciseChanges))
+        }
+
+    /** The drills list with waiting exercise changes applied (feature 004 FR-007). */
+    val shownExercises: Flow<List<ShownExercise>> =
+        combine(cachedExercises, exerciseChanges, displaySets) { cache, changes, sets -> DisplayModel.exercises(cache, changes, sets) }
+
+    /** What the picker and the edit dialog offer: the shown list (FR-001, feature 004 SC-004). */
+    val exercises: Flow<List<Exercise>> = shownExercises.map { list -> list.map { Exercise(it.name, it.muscleGroup) } }
 
     /** Sets, exercise changes and payments not in the spreadsheet yet (feature 004 FR-012). */
     val waitingCount: Flow<Int> = combine(pending, dao.exerciseChanges(), dao.pendingPayments()) { sets, exercises, payments ->
         DisplayModel.waitingCount(sets, exercises.size, payments.size)
     }
-
-    /** Cached log with pending changes applied (research R9). */
-    override val displaySets: Flow<List<DisplaySet>> =
-        combine(dao.logRows(), pending) { rows, changes -> DisplayModel.sets(rows.map { it.toDomain() }, changes) }
 
     /** Saves a confirmed set before any network activity (FR-005). Returns its pending ID. */
     override suspend fun confirmSet(key: SetKey): String {
@@ -82,7 +99,39 @@ class WorkoutRepository(
 
     override suspend fun pendingNow(): List<PendingChange> = dao.pendingNow().map { it.toDomain() }
 
-    override suspend fun commit(exercises: List<Exercise>, rows: List<LogRow>, doneIds: Collection<String>, notices: List<SyncNotice>) {
+    // Feature 004 US3: exercise changes, saved on the phone first (FR-008, FR-008a, FR-008b).
+
+    suspend fun addExercise(name: String, muscleGroup: String) =
+        dao.upsertExerciseChange(ExerciseCoalescer.add(name, muscleGroup, newId(), clock()).toEntity())
+
+    suspend fun renameExercise(current: String, name: String, muscleGroup: String) {
+        val result = ExerciseCoalescer.rename(
+            current, cachedNow(), exerciseChangesNow(), pendingNow(), name, muscleGroup, newId(), clock(),
+        )
+        when (val update = result.update) {
+            is ExerciseUpdate.Upsert -> dao.renameExercise(update.change.toEntity(), result.sets.map { it.toEntity() })
+            is ExerciseUpdate.Remove -> dao.deleteExerciseChanges(listOf(update.id))
+        }
+    }
+
+    suspend fun deleteExercise(current: String) =
+        when (val update = ExerciseCoalescer.delete(current, cachedNow(), exerciseChangesNow(), newId(), clock())) {
+            is ExerciseUpdate.Upsert -> dao.upsertExerciseChange(update.change.toEntity())
+            is ExerciseUpdate.Remove -> dao.deleteExerciseChanges(listOf(update.id))
+        }
+
+    private suspend fun cachedNow(): List<Exercise> = cachedExercises.first()
+
+    override suspend fun exerciseChangesNow(): List<ExerciseChange> = dao.exerciseChangesNow().map { it.toDomain() }
+
+    override suspend fun commit(
+        exercises: List<Exercise>,
+        rows: List<LogRow>,
+        doneIds: Collection<String>,
+        notices: List<SyncNotice>,
+        doneExerciseIds: Collection<String>,
+        renamesBack: Map<String, String>,
+    ) {
         val created = clock()
         dao.commitSync(
             exercises.toEntities(),
@@ -91,11 +140,19 @@ class WorkoutRepository(
             notices.map {
                 SyncNoticeEntity(0, it.kind.name, it.key.time, it.key.exercise, it.key.weight.hundredths, it.key.reps.value, created)
             },
+            doneExerciseIds.toList(),
+            renamesBack,
         )
     }
 
     override suspend fun keepOnlyNewSets() = dao.keepOnlyNewSets()
 }
+
+internal fun PendingExerciseChangeEntity.toDomain() =
+    ExerciseChange(id, ExerciseChangeKind.valueOf(kind), name, muscleGroup, lastSeenName, lastSeenGroup, createdAt)
+
+internal fun ExerciseChange.toEntity() =
+    PendingExerciseChangeEntity(id, kind.name, name, muscleGroup, lastSeenName, lastSeenGroup, createdAt)
 
 internal fun List<Exercise>.toEntities(): List<ExerciseEntity> =
     distinctBy { it.name }.mapIndexed { i, e -> ExerciseEntity(e.name, e.muscleGroup, i) }

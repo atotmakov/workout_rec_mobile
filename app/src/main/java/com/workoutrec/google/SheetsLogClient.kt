@@ -41,6 +41,25 @@ data class LogEdit(val rowIndex: Int, val exercise: String, val weight: Double, 
 
 data class LogAppend(val serial: Double, val exercise: String, val weight: Double, val reps: Int)
 
+/** A drills row's new values (feature 004 rename). */
+data class DrillRename(val rowIndex: Int, val muscleGroup: String, val name: String)
+
+/** Every whole cell [old] becomes [new], in log column B and rec A1 (feature 004 research R4). */
+data class NameReplace(val old: String, val new: String)
+
+/** Feature 004: the drills part of call 22 (contracts/sheets.md "Call 22 request order"). */
+data class DrillsWrite(
+    val drillsSheetId: Int,
+    /** Null when the spreadsheet has no rec tab: rec A1 is then not renamed. */
+    val recSheetId: Int?,
+    val deletes: List<Int> = emptyList(),
+    val renames: List<DrillRename> = emptyList(),
+    val replaces: List<NameReplace> = emptyList(),
+    val appends: List<SheetDrill> = emptyList(),
+) {
+    val isEmpty: Boolean get() = deletes.isEmpty() && renames.isEmpty() && replaces.isEmpty() && appends.isEmpty()
+}
+
 /** The spreadsheet has no `log` or `drills` tab (contracts/sheets-log.md, failure `Structure`). */
 class MissingTabException(val tab: String) : Exception("Missing tab $tab")
 
@@ -54,6 +73,7 @@ interface SheetsLogApi {
         deletes: List<Int>,
         edits: List<LogEdit>,
         appends: List<LogAppend>,
+        drills: DrillsWrite? = null,
     )
 }
 
@@ -121,20 +141,34 @@ class SheetsLogClient(
         )
     }
 
-    /** Call 22: deletes and edits bottom-up so row indexes stay valid, then one append. */
+    /**
+     * Call 22: deletes and edits bottom-up so row indexes stay valid, per tab; then the renames
+     * (feature 004); then the appends. One atomic write.
+     */
     override suspend fun writeLog(
         spreadsheetId: String,
         logSheetId: Int,
         deletes: List<Int>,
         edits: List<LogEdit>,
         appends: List<LogAppend>,
+        drills: DrillsWrite?,
     ) {
-        if (deletes.isEmpty() && edits.isEmpty() && appends.isEmpty()) return
+        val drillsPart = drills?.takeUnless { it.isEmpty }
+        if (deletes.isEmpty() && edits.isEmpty() && appends.isEmpty() && drillsPart == null) return
         val byRow: List<Pair<Int, JsonObject>> =
             deletes.map { it to deleteRow(logSheetId, it) } + edits.map { it.rowIndex to editRow(logSheetId, it) }
+        val drillsByRow: List<Pair<Int, JsonObject>> = drillsPart?.let { d ->
+            d.deletes.map { it to deleteRow(d.drillsSheetId, it) } + d.renames.map { it.rowIndex to renameDrill(d.drillsSheetId, it) }
+        }.orEmpty()
         val requests = buildJsonArray {
             byRow.sortedByDescending { it.first }.forEach { add(it.second) }
+            drillsByRow.sortedByDescending { it.first }.forEach { add(it.second) }
+            drillsPart?.replaces?.forEach { replace ->
+                add(findReplace(replace, logColumnB(logSheetId)))
+                drillsPart.recSheetId?.let { add(findReplace(replace, recA1(it))) }
+            }
             if (appends.isNotEmpty()) add(appendRows(logSheetId, appends))
+            drillsPart?.appends?.takeIf { it.isNotEmpty() }?.let { add(appendDrills(drillsPart.drillsSheetId, it)) }
         }
         val url = spreadsheets().addPathSegment("$spreadsheetId:batchUpdate").build()
         val body = buildJsonObject { put("requests", requests) }.toString().toJsonBody()
@@ -173,6 +207,54 @@ class SheetsLogClient(
             }
             put("fields", "userEnteredValue")
         }
+    }
+
+    private fun renameDrill(sheetId: Int, rename: DrillRename) = buildJsonObject {
+        putJsonObject("updateCells") {
+            putJsonObject("start") {
+                put("sheetId", sheetId)
+                put("rowIndex", rename.rowIndex)
+                put("columnIndex", 0)
+            }
+            putJsonArray("rows") { add(rowData(listOf(text(rename.muscleGroup), text(rename.name)))) }
+            put("fields", "userEnteredValue")
+        }
+    }
+
+    private fun appendDrills(sheetId: Int, drills: List<SheetDrill>) = buildJsonObject {
+        putJsonObject("appendCells") {
+            put("sheetId", sheetId)
+            putJsonArray("rows") { drills.forEach { add(rowData(listOf(text(it.muscleGroup), text(it.name)))) } }
+            put("fields", "userEnteredValue")
+        }
+    }
+
+    /** Whole-cell, case-sensitive: only cells that are exactly the old name change. */
+    private fun findReplace(replace: NameReplace, range: JsonObject) = buildJsonObject {
+        putJsonObject("findReplace") {
+            put("find", replace.old)
+            put("replacement", replace.new)
+            put("matchCase", true)
+            put("matchEntireCell", true)
+            put("searchByRegex", false)
+            put("includeFormulas", false)
+            put("range", range)
+        }
+    }
+
+    private fun logColumnB(sheetId: Int) = buildJsonObject {
+        put("sheetId", sheetId)
+        put("startRowIndex", 1)
+        put("startColumnIndex", 1)
+        put("endColumnIndex", 2)
+    }
+
+    private fun recA1(sheetId: Int) = buildJsonObject {
+        put("sheetId", sheetId)
+        put("startRowIndex", 0)
+        put("endRowIndex", 1)
+        put("startColumnIndex", 0)
+        put("endColumnIndex", 1)
     }
 
     private fun rowData(cells: List<JsonObject>) = buildJsonObject {

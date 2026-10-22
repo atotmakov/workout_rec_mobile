@@ -203,10 +203,13 @@ fun SyncNoticeList(notices: List<Pair<Long, SyncNotice>>, onDismiss: (Long) -> U
                 Column(Modifier.padding(12.dp)) {
                     val set = "${notice.key.exercise} ${setText(notice.key, locale)}"
                     Text(
-                        stringResource(
-                            if (notice.kind == NoticeKind.CONFLICT_DROPPED) R.string.notice_conflict_dropped else R.string.notice_workout_row,
-                            set,
-                        ),
+                        when (notice.kind) {
+                            NoticeKind.CONFLICT_DROPPED -> stringResource(R.string.notice_conflict_dropped, set)
+                            NoticeKind.WORKOUT_ROW_NOT_UPDATED -> stringResource(R.string.notice_workout_row, set)
+                            // Feature 004: about an exercise; only its name is known.
+                            NoticeKind.EXERCISE_CHANGE_DROPPED -> stringResource(R.string.notice_exercise_change_dropped, notice.key.exercise)
+                            NoticeKind.EXERCISE_IN_USE -> stringResource(R.string.notice_exercise_in_use, notice.key.exercise)
+                        },
                         style = MaterialTheme.typography.bodyMedium,
                     )
                     TextButton(onClick = { onDismiss(id) }, modifier = Modifier.testTag(CorrectionTags.noticeDismiss(id))) {

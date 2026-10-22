@@ -151,4 +151,23 @@
     <string name="tab_exercises">Exercises</string>
     <string name="tab_money">Money</string>
     <string name="tab_placeholder">Coming soon</string>
+    <!-- Feature 004 US3: Exercises tab -->
+    <string name="exercises_empty">No exercises yet. Add the ones you do.</string>
+    <string name="exercise_add">Add exercise</string>
+    <string name="exercise_add_title">New exercise</string>
+    <string name="exercise_rename_title">Rename exercise</string>
+    <string name="exercise_group_label">Muscle group</string>
+    <string name="exercise_name_label">Name</string>
+    <string name="exercise_exists">This exercise already exists</string>
+    <string name="exercise_name_empty">Enter a name</string>
+    <string name="exercise_name_too_long">Up to 100 characters</string>
+    <string name="exercise_group_too_long">Up to 50 characters</string>
+    <string name="exercise_log_today">Log today</string>
+    <string name="exercise_rename">Rename</string>
+    <string name="exercise_delete_question">Delete %1$s?</string>
+    <string name="exercise_delete_text">It is removed from your exercise list and from the drills tab.</string>
+    <string name="exercise_in_use">Exercises with logged sets can’t be deleted.</string>
+    <string name="exercise_waiting">Not in the spreadsheet yet</string>
+    <string name="notice_exercise_change_dropped">%1$s was changed in the spreadsheet before your change reached it; the spreadsheet version is kept.</string>
+    <string name="notice_exercise_in_use">%1$s has sets in the log, so it was not deleted.</string>
 </resources>

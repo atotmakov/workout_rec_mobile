@@ -11,6 +11,8 @@ object TabRoutes {
     /** The graph holding the four tabs; setup stays outside it. */
     const val MAIN = "main"
     const val EXERCISES = "exercises"
+    const val EXERCISE = "exercise/{name}"
+    fun exercise(name: String) = "exercise/${android.net.Uri.encode(name)}"
     const val MONEY = "money"
 }
 
@@ -41,7 +43,7 @@ fun barVisible(route: String?): Boolean = route != null && route !in HIDDEN_BAR
 fun tabOf(route: String?): Tab? = when (route) {
     Routes.HOME, LogRoutes.PICKER, LogRoutes.LOGGING -> Tab.TODAY
     LogRoutes.WORKOUTS, LogRoutes.DAY, LogRoutes.PAST_WORKOUT -> Tab.HISTORY
-    TabRoutes.EXERCISES -> Tab.EXERCISES
+    TabRoutes.EXERCISES, TabRoutes.EXERCISE -> Tab.EXERCISES
     TabRoutes.MONEY -> Tab.MONEY
     else -> null
 }

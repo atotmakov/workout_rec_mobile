@@ -1,5 +1,8 @@
 package com.workoutrec
 
+import com.workoutrec.exercises.ExerciseDetailRoute
+import com.workoutrec.exercises.ExercisesRoute
+import com.workoutrec.nav.logToday
 import androidx.navigation.NavDestination.Companion.hierarchy
 import com.workoutrec.home.AccountActions
 import com.workoutrec.nav.PlaceholderTabScreen
@@ -190,7 +193,7 @@ private fun AppNavHost(container: AppContainer) {
                                 ) { modifier ->
                                     TodayRoute(
                                         container = container,
-                                        onAddExercise = { navController.navigate(LogRoutes.PICKER) },
+                                        onAddExercise = { navController.navigate(LogRoutes.picker()) },
                                         onOpenExercise = { navController.navigate(LogRoutes.logging(it, sets = 0)) },
                                         modifier = modifier,
                                         header = {
@@ -202,10 +205,13 @@ private fun AppNavHost(container: AppContainer) {
                                 }
                             }
                         }
-                        composable(LogRoutes.PICKER) {
+                        composable(
+                            LogRoutes.PICKER,
+                            arguments = listOf(navArgument("exercise") { type = NavType.StringType; nullable = true; defaultValue = null }),
+                        ) { entry ->
                             PickerRoute(container, onBack = { navController.popBackStack() }, onStart = { exercise, sets ->
                                 navController.navigate(LogRoutes.logging(exercise, sets)) { popUpTo(Routes.HOME) }
-                            })
+                            }, preselected = entry.arguments?.getString("exercise"))
                         }
                         composable(
                             LogRoutes.LOGGING,
@@ -240,7 +246,19 @@ private fun AppNavHost(container: AppContainer) {
                         }
                     },
                     exercises = {
-                        composable(TabRoutes.EXERCISES) { PlaceholderTabScreen(R.string.tab_exercises, actions = accountActions) }
+                        composable(TabRoutes.EXERCISES) {
+                            ExercisesRoute(container, onOpen = { navController.navigate(TabRoutes.exercise(it)) }, actions = accountActions)
+                        }
+                        composable(TabRoutes.EXERCISE, arguments = listOf(navArgument("name") { type = NavType.StringType })) { entry ->
+                            ExerciseDetailRoute(
+                                container,
+                                name = entry.arguments?.getString("name").orEmpty(),
+                                onBack = { navController.popBackStack() },
+                                onLogToday = { navController.logToday(it) },
+                                onRenamed = { navController.navigate(TabRoutes.exercise(it)) { popUpTo(TabRoutes.EXERCISES) } },
+                                actions = { SyncStatusAction(container) },
+                            )
+                        }
                     },
                     money = {
                         composable(TabRoutes.MONEY) { PlaceholderTabScreen(R.string.tab_money, actions = accountActions) }

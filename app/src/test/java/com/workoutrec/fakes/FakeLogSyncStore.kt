@@ -9,6 +9,7 @@ import com.workoutrec.sync.SyncPhase
 import com.workoutrec.sync.SyncStatus
 import com.workoutrec.sync.SyncStatusStore
 import com.workoutrec.workout.Exercise
+import com.workoutrec.workout.ExerciseChange
 import com.workoutrec.workout.LogRow
 import com.workoutrec.workout.PendingChange
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,6 +18,7 @@ import kotlinx.coroutines.flow.StateFlow
 /** In-memory phone data for sync tests. */
 class FakeLogSyncStore(
     val pending: MutableList<PendingChange> = mutableListOf(),
+    val exerciseChanges: MutableList<ExerciseChange> = mutableListOf(),
 ) : LogSyncStore {
     var exercises: List<Exercise> = emptyList()
     var rows: List<LogRow> = emptyList()
@@ -26,11 +28,22 @@ class FakeLogSyncStore(
 
     override suspend fun pendingNow(): List<PendingChange> = pending.toList()
 
-    override suspend fun commit(exercises: List<Exercise>, rows: List<LogRow>, doneIds: Collection<String>, notices: List<SyncNotice>) {
+    override suspend fun exerciseChangesNow(): List<ExerciseChange> = exerciseChanges.toList()
+
+    override suspend fun commit(
+        exercises: List<Exercise>,
+        rows: List<LogRow>,
+        doneIds: Collection<String>,
+        notices: List<SyncNotice>,
+        doneExerciseIds: Collection<String>,
+        renamesBack: Map<String, String>,
+    ) {
         commits++
         this.exercises = exercises
         this.rows = rows
         pending.removeAll { it.id in doneIds }
+        pending.replaceAll { c -> renamesBack[c.key.exercise]?.takeIf { c.kind != com.workoutrec.workout.ChangeKind.DELETE }?.let { c.copy(key = c.key.copy(exercise = it)) } ?: c }
+        exerciseChanges.removeAll { it.id in doneExerciseIds }
         this.notices += notices
     }
 
@@ -40,6 +53,7 @@ class FakeLogSyncStore(
         rows = emptyList()
         notices.clear()
         pending.removeAll { it.kind != com.workoutrec.workout.ChangeKind.NEW }
+        exerciseChanges.removeAll { it.kind != com.workoutrec.workout.ExerciseChangeKind.ADD }
     }
 }
 
