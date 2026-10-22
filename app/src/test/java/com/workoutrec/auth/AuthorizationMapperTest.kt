@@ -48,4 +48,12 @@ class AuthorizationMapperTest {
     fun `network failure is Unavailable, not Denied, so the stored account is kept`() {
         assertEquals(AuthDecision.Unavailable, AuthorizationMapper.decideFailure(networkError = true))
     }
+
+    // Feature 005: a Google error keeps its status so it can be reported; a cancel stays Denied
+    @Test
+    fun `a Google error status is kept, a cancelled consent is denied`() {
+        assertEquals(AuthDecision.Failed(10), AuthorizationMapper.decideFailure(networkError = false, statusCode = 10))
+        assertEquals(AuthDecision.Denied, AuthorizationMapper.decideFailure(networkError = false, statusCode = 16))
+        assertEquals(AuthDecision.Unavailable, AuthorizationMapper.decideFailure(networkError = true, statusCode = 7))
+    }
 }

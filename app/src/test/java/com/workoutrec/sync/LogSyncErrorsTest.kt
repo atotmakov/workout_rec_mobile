@@ -128,11 +128,35 @@ class LogSyncErrorsTest {
     @Test
     fun `a failed run reports sync-failed with the error`() = runTest {
         store.pending += set
-        sheets.failNext("read", ApiError.ServiceUnavailable(503))
+        sheets.failNext("read", ApiError.NotFound)
         monitoredSync.run()
         val event = monitoring.nonFatals.single()
         assertEquals(NonFatalIssue.SYNC_FAILED, event.issue)
-        assertEquals(ApiError.ServiceUnavailable(503), event.error)
+        assertEquals(ApiError.NotFound, event.error)
+        assertEquals("operation=sync", event.details)
+    }
+
+    // Feature 005 FR-011: no-connection failures are one info issue
+    @Test
+    fun `no connection reports no-connection, not sync-failed`() = runTest {
+        for (error in listOf(ApiError.Offline, ApiError.ServiceUnavailable(503))) {
+            monitoring.nonFatals.clear()
+            store.pending += set
+            sheets.failNext("read", error)
+            assertEquals(SyncOutcome.Failed(SyncPhase.Failing(FailReason.NETWORK)), monitoredSync.run())
+            assertEquals(listOf(NonFatalIssue.NO_CONNECTION to "operation=sync"), monitoring.nonFatals.map { it.issue to it.details })
+        }
+    }
+
+    @Test
+    fun `a missing tab and other Google errors report sync-failed`() = runTest {
+        for (error in listOf(MissingTabException("log"), ApiError.Unexpected(400, "bad"))) {
+            monitoring.nonFatals.clear()
+            store.pending += set
+            sheets.failNext("read", error)
+            monitoredSync.run()
+            assertEquals(listOf(NonFatalIssue.SYNC_FAILED to "operation=sync"), monitoring.nonFatals.map { it.issue to it.details })
+        }
     }
 
     @Test

@@ -10,6 +10,7 @@ import com.workoutrec.google.ApiError
 import com.workoutrec.monitoring.Monitoring
 import com.workoutrec.monitoring.NoMonitoring
 import com.workoutrec.monitoring.NonFatalIssue
+import com.workoutrec.monitoring.failure
 import com.workoutrec.spreadsheet.SpreadsheetSetup
 import com.workoutrec.spreadsheet.SpreadsheetSnapshot
 import com.workoutrec.spreadsheet.StructureCheckResult
@@ -214,6 +215,7 @@ class SpreadsheetSetupFlow(
             block()
         } catch (e: ApiError) {
             if (step == SetupStep.Renaming) failedRewriteId = rewriteId
+            monitoring.failure(NonFatalIssue.SETUP_STEP_FAILED, e, "setup", "step=${step.name}")
             SetupState.Error(step, e)
         }
 }

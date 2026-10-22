@@ -8,6 +8,8 @@ import com.workoutrec.StartDestinationResolver
 import com.workoutrec.auth.AccountPicker
 import com.workoutrec.auth.AccountRepository
 import com.workoutrec.auth.AuthOutcome
+import com.workoutrec.auth.AuthorizationFailed
+import com.workoutrec.auth.PickFailed
 import com.workoutrec.auth.PickResult
 import com.workoutrec.data.SelectedAccount
 import com.workoutrec.monitoring.Monitoring
@@ -43,6 +45,7 @@ class SetupViewModel(
             }
             _state.value = SetupState.Authorizing
             val outcome = accounts.authorizeOnLaunch()
+            if (outcome != null) report(outcome)
             _state.value = when (val destination = StartDestinationResolver.resolve(account, outcome)) {
                 StartDestination.Home ->
                     if (outcome is AuthOutcome.Granted) postAuth.run(account) else SetupState.Ready
@@ -62,8 +65,11 @@ class SetupViewModel(
             _state.value = SetupState.Authorizing
             when (val picked = accounts.chooseAccount(picker)) {
                 is PickResult.Picked -> handleAuthorization(picked.account, accounts.authorize(picked.account))
-                PickResult.Cancelled, is PickResult.Failed ->
+                PickResult.Cancelled -> _state.value = SetupState.SignedOut(SetupMessage.AccountRequired)
+                is PickResult.Failed -> {
+                    report(picked)
                     _state.value = SetupState.SignedOut(SetupMessage.AccountRequired)
+                }
             }
         }
     }
@@ -120,7 +126,11 @@ class SetupViewModel(
                     _reminder.value = null
                     handleAuthorization(picked.account, accounts.authorize(picked.account))
                 }
-                PickResult.Cancelled, is PickResult.Failed -> _state.value = previous
+                PickResult.Cancelled -> _state.value = previous
+                is PickResult.Failed -> {
+                    report(picked)
+                    _state.value = previous
+                }
             }
         }
     }
@@ -144,7 +154,23 @@ class SetupViewModel(
         }
     }
 
+    /** Feature 005: a failed pick, and authorization failures other than a refusal or cancel. */
+    private fun report(picked: PickResult.Failed) =
+        monitoring.nonFatal(NonFatalIssue.SIGN_IN_FAILED, PickFailed(picked.type), "type=${picked.type}")
+
+    private fun report(outcome: AuthOutcome) = when (outcome) {
+        is AuthOutcome.Failed -> monitoring.nonFatal(
+            NonFatalIssue.AUTHORIZATION_FAILED,
+            AuthorizationFailed(outcome),
+            "operation=authorization; outcome=Failed; status=${outcome.statusCode}",
+        )
+        AuthOutcome.Unavailable ->
+            monitoring.nonFatal(NonFatalIssue.NO_CONNECTION, AuthorizationFailed(outcome), "operation=authorization")
+        is AuthOutcome.Granted, is AuthOutcome.NeedsUserConsent, AuthOutcome.Denied -> Unit
+    }
+
     private suspend fun handleAuthorization(account: SelectedAccount, outcome: AuthOutcome) {
+        report(outcome)
         when (outcome) {
             is AuthOutcome.Granted -> {
                 pendingAccount = null
@@ -155,7 +181,7 @@ class SetupViewModel(
                 pendingAccount = account
                 _state.value = SetupState.NeedsConsent(outcome.consent)
             }
-            AuthOutcome.Denied, AuthOutcome.Unavailable -> {
+            AuthOutcome.Denied, AuthOutcome.Unavailable, is AuthOutcome.Failed -> {
                 pendingAccount = null
                 accounts.forgetAccount()
                 _state.value = SetupState.SignedOut(SetupMessage.AccountRequired)

@@ -13,8 +13,12 @@ import com.workoutrec.data.SelectedAccount
 sealed interface PickResult {
     data class Picked(val account: SelectedAccount) : PickResult
     data object Cancelled : PickResult
-    data class Failed(val reason: String) : PickResult
+    /** [type]: the platform's error type, never user data (feature 005: reported). */
+    data class Failed(val type: String) : PickResult
 }
+
+/** A failed account pick as a non-fatal event (feature 005); [type] names the platform error. */
+class PickFailed(type: String) : Exception("Account pick failed: $type")
 
 /** Shows Google's account chooser (research R2). */
 fun interface AccountPicker {
@@ -48,12 +52,12 @@ class CredentialManagerAccountPicker(
                     ),
                 )
             } else {
-                PickResult.Failed("Unexpected credential type: ${credential.type}")
+                PickResult.Failed("unexpected-credential: ${credential.type}")
             }
         } catch (e: GetCredentialCancellationException) {
             PickResult.Cancelled
         } catch (e: GetCredentialException) {
-            PickResult.Failed(e.message ?: e.type)
+            PickResult.Failed(e.type)
         }
     }
 }

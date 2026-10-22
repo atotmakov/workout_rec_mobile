@@ -6,6 +6,9 @@ sealed interface AuthDecision {
     data object NeedsUserConsent : AuthDecision
     data object Denied : AuthDecision
 
+    /** A Google error other than a network error or a cancel (feature 005: reported). */
+    data class Failed(val statusCode: Int) : AuthDecision
+
     /** Network failure: keep the stored account and try again later. */
     data object Unavailable : AuthDecision
 }
@@ -25,6 +28,12 @@ object AuthorizationMapper {
         else -> AuthDecision.Denied
     }
 
-    fun decideFailure(networkError: Boolean): AuthDecision =
-        if (networkError) AuthDecision.Unavailable else AuthDecision.Denied
+    /** [statusCode] 16 is `CommonStatusCodes.CANCELED`: the user closed the consent screen. */
+    fun decideFailure(networkError: Boolean, statusCode: Int? = null): AuthDecision = when {
+        networkError -> AuthDecision.Unavailable
+        statusCode == null || statusCode == CANCELED -> AuthDecision.Denied
+        else -> AuthDecision.Failed(statusCode)
+    }
+
+    private const val CANCELED = 16
 }

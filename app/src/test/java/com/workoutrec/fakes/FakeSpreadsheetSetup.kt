@@ -70,6 +70,9 @@ class FakeScriptInstaller(
     var apiDisabled: Boolean = false,
     val log: MutableList<String> = mutableListOf(),
 ) : ScriptInstall {
+    /** An error to throw from the next install. */
+    var failNext: ApiError? = null
+
     override suspend fun install(
         spreadsheetId: String,
         timeZone: String,
@@ -78,6 +81,7 @@ class FakeScriptInstaller(
     ): InstalledScript {
         log += "install:$spreadsheetId"
         if (apiDisabled) throw ApiError.AppsScriptApiDisabled("User has not enabled the Apps Script API")
+        failNext?.let { failNext = null; throw it }
         return InstalledScript("script-1", "https://enable")
     }
 }

@@ -15,6 +15,7 @@ import com.workoutrec.google.SheetsLogApi
 import com.workoutrec.monitoring.Monitoring
 import com.workoutrec.monitoring.NoMonitoring
 import com.workoutrec.monitoring.NonFatalIssue
+import com.workoutrec.monitoring.failure
 import com.workoutrec.monitoring.Profile
 import com.workoutrec.monitoring.ProfileTarget
 import com.workoutrec.workout.ChangeKind
@@ -116,7 +117,7 @@ class LogSync(
         } catch (e: Exception) {
             profile.abort()
             log("sync: failed: ${e::class.simpleName}: ${e.message}")
-            monitoring.nonFatal(NonFatalIssue.SYNC_FAILED, e)
+            monitoring.failure(NonFatalIssue.SYNC_FAILED, e, "sync")
             val phase = phaseOf(e)
             status.setPhase(phase)
             SyncOutcome.Failed(phase)

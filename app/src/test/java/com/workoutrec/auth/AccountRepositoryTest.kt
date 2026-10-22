@@ -145,14 +145,31 @@ class AccountRepositoryTest {
     }
 
     // Feature 003 FR-005: a failed token request reaches monitoring.
+    // Feature 005 FR-011: no answer or no network is a no-connection failure
     @Test
-    fun `a token request without an answer reports token-failed`() = runTest {
+    fun `a token request without an answer reports no-connection`() = runTest {
         val monitoring = FakeMonitoring()
         val repo = AccountRepository(FakeApiAuthorizer().apply { hang = true }, FakeSettingsStore(account), monitoring = monitoring)
-        runCatching { repo.accessToken(forceRefresh = false) }
+        assertTrue(runCatching { repo.accessToken(forceRefresh = false) }.exceptionOrNull() is ApiError.Offline)
         val event = monitoring.nonFatals.single()
-        assertEquals(NonFatalIssue.TOKEN_FAILED, event.issue)
-        assertEquals("no answer in 20 s", event.details)
+        assertEquals(NonFatalIssue.NO_CONNECTION, event.issue)
+        assertEquals("operation=token", event.details)
+    }
+
+    @Test
+    fun `an unavailable token request reports no-connection`() = runTest {
+        val monitoring = FakeMonitoring()
+        val repo = AccountRepository(FakeApiAuthorizer(AuthOutcome.Unavailable), FakeSettingsStore(account), monitoring = monitoring)
+        runCatching { repo.accessToken(forceRefresh = false) }
+        assertEquals(listOf(NonFatalIssue.NO_CONNECTION to "operation=token"), monitoring.nonFatals.map { it.issue to it.details })
+    }
+
+    @Test
+    fun `a Google error during the token request reports token-failed with the status`() = runTest {
+        val monitoring = FakeMonitoring()
+        val repo = AccountRepository(FakeApiAuthorizer(AuthOutcome.Failed(10)), FakeSettingsStore(account), monitoring = monitoring)
+        runCatching { repo.accessToken(forceRefresh = false) }
+        assertEquals(listOf(NonFatalIssue.TOKEN_FAILED to "Failed (status 10)"), monitoring.nonFatals.map { it.issue to it.details })
     }
 
     @Test

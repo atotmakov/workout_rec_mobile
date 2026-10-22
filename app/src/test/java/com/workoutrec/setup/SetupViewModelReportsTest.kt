@@ -2,6 +2,8 @@ package com.workoutrec.setup
 
 import com.workoutrec.auth.AccountRepository
 import com.workoutrec.auth.AuthOutcome
+import com.workoutrec.auth.PickResult
+import com.workoutrec.fakes.FakeAccountPicker
 import com.workoutrec.data.SelectedAccount
 import com.workoutrec.fakes.FakeApiAuthorizer
 import com.workoutrec.fakes.FakeMonitoring
@@ -66,5 +68,66 @@ class SetupViewModelReportsTest {
     fun `a cancelled setup check is not reported`() = runTest {
         readyWith(ThrowingRefresh(CancellationException("screen closed"))).refreshStatus()
         assertEquals(emptyList<Any>(), reports())
+    }
+
+    // US2: sign-in and authorization
+    private val readyStep = object : PostAuthStep {
+        override suspend fun run(account: SelectedAccount) = SetupState.Ready
+    }
+
+    private fun signedOut(vararg outcomes: AuthOutcome): SetupViewModel {
+        val vm = SetupViewModel(AccountRepository(FakeApiAuthorizer(*outcomes), FakeSettingsStore(null)), readyStep, monitoring)
+        vm.start()
+        return vm
+    }
+
+    @Test
+    fun `a failed account pick returns to the chooser and is reported`() = runTest {
+        val vm = signedOut()
+        vm.chooseAccount(FakeAccountPicker(PickResult.Failed(type = "TYPE_NO_CREDENTIAL")))
+        assertEquals(SetupState.SignedOut(SetupMessage.AccountRequired), vm.state.value)
+        assertEquals(listOf(NonFatalIssue.SIGN_IN_FAILED to "type=TYPE_NO_CREDENTIAL"), reports())
+    }
+
+    @Test
+    fun `a failed account switch keeps the screen and is reported`() = runTest {
+        val vm = readyWith(readyStep)
+        vm.switchAccount(FakeAccountPicker(PickResult.Failed(type = "TYPE_NO_CREDENTIAL")))
+        assertEquals(SetupState.Ready, vm.state.value)
+        assertEquals(listOf(NonFatalIssue.SIGN_IN_FAILED to "type=TYPE_NO_CREDENTIAL"), reports())
+    }
+
+    @Test
+    fun `a cancelled pick or switch is not reported`() = runTest {
+        signedOut().chooseAccount(FakeAccountPicker(PickResult.Cancelled))
+        readyWith(readyStep).switchAccount(FakeAccountPicker(PickResult.Cancelled))
+        assertEquals(emptyList<Any>(), reports())
+    }
+
+    @Test
+    fun `a Google error while authorizing is reported with its status`() = runTest {
+        val vm = signedOut(AuthOutcome.Failed(10))
+        vm.chooseAccount(FakeAccountPicker(PickResult.Picked(account)))
+        assertEquals(SetupState.SignedOut(SetupMessage.AccountRequired), vm.state.value)
+        assertEquals(listOf(NonFatalIssue.AUTHORIZATION_FAILED to "operation=authorization; outcome=Failed; status=10"), reports())
+    }
+
+    @Test
+    fun `authorizing without connection is reported as info`() = runTest {
+        signedOut(AuthOutcome.Unavailable).chooseAccount(FakeAccountPicker(PickResult.Picked(account)))
+        assertEquals(listOf(NonFatalIssue.NO_CONNECTION to "operation=authorization"), reports())
+    }
+
+    @Test
+    fun `a refused or cancelled consent is not reported`() = runTest {
+        signedOut(AuthOutcome.Denied).chooseAccount(FakeAccountPicker(PickResult.Picked(account)))
+        assertEquals(emptyList<Any>(), reports())
+    }
+
+    @Test
+    fun `a Google error on launch is reported`() = runTest {
+        val vm = SetupViewModel(AccountRepository(FakeApiAuthorizer(AuthOutcome.Failed(8)), FakeSettingsStore(account)), readyStep, monitoring)
+        vm.start()
+        assertEquals(listOf(NonFatalIssue.AUTHORIZATION_FAILED to "operation=authorization; outcome=Failed; status=8"), reports())
     }
 }

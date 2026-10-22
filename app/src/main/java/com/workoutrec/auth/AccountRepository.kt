@@ -51,7 +51,7 @@ class AccountRepository(
     suspend fun authorizeOnLaunch(): AuthOutcome? {
         val account = store.account.first() ?: return null
         val outcome = authorize(account)
-        if (outcome is AuthOutcome.Denied) forgetAccount()
+        if (outcome is AuthOutcome.Denied || outcome is AuthOutcome.Failed) forgetAccount()
         return outcome
     }
 
@@ -94,10 +94,17 @@ class AccountRepository(
         val failure = when (outcome) {
             null -> "no answer in ${AUTHORIZE_TIMEOUT_MILLIS / 1000} s"
             is AuthOutcome.Granted -> null
+            is AuthOutcome.Failed -> "Failed (status ${outcome.statusCode})"
             else -> "${outcome::class.simpleName}"
         }
         log("token: ${failure ?: "granted"}")
-        if (failure != null) monitoring.nonFatal(NonFatalIssue.TOKEN_FAILED, TokenRequestFailed(failure), details = failure)
+        when {
+            failure == null -> Unit
+            // Feature 005 FR-011: no answer or no network is a no-connection failure.
+            outcome == null || outcome == AuthOutcome.Unavailable ->
+                monitoring.nonFatal(NonFatalIssue.NO_CONNECTION, TokenRequestFailed(failure), "operation=token")
+            else -> monitoring.nonFatal(NonFatalIssue.TOKEN_FAILED, TokenRequestFailed(failure), details = failure)
+        }
         when (outcome) {
             is AuthOutcome.Granted -> outcome.accessToken
             null, AuthOutcome.Unavailable -> throw ApiError.Offline
