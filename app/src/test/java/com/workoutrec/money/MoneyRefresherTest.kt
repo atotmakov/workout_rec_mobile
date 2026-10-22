@@ -1,14 +1,17 @@
 package com.workoutrec.money
 
 import com.workoutrec.automation.AutomationStatus
+import com.workoutrec.fakes.FakeMonitoring
 import com.workoutrec.google.ApiError
 import com.workoutrec.google.MissingTabException
 import com.workoutrec.google.MoneyApi
 import com.workoutrec.google.MoneyRead
 import com.workoutrec.google.SheetMoneyRow
+import com.workoutrec.monitoring.NonFatalIssue
 import com.workoutrec.sync.SheetInfoCache
 import com.workoutrec.workout.PaymentRow
 import java.time.LocalDate
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -56,7 +59,10 @@ class MoneyRefresherTest {
     /** 2026-10-22T10:00Z */
     private var now = 1_792_663_200_000L
     private var sheet: SheetInfoCache? = SheetInfoCache("s1", "UTC", 0, drillsSheetId = 1, moneySheetId = 2, balanceSheetId = 3)
-    private val refresher = MoneyRefresher(api, store, sheet = { sheet }, now = { now })
+    private val monitoring = FakeMonitoring()
+    private val refresher = MoneyRefresher(api, store, sheet = { sheet }, now = { now }, monitoring = monitoring)
+
+    private fun reports() = monitoring.nonFatals.map { it.issue to it.details }
 
     @Test
     fun `opening Money downloads and stores payments, balance and the automation state`() = runTest {
@@ -119,5 +125,40 @@ class MoneyRefresherTest {
         refresher.onOpen()
         assertEquals(0, api.reads)
         assertEquals(MoneyError.OTHER, store.summary?.error)
+    }
+
+    // Feature 005 US1, contracts/issues.md
+    @Test
+    fun `a missing tab is reported`() = runTest {
+        api.next = { throw MissingTabException("money") }
+        refresher.refresh()
+        assertEquals(listOf(NonFatalIssue.MONEY_REFRESH_FAILED to "operation=money-refresh; reason=missing-tab"), reports())
+    }
+
+    @Test
+    fun `another Google error is reported as other`() = runTest {
+        api.next = { throw ApiError.Unexpected(500, "boom") }
+        refresher.refresh()
+        assertEquals(MoneyError.OTHER, store.summary?.error)
+        assertEquals(listOf(NonFatalIssue.MONEY_REFRESH_FAILED to "operation=money-refresh; reason=other"), reports())
+    }
+
+    @Test
+    fun `no connection is reported as info`() = runTest {
+        api.next = { throw ApiError.Offline }
+        refresher.refresh()
+        assertEquals(MoneyError.NETWORK, store.summary?.error)
+        assertEquals(listOf(NonFatalIssue.NO_CONNECTION to "operation=money-refresh"), reports())
+    }
+
+    @Test
+    fun `no sheet info, a cancelled refresh and a success send nothing`() = runTest {
+        refresher.refresh()
+        sheet = null
+        refresher.refresh()
+        sheet = SheetInfoCache("s1", "UTC", 0, drillsSheetId = 1, moneySheetId = 2, balanceSheetId = 3)
+        api.next = { throw CancellationException("left the tab") }
+        runCatching { refresher.refresh() }
+        assertEquals(emptyList<Any>(), reports())
     }
 }

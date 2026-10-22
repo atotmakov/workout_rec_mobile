@@ -10,6 +10,11 @@ import com.workoutrec.auth.AccountRepository
 import com.workoutrec.auth.AuthOutcome
 import com.workoutrec.auth.PickResult
 import com.workoutrec.data.SelectedAccount
+import com.workoutrec.monitoring.Monitoring
+import com.workoutrec.monitoring.NoMonitoring
+import com.workoutrec.monitoring.NonFatalIssue
+import com.workoutrec.monitoring.failure
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
@@ -19,6 +24,8 @@ import kotlinx.coroutines.launch
 class SetupViewModel(
     private val accounts: AccountRepository,
     private val postAuth: PostAuthStep,
+    /** Feature 005: handled failures as non-fatal events (contracts/issues.md). */
+    private val monitoring: Monitoring = NoMonitoring,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<SetupState>(SetupState.Starting)
@@ -83,7 +90,15 @@ class SetupViewModel(
     fun refreshStatus() {
         viewModelScope.launch {
             val account = accounts.currentAccount.first() ?: return@launch
-            when (val result = runCatching { postAuth.refresh(account) }.getOrElse { RefreshResult.NoChange }) {
+            val result = try {
+                postAuth.refresh(account)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                monitoring.failure(NonFatalIssue.SETUP_CHECK_FAILED, e, "setup-check")
+                RefreshResult.NoChange
+            }
+            when (result) {
                 RefreshResult.NoChange -> Unit
                 is RefreshResult.Status -> _reminder.value = result.reminder
                 RefreshResult.SpreadsheetGone -> {

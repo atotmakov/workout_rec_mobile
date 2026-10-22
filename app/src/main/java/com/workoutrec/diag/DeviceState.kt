@@ -8,17 +8,28 @@ import android.net.NetworkCapabilities
 import android.os.Build
 import android.os.PowerManager
 import androidx.core.content.FileProvider
+import com.workoutrec.monitoring.Monitoring
+import com.workoutrec.monitoring.NoMonitoring
+import com.workoutrec.monitoring.NonFatalIssue
 
 /** What decides whether Android lets background sync run (quickstart-results.md issue 1). */
 object DeviceState {
 
-    fun describe(context: Context): String =
-        "network: ${network(context)}, idle: ${idle(context)}, power saver: ${powerSaver(context)}, standby: ${standby(context)}"
+    fun describe(context: Context, monitoring: Monitoring = NoMonitoring): String =
+        "network: ${network(monitoring) { network(context) }}, idle: ${idle(context)}, power saver: ${powerSaver(context)}, standby: ${standby(context)}"
 
-    private fun network(context: Context): String = try {
+    /** The network check needs a permission every install has, so a refusal is reported (005 C1). */
+    fun network(monitoring: Monitoring, check: () -> String): String = try {
+        check()
+    } catch (e: SecurityException) {
+        monitoring.nonFatal(NonFatalIssue.SYNC_LOG_FAILED, e, "action=device-state")
+        "unknown"
+    }
+
+    private fun network(context: Context): String {
         val connectivity = context.getSystemService(ConnectivityManager::class.java)
         val caps = connectivity?.activeNetwork?.let(connectivity::getNetworkCapabilities)
-        if (caps == null) {
+        return if (caps == null) {
             "none"
         } else {
             network(
@@ -27,8 +38,6 @@ object DeviceState {
                 vpn = caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN),
             )
         }
-    } catch (e: SecurityException) {
-        "unknown"
     }
 
     fun network(internet: Boolean, validated: Boolean, vpn: Boolean): String {

@@ -33,11 +33,13 @@ class NonFatalLimiterTest {
         assertTrue(limiter.allow(NonFatalIssue.TOKEN_FAILED))
     }
 
+    private val errorsAndWarnings = NonFatalIssue.entries.filter { it.severity != IssueSeverity.INFO }
+
     @Test
-    fun `no more than 20 events a day in total`() {
+    fun `no more than 20 error and warning events a day in total`() {
         now = 1_768_176_000_000L // 2026-01-12 00:00 UTC
         val sent = (1..21).count {
-            limiter.allow(NonFatalIssue.entries[it % NonFatalIssue.entries.size]).also { now += 31 * minute }
+            limiter.allow(errorsAndWarnings[it % errorsAndWarnings.size]).also { now += 31 * minute }
         }
         assertEquals(20, sent)
     }
@@ -46,11 +48,44 @@ class NonFatalLimiterTest {
     fun `the daily count starts again on a new day`() {
         now = 1_768_176_000_000L // 2026-01-12 00:00 UTC
         repeat(20) {
-            limiter.allow(NonFatalIssue.entries[it % NonFatalIssue.entries.size])
+            limiter.allow(errorsAndWarnings[it % errorsAndWarnings.size])
             now += 31 * minute
         }
         assertFalse(limiter.allow(NonFatalIssue.SYNC_FAILED))
         now = 1_768_262_400_000L + minute // 2026-01-13 00:01 UTC
         assertTrue(limiter.allow(NonFatalIssue.SYNC_FAILED))
+    }
+
+    // Feature 005 research R2: info events have their own budget
+    @Test
+    fun `no more than 5 info events a day`() {
+        now = 1_768_176_000_000L // 2026-01-12 00:00 UTC
+        val sent = (1..6).count { limiter.allow(NonFatalIssue.NO_CONNECTION).also { now += 31 * minute } }
+        assertEquals(5, sent)
+    }
+
+    @Test
+    fun `info events do not use the error budget`() {
+        now = 1_768_176_000_000L // 2026-01-12 00:00 UTC
+        repeat(5) {
+            limiter.allow(NonFatalIssue.NO_CONNECTION)
+            now += 31 * minute
+        }
+        val sent = (1..21).count {
+            limiter.allow(errorsAndWarnings[it % errorsAndWarnings.size]).also { now += 31 * minute }
+        }
+        assertEquals(20, sent)
+    }
+
+    @Test
+    fun `the info count starts again on a new day`() {
+        now = 1_768_176_000_000L // 2026-01-12 00:00 UTC
+        repeat(5) {
+            limiter.allow(NonFatalIssue.NO_CONNECTION)
+            now += 31 * minute
+        }
+        assertFalse(limiter.allow(NonFatalIssue.NO_CONNECTION))
+        now = 1_768_262_400_000L + minute // 2026-01-13 00:01 UTC
+        assertTrue(limiter.allow(NonFatalIssue.NO_CONNECTION))
     }
 }

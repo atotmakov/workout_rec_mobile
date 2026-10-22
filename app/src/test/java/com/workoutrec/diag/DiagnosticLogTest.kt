@@ -1,6 +1,7 @@
 package com.workoutrec.diag
 
 import com.workoutrec.fakes.FakeMonitoring
+import com.workoutrec.monitoring.NonFatalIssue
 import java.io.File
 import java.time.ZoneOffset
 import org.junit.Assert.assertEquals
@@ -65,5 +66,23 @@ class DiagnosticLogTest {
         log.write("account: a@example.com")
         assertEquals(listOf("sync: start"), monitoring.logs)
         assertTrue(log.read().contains("account: a@example.com"))
+    }
+
+    // Feature 005 US1: a log that cannot be written or read is reported, never through the log
+    @Test
+    fun `a failed write is reported and the line still goes to monitoring`() {
+        val monitoring = FakeMonitoring()
+        val log = DiagnosticLog(tmp.root, now = { at }, zone = { ZoneOffset.UTC }, monitoring = monitoring)
+        log.write("sync: start")
+        assertEquals(listOf(NonFatalIssue.SYNC_LOG_FAILED to "action=write"), monitoring.nonFatals.map { it.issue to it.details })
+        assertEquals(listOf("sync: start"), monitoring.logs)
+    }
+
+    @Test
+    fun `a failed read is reported and reads as empty`() {
+        val monitoring = FakeMonitoring()
+        val log = DiagnosticLog(tmp.root, now = { at }, zone = { ZoneOffset.UTC }, monitoring = monitoring)
+        assertEquals("", log.read())
+        assertEquals(listOf(NonFatalIssue.SYNC_LOG_FAILED to "action=read"), monitoring.nonFatals.map { it.issue to it.details })
     }
 }

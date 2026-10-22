@@ -47,6 +47,28 @@ remain editable via the web UI.
 
 Rationale: avoiding a custom backend keeps the service simple.
 
+### V. Error Reporting to AppTracer
+
+- Every error in the app MUST be reported to AppTracer. This covers crashes and ANRs
+  (captured by the Tracer SDK) and every handled error: failed sync or Google API calls,
+  failed local database operations, and any error shown to the user.
+- A handled error MUST be reported where it is caught, through the `Monitoring` interface
+  (`Monitoring.nonFatal`) under a stable `NonFatalIssue` key, with the throwable and enough
+  context to diagnose it. Code MUST NOT call the Tracer SDK directly. Catching an error
+  without reporting it is a defect.
+- Reports MUST NOT contain OAuth tokens, credentials or the user's email, and MUST NOT
+  contain spreadsheet contents (exercise names, weights, payments); log lines pass the
+  existing log-line guard.
+- The user's "Send diagnostics" switch MUST be honored: when it is off, nothing is sent.
+  Rate limiting of repeated reports is allowed.
+- Reporting MUST NOT block or crash the app.
+- Each new error path MUST have a test that verifies the error is reported.
+- AppTracer is a third-party reporting service, not a custom backend, so Principle IV
+  is not violated.
+
+Rationale: users hit errors on their own phones in gyms, often offline; without reports
+those errors stay invisible and only surface when a user complains.
+
 ## Technology Constraints
 
 - Android: Kotlin. Specific UI frameworks, persistence libraries, and minimum OS
@@ -73,4 +95,4 @@ Rationale: avoiding a custom backend keeps the service simple.
 - Every spec, plan, and code review MUST verify compliance with these principles; complexity or
   deviations MUST be justified in writing.
 
-**Version**: 1.0.0 | **Ratified**: 2026-09-29 | **Last Amended**: 2026-09-29
+**Version**: 1.1.0 | **Ratified**: 2026-09-29 | **Last Amended**: 2026-10-22

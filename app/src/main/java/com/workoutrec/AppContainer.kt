@@ -14,6 +14,7 @@ import androidx.work.WorkManager
 import com.workoutrec.auth.AccountRepository
 import com.workoutrec.auth.ApiAuthorizer
 import com.workoutrec.auth.GoogleApiAuthorizer
+import com.workoutrec.auth.SignOutCleanup
 import com.workoutrec.automation.ScriptAssets
 import com.workoutrec.automation.ScriptInstaller
 import com.workoutrec.data.DataStoreSettingsStore
@@ -101,9 +102,16 @@ class AppContainer(context: Context, val monitoringSettings: MonitoringSettings)
     /** Background sync log, shared from the account menu (quickstart-results.md issue 1). */
     val diagnosticLog = DiagnosticLog(File(appContext.filesDir, "logs/sync.log"), monitoring = monitoring)
 
-    val accountRepository = AccountRepository(apiAuthorizer, settingsStore, clearCredentials = {
-        runCatching { CredentialManager.create(appContext).clearCredentialState(ClearCredentialStateRequest()) }
-    }, log = diagnosticLog::write, monitoring = monitoring)
+    val accountRepository = AccountRepository(
+        apiAuthorizer,
+        settingsStore,
+        clearCredentials = SignOutCleanup(
+            clear = { CredentialManager.create(appContext).clearCredentialState(ClearCredentialStateRequest()) },
+            monitoring = monitoring,
+        )::invoke,
+        log = diagnosticLog::write,
+        monitoring = monitoring,
+    )
 
     val okHttpClient: OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(20, TimeUnit.SECONDS)
@@ -134,6 +142,7 @@ class AppContainer(context: Context, val monitoringSettings: MonitoringSettings)
             MoneyClient(googleHttp),
             workoutRepository,
             sheet = { syncStatusStore.current().sheet?.takeIf { it.spreadsheetId == settingsStore.binding.first()?.spreadsheetId } },
+            monitoring = monitoring,
         )
     }
 
@@ -156,5 +165,6 @@ class AppContainer(context: Context, val monitoringSettings: MonitoringSettings)
             diagnosticLog.write("background run queued")
             SyncWork.enqueue(WorkManager.getInstance(appContext))
         },
+        monitoring = monitoring,
     )
 }

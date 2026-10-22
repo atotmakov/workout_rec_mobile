@@ -51,7 +51,7 @@ class WorkoutRecApplication : Application(), Configuration.Provider, HasTracerCo
         super.onCreate()
         container = AppContainer(this, monitoringSettings)
         appStartProfile.entered()
-        container.diagnosticLog.write("app process started; ${DeviceState.describe(this)}")
+        container.diagnosticLog.write("app process started; ${DeviceState.describe(this, container.monitoring)}")
     }
 
     /** Background sync runs through the app's own sync (research R2). */
@@ -65,7 +65,7 @@ class WorkoutRecApplication : Application(), Configuration.Provider, HasTracerCo
                         SyncWork.enqueue(WorkManager.getInstance(this), delayMinutes = 1)
                     },
                     record = { result ->
-                        val state = if (result == "started") "; ${DeviceState.describe(this)}" else ""
+                        val state = if (result == "started") "; ${DeviceState.describe(this, container.monitoring)}" else ""
                         container.diagnosticLog.write("background run: $result$state")
                         container.syncStatusStore.recordBackground(BackgroundRun(System.currentTimeMillis(), result))
                     },

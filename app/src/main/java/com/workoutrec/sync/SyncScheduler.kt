@@ -1,5 +1,9 @@
 package com.workoutrec.sync
 
+import com.workoutrec.monitoring.Monitoring
+import com.workoutrec.monitoring.NoMonitoring
+import com.workoutrec.monitoring.NonFatalIssue
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -14,6 +18,8 @@ class SyncScheduler(
     private val sync: LogSync,
     private val scope: CoroutineScope,
     private val enqueueBackground: () -> Unit = {},
+    /** Feature 005: failures outside the run's own handling (contracts/issues.md). */
+    private val monitoring: Monitoring = NoMonitoring,
 ) {
     private val mutex = Mutex()
 
@@ -26,8 +32,10 @@ class SyncScheduler(
     suspend fun runNow(): SyncOutcome? = mutex.withLock {
         try {
             sync.run()
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
-            if (e is kotlinx.coroutines.CancellationException) throw e
+            monitoring.nonFatal(NonFatalIssue.SYNC_UNEXPECTED, e, "operation=sync-request")
             null
         }
     }
