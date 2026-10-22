@@ -73,4 +73,13 @@ class TodayScreenTest {
         compose.waitForIdle()
         assertEquals(1, refreshed)
     }
+
+    // Feature 004 FR-006: past days and past workouts moved to the History tab.
+    @Test
+    fun todayHasNoLinksToOtherSections() {
+        val groups = listOf(ExerciseGroup("squat", listOf(set(1, 2000, 10, "squat"))))
+        compose.setContent { TodayScreen(groups = groups, onAddExercise = {}, onOpenExercise = {}) }
+        compose.onNodeWithTag("menu_workouts").assertDoesNotExist()
+        compose.onNodeWithTag("menu_past_workout").assertDoesNotExist()
+    }
 }

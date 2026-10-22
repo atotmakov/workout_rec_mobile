@@ -50,7 +50,6 @@ import java.time.format.DateTimeParseException
 
 /** Test tags of contracts/screens.md "Past workout dialog and editor". */
 object PastWorkoutTags {
-    const val MENU = "menu_past_workout"
     const val DIALOG = "past_workout"
     const val START = "past_workout_start"
     const val EDITOR = "past_workout_editor"

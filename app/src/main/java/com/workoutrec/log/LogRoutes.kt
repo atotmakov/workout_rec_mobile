@@ -101,8 +101,6 @@ fun TodayRoute(
     onAddExercise: () -> Unit,
     onOpenExercise: (String) -> Unit,
     modifier: Modifier = Modifier,
-    onOpenWorkouts: () -> Unit = {},
-    onPastWorkout: () -> Unit = {},
     header: @Composable () -> Unit = {},
 ) {
     // Feature 003 FR-011: opening Today until its first frame; leaving earlier drops the profile.
@@ -143,31 +141,22 @@ fun TodayRoute(
     TodayScreen(groups, onAddExercise, onOpenExercise, modifier, refreshing = refreshing, onRefresh = refresh) {
         header()
         SyncNoticeList(notices, onDismiss = { id -> scope.launch { container.workoutRepository.dismissNotice(id) } })
-        Row {
-            TextButton(onClick = onOpenWorkouts, modifier = Modifier.testTag(TodayTags.WORKOUTS)) { Text(stringResource(R.string.menu_workouts)) }
-            TextButton(onClick = onPastWorkout, modifier = Modifier.testTag(PastWorkoutTags.MENU)) { Text(stringResource(R.string.menu_past_workout)) }
-        }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+/** The History tab's first screen (feature 004 US2); [actions] are the sync icon and the avatar. */
 @Composable
-fun WorkoutsRoute(container: AppContainer, onBack: () -> Unit, onOpenDay: (LocalDate) -> Unit) {
+fun WorkoutsRoute(
+    container: AppContainer,
+    onOpenDay: (LocalDate) -> Unit,
+    onPastWorkout: () -> Unit,
+    actions: @Composable () -> Unit,
+) {
     val sets by container.workoutRepository.displaySets.collectAsState(initial = emptyList())
     val status by container.syncStatusStore.status.collectAsState(initial = SyncStatus())
     val zone = status.zone()
     val days = remember(sets, zone) { DisplayModel.pastDays(sets, LocalDate.now(zone), zone) }
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.past_days_title)) },
-                navigationIcon = { TextButton(onClick = onBack) { Text("←") } },
-                actions = { SyncStatusAction(container) },
-            )
-        },
-    ) { padding ->
-        PastDaysScreen(days, onOpenDay, Modifier.padding(padding))
-    }
+    HistoryScreen(days, onOpenDay, onPastWorkout, actions = actions)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

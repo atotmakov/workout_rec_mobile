@@ -31,7 +31,6 @@ object TodayTags {
     const val SCREEN = "today_screen"
     const val EMPTY = "today_empty"
     const val ADD_EXERCISE = "add_exercise"
-    const val WORKOUTS = "menu_workouts"
     fun exercise(index: Int) = "today_exercise_$index"
 }
 

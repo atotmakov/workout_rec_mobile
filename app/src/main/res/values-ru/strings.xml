@@ -101,8 +101,6 @@
     <string name="logging_last_time">В прошлый раз, %1$s: %2$s</string>
     <string name="logging_record">Рекорд: %1$s кг × %2$d</string>
     <!-- 002 US4: corrections -->
-    <string name="menu_workouts">Тренировки</string>
-    <string name="past_days_title">Тренировки</string>
     <string name="past_days_empty">Прошлых тренировок пока нет.</string>
     <plurals name="past_day_summary">
         <item quantity="one">%1$d упражнение · подходов: %2$d</item>
@@ -153,4 +151,10 @@
     <string name="diagnostics_test_disk">Проверить диск</string>
     <string name="diagnostics_test_profile_start">Профилировать следующий запуск</string>
     <string name="diagnostics_test_close">Закрыть</string>
+    <!-- Feature 004: bottom tabs -->
+    <string name="tab_today">Сегодня</string>
+    <string name="tab_history">История</string>
+    <string name="tab_exercises">Упражнения</string>
+    <string name="tab_money">Деньги</string>
+    <string name="tab_placeholder">Скоро</string>
 </resources>

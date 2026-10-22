@@ -15,6 +15,11 @@ Sets themselves show no sync state (redesign brief 1b).
 
 ## Navigation
 
+> Feature 004 replaced the "Workouts" and "Enter past workout" links with a bottom bar; past days
+> and past workouts are now in the History tab. See
+> [004 contracts/screens.md](../../004-bottom-tab-navigation/contracts/screens.md). The diagram
+> below is the original 002 navigation.
+
 ```text
 Main (Today) ──Add exercise──▶ Exercise picker ──pick──▶ Plan sets dialog ──▶ Exercise logging
      │                                                                          ▲
@@ -31,7 +36,7 @@ Main (Today) ──Add exercise──▶ Exercise picker ──pick──▶ Pla
 | Empty state ("No sets today") | `today_empty` | |
 | Add exercise button | `add_exercise` | → Exercise picker |
 | Notices (conflicts, workout row not updated) | `sync_notice_<id>` | dismiss button |
-| Menu: Workouts, Enter past workout | `menu_workouts`, `menu_past_workout` | |
+| ~~Menu: Workouts, Enter past workout~~ | ~~`menu_workouts`, `menu_past_workout`~~ | removed by feature 004: History tab |
 
 ## Exercise picker — `exercise_picker` (FR-001, FR-002)
 
