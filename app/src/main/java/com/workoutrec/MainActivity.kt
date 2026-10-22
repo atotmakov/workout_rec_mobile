@@ -115,7 +115,7 @@ private fun AppNavHost(container: AppContainer) {
     val navController = rememberNavController()
     val viewModel: SetupViewModel = viewModel(
         factory = viewModelFactory {
-            initializer { SetupViewModel(container.accountRepository, container.spreadsheetSetupFlow) }
+            initializer { SetupViewModel(container.accountRepository, container.spreadsheetSetupFlow, container.monitoring) }
         },
     )
     LaunchedEffect(Unit) { viewModel.start() }

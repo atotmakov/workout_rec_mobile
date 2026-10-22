@@ -28,7 +28,7 @@ A small exception for fallbacks without a thrown error (time zone, timestamp, sa
 |-------|-------|
 | value | one of `sheet-time-zone`, `automation-timestamp`, `sync-phase`, `automation-status`, `money-error` |
 | message | `"Unreadable <value>"`; never the unreadable content |
-| cause | the parsing exception, when there is one |
+| cause | none: a parsing exception's message can contain the unreadable text (FR-007); the stack trace is the report site's |
 
 ## Normal-outcome entry (`app/src/test/resources/normal-outcomes.txt`)
 

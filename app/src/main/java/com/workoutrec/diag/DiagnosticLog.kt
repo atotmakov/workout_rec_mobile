@@ -3,6 +3,7 @@ package com.workoutrec.diag
 import com.workoutrec.monitoring.LogLineGuard
 import com.workoutrec.monitoring.Monitoring
 import com.workoutrec.monitoring.NoMonitoring
+import com.workoutrec.monitoring.NonFatalIssue
 import java.io.File
 import java.io.IOException
 import java.time.Instant
@@ -30,7 +31,8 @@ class DiagnosticLog(
             file.appendText("${format.format(Instant.ofEpochMilli(now()).atZone(zone()))} $message\n")
             if (file.length() > maxBytes) keepNewestHalf()
         } catch (e: IOException) {
-            // The log is only a diagnostic aid.
+            // The log is only a diagnostic aid; reported directly, never through this log.
+            monitoring.nonFatal(NonFatalIssue.SYNC_LOG_FAILED, e, "action=write")
         }
         if (LogLineGuard.allows(message)) monitoring.log(message)
     }
@@ -40,6 +42,7 @@ class DiagnosticLog(
         try {
             if (file.exists()) file.readText() else ""
         } catch (e: IOException) {
+            monitoring.nonFatal(NonFatalIssue.SYNC_LOG_FAILED, e, "action=read")
             ""
         }
 

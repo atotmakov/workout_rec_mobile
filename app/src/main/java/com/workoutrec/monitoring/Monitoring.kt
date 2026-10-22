@@ -59,6 +59,20 @@ enum class NonFatalIssue(val key: String, val severity: IssueSeverity) {
     SPREADSHEET_MISMATCH("spreadsheet-mismatch", IssueSeverity.WARNING),
     TOKEN_FAILED("token-failed", IssueSeverity.ERROR),
     DIAGNOSTICS_TEST("diagnostics-test", IssueSeverity.INFO),
+
+    // Feature 005 contracts/issues.md
+    MONEY_REFRESH_FAILED("money-refresh-failed", IssueSeverity.ERROR),
+    SETUP_STEP_FAILED("setup-step-failed", IssueSeverity.ERROR),
+    SETUP_CHECK_FAILED("setup-check-failed", IssueSeverity.WARNING),
+    SIGN_IN_FAILED("sign-in-failed", IssueSeverity.ERROR),
+    AUTHORIZATION_FAILED("authorization-failed", IssueSeverity.ERROR),
+    SYNC_UNEXPECTED("sync-unexpected", IssueSeverity.ERROR),
+    SIGN_OUT_CLEANUP_FAILED("sign-out-cleanup-failed", IssueSeverity.WARNING),
+    SYNC_LOG_FAILED("sync-log-failed", IssueSeverity.WARNING),
+    SPREADSHEET_CREATE_FALLBACK("spreadsheet-create-fallback", IssueSeverity.WARNING),
+    BAD_SHEET_DATA("bad-sheet-data", IssueSeverity.WARNING),
+    BAD_SAVED_STATE("bad-saved-state", IssueSeverity.WARNING),
+    NO_CONNECTION("no-connection", IssueSeverity.INFO),
 }
 
 enum class IssueSeverity { ERROR, WARNING, INFO }

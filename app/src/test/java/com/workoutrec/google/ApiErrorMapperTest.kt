@@ -62,7 +62,14 @@ class ApiErrorMapperTest {
     @Test
     fun `other codes map to Unexpected with the Google message`() {
         val error = ApiErrorMapper.fromResponse(400, googleError(400, "Invalid requests[0]", "INVALID_ARGUMENT"))
-        assertEquals(ApiError.Unexpected(400, "Invalid requests[0]"), error)
+        assertEquals(ApiError.Unexpected(400, "Invalid requests[0]", status = "INVALID_ARGUMENT"), error)
+    }
+
+    // Feature 005 research R10: the status is kept so reports can leave Google's text out
+    @Test
+    fun `access denied keeps Google's status`() {
+        val error = ApiErrorMapper.fromResponse(403, googleError(403, "The caller does not have permission", "PERMISSION_DENIED"))
+        assertEquals(ApiError.AccessDenied("The caller does not have permission", status = "PERMISSION_DENIED"), error)
     }
 
     @Test

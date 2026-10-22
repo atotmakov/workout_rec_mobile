@@ -28,6 +28,8 @@ class TracerMonitoring(
     private val limiter: NonFatalLimiter = NonFatalLimiter(),
     /** Null: profiling off (research R9). */
     sampler: ProfileSampler? = null,
+    /** Sends one non-fatal event; replaced in tests (feature 005 T005). */
+    private val send: (IssueSeverity, Throwable, String) -> Unit = ::sendToTracer,
 ) : Monitoring {
 
     private val profiles = sampler?.let { ProfileStarter({ enabled }, it, ProfileGate(), ::startProfile) }
@@ -41,7 +43,7 @@ class TracerMonitoring(
     override fun nonFatal(issue: NonFatalIssue, error: Throwable, details: String?) {
         if (!enabled || !limiter.allow(issue)) return
         val reported = if (details == null) error else ReportedError(details, error)
-        safely { TracerCrashReport.report(issue.severity.toTracer(), reported, issue.key) }
+        safely { send(issue.severity, reported, issue.key) }
     }
 
     override fun beginProfile(target: ProfileTarget): Profile = profiles?.begin(target) ?: NoProfile
@@ -116,6 +118,9 @@ class TracerMonitoring(
 
         /** Stops Tracer for the rest of this process (Send diagnostics turned off, R3 update). */
         fun disableNow() = safely { Tracer.disable() }
+
+        private fun sendToTracer(severity: IssueSeverity, error: Throwable, key: String) =
+            TracerCrashReport.report(severity.toTracer(), error, key)
 
         private fun IssueSeverity.toTracer(): Severity = when (this) {
             IssueSeverity.ERROR -> Severity.ERROR

@@ -4,7 +4,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 
-/** FR-007, data-model.md "NonFatalLimiter": in memory, per process. */
+/** FR-007, data-model.md "NonFatalLimiter": in memory, per process; info has its own budget (005 R2). */
 class NonFatalLimiter(
     private val now: () -> Long = System::currentTimeMillis,
     private val zone: () -> ZoneId = ZoneId::systemDefault,
@@ -12,6 +12,7 @@ class NonFatalLimiter(
     private val lastSent = mutableMapOf<NonFatalIssue, Long>()
     private var day: LocalDate? = null
     private var sentToday = 0
+    private var infoToday = 0
 
     /** True when an event of [issue] may be sent now; counts it as sent. */
     @Synchronized
@@ -21,17 +22,20 @@ class NonFatalLimiter(
         if (today != day) {
             day = today
             sentToday = 0
+            infoToday = 0
         }
         val last = lastSent[issue]
         if (last != null && at - last < MIN_GAP_MILLIS) return false
-        if (sentToday >= MAX_PER_DAY) return false
+        val info = issue.severity == IssueSeverity.INFO
+        if (if (info) infoToday >= MAX_INFO_PER_DAY else sentToday >= MAX_PER_DAY) return false
         lastSent[issue] = at
-        sentToday++
+        if (info) infoToday++ else sentToday++
         return true
     }
 
     companion object {
         const val MIN_GAP_MILLIS = 30 * 60_000L
         const val MAX_PER_DAY = 20
+        const val MAX_INFO_PER_DAY = 5
     }
 }

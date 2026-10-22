@@ -5,6 +5,10 @@ import com.workoutrec.automation.AutomationStatusEvaluator
 import com.workoutrec.google.ApiError
 import com.workoutrec.google.MissingTabException
 import com.workoutrec.google.MoneyApi
+import com.workoutrec.monitoring.Monitoring
+import com.workoutrec.monitoring.NoMonitoring
+import com.workoutrec.monitoring.NonFatalIssue
+import com.workoutrec.monitoring.failure
 import com.workoutrec.sync.SheetInfoCache
 import com.workoutrec.workout.PaymentRow
 import java.time.Instant
@@ -44,6 +48,8 @@ class MoneyRefresher(
     private val store: MoneyStore,
     private val sheet: suspend () -> SheetInfoCache?,
     private val now: () -> Long = System::currentTimeMillis,
+    /** Feature 005: failures as non-fatal events (contracts/issues.md). */
+    private val monitoring: Monitoring = NoMonitoring,
 ) {
     private val lock = Mutex()
     private var started = false
@@ -80,6 +86,8 @@ class MoneyRefresher(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
+            val reason = if (e is MissingTabException) "reason=missing-tab" else "reason=other"
+            monitoring.failure(NonFatalIssue.MONEY_REFRESH_FAILED, e, "money-refresh", reason)
             store.moneyFailed(
                 when (e) {
                     is MissingTabException -> MoneyError.MISSING_TAB
