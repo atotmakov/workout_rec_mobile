@@ -1,6 +1,7 @@
 package com.workoutrec.fakes
 
 import com.workoutrec.google.ApiError
+import com.workoutrec.google.DrillsWrite
 import com.workoutrec.google.LogAndDrills
 import com.workoutrec.google.LogAppend
 import com.workoutrec.google.LogEdit
@@ -18,9 +19,15 @@ import kotlinx.coroutines.awaitCancellation
 class FakeSheetsLogApi(
     var timeZone: String = "UTC",
     var logSheetId: Int = 0,
+    var drillsSheetId: Int = 1,
+    var recSheetId: Int? = null,
+    var moneySheetId: Int? = null,
+    var balanceSheetId: Int? = null,
     var tabs: Set<String> = setOf("log", "drills"),
     val log: MutableList<Cells> = mutableListOf(),
     var drills: List<SheetDrill> = emptyList(),
+    /** The rec tab's chosen exercise. */
+    var recA1: String? = null,
 ) : SheetsLogApi {
 
     /** One log row's cells; row index = list position + 1. */
@@ -29,7 +36,7 @@ class FakeSheetsLogApi(
     val calls = mutableListOf<String>()
     val writes = mutableListOf<Write>()
 
-    data class Write(val deletes: List<Int>, val edits: List<LogEdit>, val appends: List<LogAppend>)
+    data class Write(val deletes: List<Int>, val edits: List<LogEdit>, val appends: List<LogAppend>, val drills: DrillsWrite? = null)
 
     /** Fails the next call to [call] (`info`, `read` or `write`) with [error]. */
     private val failures = mutableMapOf<String, Exception>()
@@ -52,15 +59,15 @@ class FakeSheetsLogApi(
         calls += "info:$spreadsheetId"
         maybeFail("info")
         listOf("log", "drills").firstOrNull { it !in tabs }?.let { throw MissingTabException(it) }
-        return LogSheetInfo(timeZone, logSheetId)
+        return LogSheetInfo(timeZone, logSheetId, drillsSheetId, recSheetId, moneySheetId, balanceSheetId)
     }
 
-    override suspend fun readLogAndDrills(spreadsheetId: String): LogAndDrills {
+    override suspend fun readLogAndDrills(spreadsheetId: String, withMoney: Boolean): LogAndDrills {
         calls += "read:$spreadsheetId"
         maybeFail("read")
         return LogAndDrills(
             log = log.mapIndexed { i, c -> SheetLogRow(i + 1, c.serial, c.exercise, c.weight, c.reps) },
-            drills = drills,
+            drills = drills.mapIndexed { i, d -> d.copy(rowIndex = i + 1) },
         )
     }
 
@@ -70,11 +77,13 @@ class FakeSheetsLogApi(
         deletes: List<Int>,
         edits: List<LogEdit>,
         appends: List<LogAppend>,
+        drills: DrillsWrite?,
     ) {
-        if (deletes.isEmpty() && edits.isEmpty() && appends.isEmpty()) return
+        val drillsPart = drills?.takeUnless { it.isEmpty }
+        if (deletes.isEmpty() && edits.isEmpty() && appends.isEmpty() && drillsPart == null) return
         calls += "write:$spreadsheetId"
         maybeFail("write")
-        writes += Write(deletes, edits, appends)
+        writes += Write(deletes, edits, appends, drillsPart)
         val ops = deletes.map { it to null } + edits.map { it.rowIndex to it }
         ops.sortedByDescending { it.first }.forEach { (row, edit) ->
             val i = row - 1
@@ -83,6 +92,18 @@ class FakeSheetsLogApi(
             } else {
                 log[i] = log[i].copy(exercise = edit.exercise, weight = edit.weight, reps = edit.reps)
             }
+        }
+        drillsPart?.let { d ->
+            val rows = this.drills.toMutableList()
+            val drillOps = d.deletes.map { it to null } + d.renames.map { it.rowIndex to it }
+            drillOps.sortedByDescending { it.first }.forEach { (row, rename) ->
+                if (rename == null) rows.removeAt(row - 1) else rows[row - 1] = SheetDrill(rename.muscleGroup, rename.name)
+            }
+            d.replaces.forEach { r ->
+                log.replaceAll { if (it.exercise == r.old) it.copy(exercise = r.new) else it }
+                if (d.recSheetId != null && recA1 == r.old) recA1 = r.new
+            }
+            this.drills = rows + d.appends
         }
         appends.forEach { log += Cells(it.serial, it.exercise, it.weight, it.reps) }
         if (loseNextWriteResponse) {

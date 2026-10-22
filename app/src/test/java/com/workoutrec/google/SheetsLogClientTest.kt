@@ -41,7 +41,7 @@ class SheetsLogClientTest {
             ),
         )
         // sheetId 0 is omitted by proto3 JSON.
-        assertEquals(LogSheetInfo("Europe/Moscow", 0), client.logSheetInfo("id1"))
+        assertEquals(LogSheetInfo("Europe/Moscow", 0, drillsSheetId = 7), client.logSheetInfo("id1"))
         val url = server.takeRequest().requestUrl!!
         assertEquals("/v4/spreadsheets/id1", url.encodedPath)
         assertEquals("properties.timeZone,sheets.properties(sheetId,title)", url.queryParameter("fields"))
@@ -100,7 +100,44 @@ class SheetsLogClientTest {
             ),
             result.log,
         )
-        assertEquals(listOf(SheetDrill("back", "pull-up"), SheetDrill("", "plank"), SheetDrill("chest", "bench")), result.drills)
+        // Feature 004: drills keep their sheet row (row 2 → 1) for renames and deletes.
+        assertEquals(listOf(SheetDrill("back", "pull-up", 1), SheetDrill("", "plank", 2), SheetDrill("chest", "bench", 4)), result.drills)
+    }
+
+    // Feature 004 contracts/sheets.md call 20
+    @Test
+    fun `call 20 also returns the drills, rec, money and balance sheet ids`() = runTest {
+        server.enqueue(
+            MockResponse().setBody(
+                """{"properties":{"timeZone":"UTC"},"sheets":[
+                     {"properties":{"title":"log"}},{"properties":{"sheetId":7,"title":"drills"}},
+                     {"properties":{"sheetId":8,"title":"rec"}},{"properties":{"sheetId":9,"title":"money"}},
+                     {"properties":{"sheetId":10,"title":"balance"}}]}""",
+            ),
+        )
+        assertEquals(LogSheetInfo("UTC", 0, drillsSheetId = 7, recSheetId = 8, moneySheetId = 9, balanceSheetId = 10), client.logSheetInfo("id1"))
+    }
+
+    @Test
+    fun `call 20 reports missing optional tabs as null`() = runTest {
+        server.enqueue(MockResponse().setBody("""{"properties":{"timeZone":"UTC"},"sheets":[{"properties":{"sheetId":1,"title":"log"}},{"properties":{"sheetId":2,"title":"drills"}}]}"""))
+        assertEquals(LogSheetInfo("UTC", 1, drillsSheetId = 2), client.logSheetInfo("id1"))
+    }
+
+    // Feature 004 contracts/sheets.md call 21, research R5
+    @Test
+    fun `call 21 reads the money tab only when asked`() = runTest {
+        server.enqueue(
+            MockResponse().setBody(
+                """{"valueRanges":[{},{},{"values":[[46000, 8, 8000], ["", 4, 4000], [46030, "x", 12000.5]]}]}""",
+            ),
+        )
+        val result = client.readLogAndDrills("id1", withMoney = true)
+        assertEquals(listOf("log!A2:D", "drills!A2:B", "money!A2:C"), server.takeRequest().requestUrl!!.queryParameterValues("ranges"))
+        assertEquals(
+            listOf(SheetMoneyRow(1, 46000.0, 8.0, 8000.0), SheetMoneyRow(2, null, 4.0, 4000.0), SheetMoneyRow(3, 46030.0, null, 12000.5)),
+            result.money,
+        )
     }
 
     @Test
@@ -143,6 +180,62 @@ class SheetsLogClientTest {
         assertEquals(30.0, rows[0][2]["numberValue"]!!.jsonPrimitive.double, 0.0)
         assertEquals(12.0, rows[0][3]["numberValue"]!!.jsonPrimitive.double, 0.0)
         assertEquals(30.5, rows[1][2]["numberValue"]!!.jsonPrimitive.double, 0.0)
+    }
+
+    // Feature 004 contracts/sheets.md "Call 22 request order"
+    @Test
+    fun `call 22 writes drills changes, renames by findReplace, then all appends`() = runTest {
+        server.enqueue(MockResponse().setBody("""{"replies":[]}"""))
+        client.writeLog(
+            spreadsheetId = "id1",
+            logSheetId = 4,
+            deletes = listOf(3),
+            edits = emptyList(),
+            appends = listOf(LogAppend(46034.5, "Bench", 60.0, 8)),
+            drills = DrillsWrite(
+                drillsSheetId = 7,
+                recSheetId = 8,
+                deletes = listOf(2),
+                renames = listOf(DrillRename(5, "Chest", "Bench")),
+                replaces = listOf(NameReplace("Bench press", "Bench")),
+                appends = listOf(SheetDrill("Shoulders", "Face pull")),
+            ),
+        )
+        val requests = GoogleJson.parseToJsonElement(server.takeRequest().body.readUtf8()).jsonObject["requests"]!!.jsonArray.map { it.jsonObject }
+        assertEquals(
+            listOf("deleteDimension", "updateCells", "deleteDimension", "findReplace", "findReplace", "appendCells", "appendCells"),
+            requests.map { it.keys.single() },
+        )
+        // Drills bottom-up: rename row 5, then delete row 2.
+        val rename = requests[1]["updateCells"]!!.jsonObject
+        assertEquals(listOf(7, 5, 0), listOf("sheetId", "rowIndex", "columnIndex").map { rename["start"]!!.jsonObject[it]!!.jsonPrimitive.int })
+        val renameCells = rename["rows"]!!.jsonArray.single().jsonObject["values"]!!.jsonArray.map { it.jsonObject["userEnteredValue"]!!.jsonObject["stringValue"]!!.jsonPrimitive.content }
+        assertEquals(listOf("Chest", "Bench"), renameCells)
+        assertEquals(7, requests[2]["deleteDimension"]!!.jsonObject["range"]!!.jsonObject["sheetId"]!!.jsonPrimitive.int)
+
+        val logReplace = requests[3]["findReplace"]!!.jsonObject
+        assertEquals("Bench press", logReplace["find"]!!.jsonPrimitive.content)
+        assertEquals("Bench", logReplace["replacement"]!!.jsonPrimitive.content)
+        listOf("matchCase", "matchEntireCell").forEach { assertEquals(it, "true", logReplace[it]!!.jsonPrimitive.content) }
+        listOf("searchByRegex", "includeFormulas").forEach { assertEquals(it, "false", logReplace[it]!!.jsonPrimitive.content) }
+        val logRange = logReplace["range"]!!.jsonObject
+        assertEquals(listOf(4, 1, 1, 2), listOf("sheetId", "startRowIndex", "startColumnIndex", "endColumnIndex").map { logRange[it]!!.jsonPrimitive.int })
+        val recRange = requests[4]["findReplace"]!!.jsonObject["range"]!!.jsonObject
+        assertEquals(listOf(8, 0, 1, 0, 1), listOf("sheetId", "startRowIndex", "endRowIndex", "startColumnIndex", "endColumnIndex").map { recRange[it]!!.jsonPrimitive.int })
+
+        assertEquals(4, requests[5]["appendCells"]!!.jsonObject["sheetId"]!!.jsonPrimitive.int)
+        val drillAppend = requests[6]["appendCells"]!!.jsonObject
+        assertEquals(7, drillAppend["sheetId"]!!.jsonPrimitive.int)
+        val drillCells = drillAppend["rows"]!!.jsonArray.single().jsonObject["values"]!!.jsonArray.map { it.jsonObject["userEnteredValue"]!!.jsonObject["stringValue"]!!.jsonPrimitive.content }
+        assertEquals(listOf("Shoulders", "Face pull"), drillCells)
+    }
+
+    @Test
+    fun `call 22 skips the rec rename when the rec tab is missing`() = runTest {
+        server.enqueue(MockResponse().setBody("""{"replies":[]}"""))
+        client.writeLog("id1", 0, emptyList(), emptyList(), emptyList(), DrillsWrite(drillsSheetId = 1, recSheetId = null, replaces = listOf(NameReplace("a", "b"))))
+        val requests = GoogleJson.parseToJsonElement(server.takeRequest().body.readUtf8()).jsonObject["requests"]!!.jsonArray
+        assertEquals(listOf("findReplace"), requests.map { (it as JsonObject).keys.single() })
     }
 
     @Test

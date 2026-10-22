@@ -1,5 +1,8 @@
 package com.workoutrec
 
+import com.workoutrec.exercises.ExerciseDetailRoute
+import com.workoutrec.exercises.ExercisesRoute
+import com.workoutrec.nav.logToday
 import androidx.navigation.NavDestination.Companion.hierarchy
 import com.workoutrec.home.AccountActions
 import com.workoutrec.nav.PlaceholderTabScreen
@@ -70,7 +73,6 @@ import com.workoutrec.setup.SetupProgressScreen
 import com.workoutrec.setup.SetupState
 import com.workoutrec.setup.SetupViewModel
 import com.workoutrec.ui.theme.WorkoutRecTheme
-import com.workoutrec.workout.DisplayModel
 import java.time.LocalDate
 import kotlinx.coroutines.launch
 
@@ -131,7 +133,7 @@ private fun AppNavHost(container: AppContainer) {
     }
 
     val account by container.settingsStore.account.collectAsState(initial = null)
-    val pending by container.workoutRepository.pending.collectAsState(initial = emptyList())
+    val waiting by container.workoutRepository.waitingCount.collectAsState(initial = 0)
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     // The phone's sets belong to this account's spreadsheet; they go when the account does.
@@ -154,7 +156,7 @@ private fun AppNavHost(container: AppContainer) {
                 account = it,
                 onSwitchAccount = onSwitchAccount,
                 onSignOut = onSignOut,
-                unsyncedCount = DisplayModel.pendingCount(pending),
+                unsyncedCount = waiting,
                 // Research R13: try to sync first, so the warning counts only what is really left.
                 onMenuOpened = container.syncScheduler::requestSync,
                 onShareLog = onShareLog,
@@ -183,7 +185,7 @@ private fun AppNavHost(container: AppContainer) {
                                     account = it,
                                     onSwitchAccount = onSwitchAccount,
                                     onSignOut = onSignOut,
-                                    unsyncedCount = DisplayModel.pendingCount(pending),
+                                    unsyncedCount = waiting,
                                     onMenuOpened = container.syncScheduler::requestSync,
                                     onShareLog = onShareLog,
                                     diagnostics = diagnosticsMenuState(container),
@@ -191,7 +193,7 @@ private fun AppNavHost(container: AppContainer) {
                                 ) { modifier ->
                                     TodayRoute(
                                         container = container,
-                                        onAddExercise = { navController.navigate(LogRoutes.PICKER) },
+                                        onAddExercise = { navController.navigate(LogRoutes.picker()) },
                                         onOpenExercise = { navController.navigate(LogRoutes.logging(it, sets = 0)) },
                                         modifier = modifier,
                                         header = {
@@ -203,10 +205,13 @@ private fun AppNavHost(container: AppContainer) {
                                 }
                             }
                         }
-                        composable(LogRoutes.PICKER) {
+                        composable(
+                            LogRoutes.PICKER,
+                            arguments = listOf(navArgument("exercise") { type = NavType.StringType; nullable = true; defaultValue = null }),
+                        ) { entry ->
                             PickerRoute(container, onBack = { navController.popBackStack() }, onStart = { exercise, sets ->
                                 navController.navigate(LogRoutes.logging(exercise, sets)) { popUpTo(Routes.HOME) }
-                            })
+                            }, preselected = entry.arguments?.getString("exercise"))
                         }
                         composable(
                             LogRoutes.LOGGING,
@@ -241,7 +246,19 @@ private fun AppNavHost(container: AppContainer) {
                         }
                     },
                     exercises = {
-                        composable(TabRoutes.EXERCISES) { PlaceholderTabScreen(R.string.tab_exercises, actions = accountActions) }
+                        composable(TabRoutes.EXERCISES) {
+                            ExercisesRoute(container, onOpen = { navController.navigate(TabRoutes.exercise(it)) }, actions = accountActions)
+                        }
+                        composable(TabRoutes.EXERCISE, arguments = listOf(navArgument("name") { type = NavType.StringType })) { entry ->
+                            ExerciseDetailRoute(
+                                container,
+                                name = entry.arguments?.getString("name").orEmpty(),
+                                onBack = { navController.popBackStack() },
+                                onLogToday = { navController.logToday(it) },
+                                onRenamed = { navController.navigate(TabRoutes.exercise(it)) { popUpTo(TabRoutes.EXERCISES) } },
+                                actions = { SyncStatusAction(container) },
+                            )
+                        }
                     },
                     money = {
                         composable(TabRoutes.MONEY) { PlaceholderTabScreen(R.string.tab_money, actions = accountActions) }

@@ -118,7 +118,7 @@ class LogSyncErrorsTest {
         val logging = LogSync(store, sheets, status, spreadsheetId = { "s1" }, now = { 7L }, log = { logged += it })
         store.pending += set
         logging.run()
-        assertEquals(listOf("sync: start", "sync: 1 pending", "sync: done, wrote 1 new, 0 edited, 0 deleted"), logged)
+        assertEquals(listOf("sync: start", "sync: 1 pending", "sync: done, wrote 1 new, 0 edited, 0 deleted, 0 exercise changes"), logged)
     }
 
     // Feature 003 FR-005: handled sync errors reach monitoring as non-fatal events.

@@ -21,6 +21,7 @@ import androidx.navigation.NavGraph
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
+import com.workoutrec.log.LogRoutes
 
 object BarTags {
     const val BAR = "bottom_bar"
@@ -64,6 +65,12 @@ fun TabBar(selected: Tab?, onSelect: (Tab) -> Unit) {
             )
         }
     }
+}
+
+/** "Log today" from an exercise (feature 004 US3 scenario 5): Today, with that exercise's plan sets dialog. */
+fun NavController.logToday(exercise: String) {
+    selectTab(Tab.TODAY, reselect = false)
+    navigate(LogRoutes.picker(exercise))
 }
 
 /**

@@ -54,7 +54,9 @@ import kotlinx.coroutines.withContext
 
 /** Navigation routes of the logging screens (contracts/screens.md "Navigation"). */
 object LogRoutes {
-    const val PICKER = "picker"
+    /** Feature 004: [picker] with an exercise opens its plan sets dialog at once ("Log today"). */
+    const val PICKER = "picker?exercise={exercise}"
+    fun picker(exercise: String? = null) = if (exercise == null) "picker" else "picker?exercise=${android.net.Uri.encode(exercise)}"
     const val WORKOUTS = "workouts"
     const val PAST_WORKOUT = "past-workout"
     const val DAY = "day/{date}"
@@ -70,10 +72,10 @@ val LocalSyncSignIn = staticCompositionLocalOf<() -> Unit> { {} }
 @Composable
 fun SyncStatusAction(container: AppContainer) {
     val status by container.syncStatusStore.status.collectAsState(initial = SyncStatus())
-    val pending by container.workoutRepository.pending.collectAsState(initial = emptyList())
+    val waiting by container.workoutRepository.waitingCount.collectAsState(initial = 0)
     val scope = rememberCoroutineScope()
     SyncStatusButton(
-        pendingCount = DisplayModel.pendingCount(pending),
+        pendingCount = waiting,
         phase = status.phase,
         lastSuccessAt = status.lastSuccessAt,
         zone = status.zone(),
@@ -215,12 +217,12 @@ fun EditSetRoute(container: AppContainer, set: DisplaySet, zone: ZoneId, onDone:
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PickerRoute(container: AppContainer, onBack: () -> Unit, onStart: (exercise: String, sets: Int) -> Unit) {
+fun PickerRoute(container: AppContainer, onBack: () -> Unit, onStart: (exercise: String, sets: Int) -> Unit, preselected: String? = null) {
     val context = LocalContext.current
     val exercises by container.workoutRepository.exercises.collectAsState(initial = emptyList())
     val sets by container.workoutRepository.displaySets.collectAsState(initial = emptyList())
     val binding by container.settingsStore.binding.collectAsState(initial = null)
-    var picked by rememberSaveable { mutableStateOf<String?>(null) }
+    var picked by rememberSaveable { mutableStateOf(preselected) }
     Scaffold(
         topBar = {
             TopAppBar(

@@ -43,6 +43,10 @@ class UnsyncedWarningTest {
         open(unsynced = 3, item = R.string.account_sign_out)
         compose.onNodeWithTag(UnsyncedWarningTag)
             .assertTextContains(context.resources.getQuantityString(R.plurals.unsynced_warning, 3, 3))
+        // Feature 004 FR-012: exercise changes and payments are lost too, so the warning says "changes".
+        if (context.resources.configuration.locales[0].language == "en") {
+            compose.onNodeWithTag(UnsyncedWarningTag).assertTextContains("3 changes", substring = true)
+        }
     }
 
     @Test

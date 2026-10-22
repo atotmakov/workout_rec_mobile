@@ -77,10 +77,10 @@
     <string name="error_reps_too_small">Минимум 1 повторение</string>
     <!-- 002 US2: offline sync -->
     <plurals name="sync_pending">
-        <item quantity="one">%d подход ещё не в таблице</item>
-        <item quantity="few">%d подхода ещё не в таблице</item>
-        <item quantity="many">%d подходов ещё не в таблице</item>
-        <item quantity="other">%d подхода ещё не в таблице</item>
+        <item quantity="one">%d изменение ещё не в таблице</item>
+        <item quantity="few">%d изменения ещё не в таблице</item>
+        <item quantity="many">%d изменений ещё не в таблице</item>
+        <item quantity="other">%d изменения ещё не в таблице</item>
     </plurals>
     <string name="sync_failing_network">Нет связи — синхронизация отложена. Подходы сохранены в телефоне.</string>
     <string name="sync_failing_spreadsheet">Не удаётся синхронизировать: таблица не найдена.</string>
@@ -88,10 +88,10 @@
     <string name="sync_failing_other">Сейчас не удаётся синхронизировать. Попробуем ещё раз.</string>
     <string name="sync_sign_in">Войдите снова, чтобы синхронизировать</string>
     <plurals name="unsynced_warning">
-        <item quantity="one">%d подход ещё не в таблице и будет потерян.</item>
-        <item quantity="few">%d подхода ещё не в таблице и будут потеряны.</item>
-        <item quantity="many">%d подходов ещё не в таблице и будут потеряны.</item>
-        <item quantity="other">%d подхода ещё не в таблице и будут потеряны.</item>
+        <item quantity="one">%d изменение ещё не в таблице и будет потеряно.</item>
+        <item quantity="few">%d изменения ещё не в таблице и будут потеряны.</item>
+        <item quantity="many">%d изменений ещё не в таблице и будут потеряны.</item>
+        <item quantity="other">%d изменения ещё не в таблице и будут потеряны.</item>
     </plurals>
     <string name="switch_question">Сменить аккаунт?</string>
     <string name="switch_confirm">Сменить</string>
@@ -157,4 +157,23 @@
     <string name="tab_exercises">Упражнения</string>
     <string name="tab_money">Деньги</string>
     <string name="tab_placeholder">Скоро</string>
+    <!-- Feature 004 US3: Exercises tab -->
+    <string name="exercises_empty">Упражнений пока нет. Добавьте те, что вы делаете.</string>
+    <string name="exercise_add">Добавить упражнение</string>
+    <string name="exercise_add_title">Новое упражнение</string>
+    <string name="exercise_rename_title">Переименовать упражнение</string>
+    <string name="exercise_group_label">Группа мышц</string>
+    <string name="exercise_name_label">Название</string>
+    <string name="exercise_exists">Такое упражнение уже есть</string>
+    <string name="exercise_name_empty">Введите название</string>
+    <string name="exercise_name_too_long">Не больше 100 символов</string>
+    <string name="exercise_group_too_long">Не больше 50 символов</string>
+    <string name="exercise_log_today">Записать сегодня</string>
+    <string name="exercise_rename">Переименовать</string>
+    <string name="exercise_delete_question">Удалить «%1$s»?</string>
+    <string name="exercise_delete_text">Оно исчезнет из списка упражнений и из вкладки drills.</string>
+    <string name="exercise_in_use">Упражнения с записанными подходами удалить нельзя.</string>
+    <string name="exercise_waiting">Ещё не в таблице</string>
+    <string name="notice_exercise_change_dropped">«%1$s» изменили в таблице раньше, чем туда дошло ваше изменение; оставлена версия из таблицы.</string>
+    <string name="notice_exercise_in_use">У «%1$s» есть подходы в журнале, поэтому оно не удалено.</string>
 </resources>

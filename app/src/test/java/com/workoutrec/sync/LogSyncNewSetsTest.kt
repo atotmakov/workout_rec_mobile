@@ -85,7 +85,7 @@ class LogSyncNewSetsTest {
         sync.run()
         sync.run()
         assertEquals(1, sheets.calls.count { it.startsWith("info") })
-        assertEquals(SheetInfoCache("s1", "UTC", 3), status.status.value.sheet)
+        assertEquals(SheetInfoCache("s1", "UTC", 3, drillsSheetId = 1), status.status.value.sheet)
     }
 
     @Test

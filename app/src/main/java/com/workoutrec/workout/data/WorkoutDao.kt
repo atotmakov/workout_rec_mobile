@@ -79,7 +79,7 @@ abstract class WorkoutDao {
         insertLogRows(rows)
     }
 
-    /** Sign out or account switch (research R13). */
+    /** Sign out or account switch (research R13); feature 004 tables too. */
     @Transaction
     open suspend fun clearAll() {
         clearExercises()
@@ -87,20 +87,45 @@ abstract class WorkoutDao {
         clearPending()
         clearNotices()
         clearDrafts()
+        clearExerciseChanges()
+        clearPayments()
+        clearPaymentRows()
+        clearMoneySummary()
     }
 
-    /** One sync result (data-model.md "Sync run"): new caches, handled changes gone, notices added. */
+    /**
+     * One sync result (data-model.md "Sync run"): new caches, handled changes gone, notices added;
+     * feature 004: handled exercise changes gone, a dropped rename's waiting sets renamed back.
+     */
     @Transaction
     open suspend fun commitSync(
         exercises: List<ExerciseEntity>,
         rows: List<LogRowEntity>,
         doneIds: List<String>,
         notices: List<SyncNoticeEntity>,
+        doneExerciseIds: List<String> = emptyList(),
+        renamesBack: Map<String, String> = emptyMap(),
     ) {
         replaceCaches(exercises, rows)
         if (doneIds.isNotEmpty()) deletePending(doneIds)
         if (notices.isNotEmpty()) insertNotices(notices)
+        if (doneExerciseIds.isNotEmpty()) deleteExerciseChanges(doneExerciseIds)
+        renamesBack.forEach { (from, to) -> renamePendingSets(from, to) }
     }
+
+    /** Waiting new and edited sets of [from] get [to] (feature 004 research R3, R5). */
+    @Query("UPDATE pending_change SET exercise = :to WHERE exercise = :from AND kind != 'DELETE'")
+    abstract suspend fun renamePendingSets(from: String, to: String)
+
+    /** A rename: the exercise change and the renamed waiting sets in one transaction (research R3). */
+    @Transaction
+    open suspend fun renameExercise(change: PendingExerciseChangeEntity, sets: List<PendingChangeEntity>) {
+        upsertExerciseChange(change)
+        upsertPendingAll(sets)
+    }
+
+    @Query("DELETE FROM pending_exercise_change WHERE kind != 'ADD'")
+    protected abstract suspend fun clearExerciseRenamesAndDeletes()
 
     @Query("DELETE FROM pending_change WHERE kind != 'NEW'")
     protected abstract suspend fun clearEditsAndDeletes()
@@ -112,12 +137,72 @@ abstract class WorkoutDao {
         clearLogRows()
         clearNotices()
         clearEditsAndDeletes()
+        // Feature 004: new exercises still apply; renames and deletes were of the old drills tab.
+        clearExerciseRenamesAndDeletes()
     }
 
     @Upsert
-    protected abstract suspend fun upsertPendingAll(changes: List<PendingChangeEntity>)
+    abstract suspend fun upsertPendingAll(changes: List<PendingChangeEntity>)
 
     /** All sets of a past workout at once (research R10). */
     @Transaction
     open suspend fun insertSets(changes: List<PendingChangeEntity>) = upsertPendingAll(changes)
+
+    // Feature 004 data-model.md
+
+    @Query("SELECT * FROM pending_exercise_change ORDER BY createdAt")
+    abstract fun exerciseChanges(): Flow<List<PendingExerciseChangeEntity>>
+
+    @Query("SELECT * FROM pending_exercise_change ORDER BY createdAt")
+    abstract suspend fun exerciseChangesNow(): List<PendingExerciseChangeEntity>
+
+    @Upsert
+    abstract suspend fun upsertExerciseChange(change: PendingExerciseChangeEntity)
+
+    @Query("DELETE FROM pending_exercise_change WHERE id IN (:ids)")
+    abstract suspend fun deleteExerciseChanges(ids: List<String>)
+
+    @Query("SELECT * FROM pending_payment ORDER BY createdAt")
+    abstract fun pendingPayments(): Flow<List<PendingPaymentEntity>>
+
+    @Query("SELECT * FROM pending_payment ORDER BY createdAt")
+    abstract suspend fun pendingPaymentsNow(): List<PendingPaymentEntity>
+
+    @Insert
+    abstract suspend fun insertPayment(payment: PendingPaymentEntity)
+
+    @Query("DELETE FROM pending_payment WHERE id IN (:ids)")
+    abstract suspend fun deletePayments(ids: List<String>)
+
+    @Query("SELECT * FROM payment_row ORDER BY rowIndex")
+    abstract fun paymentRows(): Flow<List<PaymentRowEntity>>
+
+    @Query("SELECT * FROM money_summary WHERE id = 1")
+    abstract fun moneySummary(): Flow<MoneySummaryEntity?>
+
+    @Query("DELETE FROM pending_exercise_change")
+    protected abstract suspend fun clearExerciseChanges()
+
+    @Query("DELETE FROM pending_payment")
+    protected abstract suspend fun clearPayments()
+
+    @Query("DELETE FROM payment_row")
+    protected abstract suspend fun clearPaymentRows()
+
+    @Query("DELETE FROM money_summary")
+    protected abstract suspend fun clearMoneySummary()
+
+    @Insert
+    protected abstract suspend fun insertPaymentRows(rows: List<PaymentRowEntity>)
+
+    @Upsert
+    protected abstract suspend fun upsertMoneySummary(summary: MoneySummaryEntity)
+
+    /** One money download (feature 004 research R6): rows and summary together. */
+    @Transaction
+    open suspend fun replacePayments(rows: List<PaymentRowEntity>, summary: MoneySummaryEntity) {
+        clearPaymentRows()
+        insertPaymentRows(rows)
+        upsertMoneySummary(summary)
+    }
 }

@@ -31,7 +31,7 @@ class SpreadsheetChangeTest {
         assertEquals(1, store.keptOnlyNew)
         assertEquals(listOf("info:new", "read:new", "write:new", "read:new"), sheets.calls)
         assertEquals(1, sheets.writes.single().appends.size)
-        assertEquals(SheetInfoCache("new", "UTC", 5), status.status.value.sheet)
+        assertEquals(SheetInfoCache("new", "UTC", 5, drillsSheetId = 1), status.status.value.sheet)
     }
 
     @Test

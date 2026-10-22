@@ -1,5 +1,7 @@
 package com.workoutrec.log
 
+import com.workoutrec.workout.Record
+import com.workoutrec.workout.LastTime
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -80,7 +82,7 @@ fun ExerciseLoggingScreen(
     ) {
         item {
             Text(state.exercise, style = MaterialTheme.typography.headlineSmall, modifier = Modifier.testTag(LoggingTags.TITLE))
-            LastTimeAndRecord(state, locale)
+            LastTimeAndRecord(state.lastTime, state.record, locale)
             header()
         }
         itemsIndexed(state.done) { i, done ->
@@ -154,8 +156,7 @@ private fun NumberField(
 
 /** "Last time, 9 Jan 2026: 40 × 6   40 × 8" or "First time"; "Record: 40 kg × 8" (FR-011). */
 @Composable
-private fun LastTimeAndRecord(state: LoggingState, locale: Locale) {
-    val lastTime = state.lastTime
+fun LastTimeAndRecord(lastTime: LastTime?, record: Record?, locale: Locale) {
     val text = if (lastTime == null) {
         stringResource(R.string.logging_first_time)
     } else {
@@ -163,7 +164,7 @@ private fun LastTimeAndRecord(state: LoggingState, locale: Locale) {
         stringResource(R.string.logging_last_time, date, lastTime.sets.map { setText(it, locale) }.joinToString("   "))
     }
     Text(text, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.testTag(LoggingTags.LAST_TIME))
-    state.record?.let {
+    record?.let {
         Text(
             stringResource(R.string.logging_record, it.weight.format(locale), it.reps.value),
             style = MaterialTheme.typography.bodyMedium,
