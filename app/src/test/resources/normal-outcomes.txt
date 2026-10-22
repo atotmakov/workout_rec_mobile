@@ -1,0 +1,16 @@
+# Catch sites that are allowed not to report (feature 005 FR-004, FR-012; data-model.md).
+# path (under app/src/main/java/com/workoutrec/) | caught type | count | reason
+# Sites that report (nonFatal, failure, badValue, onBadValue) or end in `throw` are not listed.
+# Before adding a line here, ask whether the error should be reported instead (Constitution V).
+
+auth/AccountPicker.kt | GetCredentialCancellationException | 1 | the user cancelled sign-in
+auth/AccountPicker.kt | GetCredentialException | 1 | turned into PickResult.Failed; SetupViewModel reports sign-in-failed
+auth/ApiAuthorizer.kt | ApiException | 2 | turned into an AuthOutcome; SetupViewModel and AccountRepository report it
+auth/ApiAuthorizer.kt | IOException | 1 | turned into AuthOutcome.Unavailable; the caller reports no-connection
+log/PastWorkoutScreens.kt | DateTimeParseException | 2 | text the user typed; the form shows it as invalid
+log/LogRoutes.kt | DateTimeException | 1 | same sheet time zone that sync reports (LogSync.zoneOf); runs in composition
+spreadsheet/SpreadsheetSetupService.kt | ApiError.NotFound | 1 | "file gone" is the answer the existence check asks for
+setup/SpreadsheetSetupFlow.kt | ApiError.AppsScriptApiDisabled | 1 | a setup instruction shown to the user, not an error
+google/ApiError.kt | runCatching | 1 | Google's error body is not JSON; the raw body is used and the error is reported by its caller
+google/ApiError.kt | IllegalArgumentException | 1 | Google's error body is not JSON, so it has no status; the error is reported by its caller
+monitoring/TracerMonitoring.kt | Throwable | 1 | reporting itself failed; there is nowhere to report it (FR-009)

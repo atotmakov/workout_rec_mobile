@@ -1,0 +1,3 @@
+# Fixture list for CatchSiteGuardTest
+sub/Unreported.kt.txt | DateTimeParseException | 1 | text the user typed
+sub/Gone.kt.txt | IOException | 1 | a site that no longer exists

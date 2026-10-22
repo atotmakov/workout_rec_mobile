@@ -6,6 +6,10 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.workoutrec.monitoring.Monitoring
+import com.workoutrec.monitoring.NoMonitoring
+import com.workoutrec.monitoring.NonFatalIssue
+import com.workoutrec.monitoring.badValue
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -66,7 +70,11 @@ interface SyncStatusStore {
     suspend fun recordBackground(run: BackgroundRun)
 }
 
-class DataStoreSyncStatusStore(private val dataStore: DataStore<Preferences>) : SyncStatusStore {
+class DataStoreSyncStatusStore(
+    private val dataStore: DataStore<Preferences>,
+    /** Feature 005 US3: an unreadable saved phase is reported. */
+    private val monitoring: Monitoring = NoMonitoring,
+) : SyncStatusStore {
 
     private val stateKey = stringPreferencesKey("sync.state")
     private val lastSuccessKey = longPreferencesKey("sync.lastSuccessAt")
@@ -85,7 +93,7 @@ class DataStoreSyncStatusStore(private val dataStore: DataStore<Preferences>) : 
         val timeZone = prefs[timeZoneKey]
         val logSheetId = prefs[logSheetKey]
         SyncStatus(
-            phase = decode(prefs[stateKey]),
+            phase = SyncPhaseCodec.decode(prefs[stateKey]) { monitoring.badValue(NonFatalIssue.BAD_SAVED_STATE, it) },
             lastSuccessAt = prefs[lastSuccessKey],
             background = prefs[backgroundAtKey]?.let { at -> BackgroundRun(at, prefs[backgroundResultKey].orEmpty()) },
             sheet = if (spreadsheetId != null && timeZone != null && logSheetId != null) {
@@ -97,12 +105,12 @@ class DataStoreSyncStatusStore(private val dataStore: DataStore<Preferences>) : 
     }
 
     override suspend fun setPhase(phase: SyncPhase) {
-        dataStore.edit { it[stateKey] = encode(phase) }
+        dataStore.edit { it[stateKey] = SyncPhaseCodec.encode(phase) }
     }
 
     override suspend fun markSuccess(at: Long) {
         dataStore.edit {
-            it[stateKey] = encode(SyncPhase.Idle)
+            it[stateKey] = SyncPhaseCodec.encode(SyncPhase.Idle)
             it[lastSuccessKey] = at
         }
     }
@@ -137,21 +145,5 @@ class DataStoreSyncStatusStore(private val dataStore: DataStore<Preferences>) : 
 
     override suspend fun clear() {
         dataStore.edit { it.clear() }
-    }
-
-    private fun encode(phase: SyncPhase): String = when (phase) {
-        SyncPhase.Idle -> "idle"
-        SyncPhase.Running -> "running"
-        SyncPhase.NeedsSignIn -> "sign_in"
-        is SyncPhase.Failing -> "failing:${phase.reason.name}"
-    }
-
-    private fun decode(value: String?): SyncPhase = when {
-        value == null || value == "idle" -> SyncPhase.Idle
-        value == "running" -> SyncPhase.Idle // a run cannot survive the process
-        value == "sign_in" -> SyncPhase.NeedsSignIn
-        value.startsWith("failing:") ->
-            SyncPhase.Failing(runCatching { FailReason.valueOf(value.removePrefix("failing:")) }.getOrDefault(FailReason.OTHER))
-        else -> SyncPhase.Idle
     }
 }

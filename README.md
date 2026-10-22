@@ -46,6 +46,13 @@ as `tracer.appToken` and `tracer.pluginToken` in `local.properties`. In the app,
 diagnostics** in the account menu turns monitoring off; a long-press on it opens test actions
 that produce one report of each kind.
 
+Every handled error is reported (constitution Principle V, feature 005): catch it and call
+`monitoring.failure(issue, e, operation)` (no-connection failures become one info issue) or
+`monitoring.nonFatal(...)`, with a key from `NonFatalIssue`. A catch that is a normal outcome
+(a user cancel, typed text, an error handed to a caller that reports it) goes in
+`app/src/test/resources/normal-outcomes.txt` with a reason. `CatchSiteGuardTest` fails the unit
+tests on any catch site that does neither.
+
 ## Google Cloud setup
 
 Needed only to sign in on a real device (task T007; research R12 in

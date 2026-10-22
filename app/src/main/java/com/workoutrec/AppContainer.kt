@@ -122,7 +122,7 @@ class AppContainer(context: Context, val monitoringSettings: MonitoringSettings)
     private val sheetsClient = SheetsClient(googleHttp)
 
     val spreadsheetSetupFlow = SpreadsheetSetupFlow(
-        setup = SpreadsheetSetupService(DriveClient(googleHttp), sheetsClient),
+        setup = SpreadsheetSetupService(DriveClient(googleHttp), sheetsClient, monitoring = monitoring),
         installer = ScriptInstaller(ScriptClient(googleHttp), sheetsClient, ScriptAssets.from(appContext.assets)),
         store = settingsStore,
         timeZone = { ZoneId.systemDefault().id },
@@ -132,8 +132,8 @@ class AppContainer(context: Context, val monitoringSettings: MonitoringSettings)
     )
 
     // Feature 002: workout logging (plan.md).
-    val workoutRepository = WorkoutRepository(WorkoutDatabase.create(appContext).dao())
-    val syncStatusStore: SyncStatusStore = DataStoreSyncStatusStore(appContext.syncDataStore)
+    val workoutRepository = WorkoutRepository(WorkoutDatabase.create(appContext).dao(), monitoring = monitoring)
+    val syncStatusStore: SyncStatusStore = DataStoreSyncStatusStore(appContext.syncDataStore, monitoring)
     val sheetsLogClient = SheetsLogClient(googleHttp)
 
     /** Feature 004 US4: the money and balance tabs (call 23), apart from the set sync. */

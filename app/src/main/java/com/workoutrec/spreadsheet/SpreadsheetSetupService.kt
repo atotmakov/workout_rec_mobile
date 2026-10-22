@@ -4,6 +4,10 @@ import com.workoutrec.google.ApiError
 import com.workoutrec.google.DriveApi
 import com.workoutrec.google.DriveFile
 import com.workoutrec.google.SheetsApi
+import com.workoutrec.monitoring.Monitoring
+import com.workoutrec.monitoring.NoMonitoring
+import com.workoutrec.monitoring.NonFatalIssue
+import com.workoutrec.monitoring.reportable
 import java.time.LocalDate
 
 data class SpreadsheetCheck(val result: StructureCheckResult, val snapshot: SpreadsheetSnapshot)
@@ -24,6 +28,8 @@ class SpreadsheetSetupService(
     private val drive: DriveApi,
     private val sheets: SheetsApi,
     private val today: () -> LocalDate = { LocalDate.now() },
+    /** Feature 005 US3: the create fallback is reported. */
+    private val monitoring: Monitoring = NoMonitoring,
 ) : SpreadsheetSetup {
 
     /** The newest app-created `workout_rec_database_` (spec edge case "more than one"). */
@@ -34,6 +40,7 @@ class SpreadsheetSetupService(
         sheets.create(ReferenceStructure.createRequest(timeZone))
     } catch (e: ApiError.Unexpected) {
         if (e.code != 400) throw e
+        monitoring.nonFatal(NonFatalIssue.SPREADSHEET_CREATE_FALLBACK, reportable(e), "code=400")
         val id = sheets.create(ReferenceStructure.minimalCreateRequest(timeZone))
         sheets.batchUpdate(id, ReferenceStructure.completionRequests())
         id

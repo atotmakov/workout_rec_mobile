@@ -8,6 +8,7 @@ import com.workoutrec.google.MoneyApi
 import com.workoutrec.monitoring.Monitoring
 import com.workoutrec.monitoring.NoMonitoring
 import com.workoutrec.monitoring.NonFatalIssue
+import com.workoutrec.monitoring.badValue
 import com.workoutrec.monitoring.failure
 import com.workoutrec.sync.SheetInfoCache
 import com.workoutrec.workout.PaymentRow
@@ -78,11 +79,12 @@ class MoneyRefresher(
             val rows = read.payments.mapNotNull { row ->
                 row.serial?.let { PaymentRow(row.rowIndex, PaymentValues.dateOf(it), row.workouts, row.sum?.let { sum -> (sum * 100).roundToLong() }) }
             }
-            val lastRun = read.metadata[AutomationStatusEvaluator.LAST_DAILY_RUN]?.let { runCatching { Instant.parse(it).toEpochMilli() }.getOrNull() }
-            store.replaceMoney(
-                rows,
-                MoneySummary(read.balance, lastRun, AutomationStatusEvaluator.evaluate(read.metadata, Instant.ofEpochMilli(at)), at, MoneyError.NONE),
-            )
+            // Feature 005 US3: each unreadable value is reported once per download.
+            val bad = mutableSetOf<String>()
+            val lastRun = AutomationStatusEvaluator.parse(read.metadata[AutomationStatusEvaluator.LAST_DAILY_RUN], bad::add)?.toEpochMilli()
+            val automation = AutomationStatusEvaluator.evaluate(read.metadata, Instant.ofEpochMilli(at), bad::add)
+            bad.forEach { monitoring.badValue(NonFatalIssue.BAD_SHEET_DATA, it) }
+            store.replaceMoney(rows, MoneySummary(read.balance, lastRun, automation, at, MoneyError.NONE))
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {

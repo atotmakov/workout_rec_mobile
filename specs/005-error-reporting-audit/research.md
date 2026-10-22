@@ -73,6 +73,7 @@ twice"):
 | `log/LogRoutes` `SyncStatus.zone()` | nothing: same value, already reported by `LogSync.zoneOf`; it runs in composition | listed |
 | `automation/AutomationStatusEvaluator.parse`, `MoneyRefresher` last-run parse | `BAD_SHEET_DATA` (`value=automation-timestamp`) | `evaluate(..., onBadValue)` callback, default no-op; callers with `Monitoring` pass it |
 | `sync/SyncStatusStore.decode`, `WorkoutRepository` `MoneySummaryEntity.toDomain` | `BAD_SAVED_STATE` (`value=sync-phase\|automation-status\|money-error`) | inject `Monitoring` (store, repository) |
+| `google/ApiErrorMapper.googleStatus` (new in R10) | nothing: a body that is not JSON has no status; the error is reported by its caller | listed |
 
 **Alternatives**: report in `ApiAuthorizer` too (the token path would report twice, as
 `AUTHORIZATION_FAILED` and `TOKEN_FAILED`).

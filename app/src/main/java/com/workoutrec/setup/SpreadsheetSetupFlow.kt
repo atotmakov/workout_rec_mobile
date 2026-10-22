@@ -10,6 +10,8 @@ import com.workoutrec.google.ApiError
 import com.workoutrec.monitoring.Monitoring
 import com.workoutrec.monitoring.NoMonitoring
 import com.workoutrec.monitoring.NonFatalIssue
+import com.workoutrec.monitoring.badValue
+import com.workoutrec.monitoring.failure
 import com.workoutrec.spreadsheet.SpreadsheetSetup
 import com.workoutrec.spreadsheet.SpreadsheetSnapshot
 import com.workoutrec.spreadsheet.StructureCheckResult
@@ -93,7 +95,7 @@ class SpreadsheetSetupFlow(
         }
 
     private suspend fun afterMatch(account: SelectedAccount, spreadsheetId: String, snapshot: SpreadsheetSnapshot): SetupState =
-        when (AutomationStatusEvaluator.evaluate(snapshot.metadata, now())) {
+        when (AutomationStatusEvaluator.evaluate(snapshot.metadata, now(), ::badSheetValue)) {
             AutomationStatus.ScriptMissing -> attach(account, spreadsheetId, snapshot.metadata, snapshot.metadataIds)
             AutomationStatus.NotEnabled -> snapshot.metadata[AutomationStatusEvaluator.ENABLE_URL]
                 ?.let { SetupState.NeedsEnable(it) }
@@ -161,7 +163,7 @@ class SpreadsheetSetupFlow(
         return guarded(SetupStep.Checking) {
             val snapshot = setup.check(binding.spreadsheetId).snapshot
             bind(account, binding.spreadsheetId, snapshot.metadata)
-            when (AutomationStatusEvaluator.evaluate(snapshot.metadata, now())) {
+            when (AutomationStatusEvaluator.evaluate(snapshot.metadata, now(), ::badSheetValue)) {
                 AutomationStatus.On -> SetupState.Ready
                 else -> current
             }
@@ -172,7 +174,7 @@ class SpreadsheetSetupFlow(
         val binding = store.binding.first() ?: return findSpreadsheet(account)
         return guarded(SetupStep.Checking) {
             val snapshot = setup.check(binding.spreadsheetId).snapshot
-            when (AutomationStatusEvaluator.evaluate(snapshot.metadata, now())) {
+            when (AutomationStatusEvaluator.evaluate(snapshot.metadata, now(), ::badSheetValue)) {
                 AutomationStatus.ScriptMissing -> attach(account, binding.spreadsheetId, snapshot.metadata, snapshot.metadataIds)
                 AutomationStatus.On -> SetupState.Ready
                 else -> snapshot.metadata[AutomationStatusEvaluator.ENABLE_URL]?.let { SetupState.NeedsEnable(it) }
@@ -192,7 +194,7 @@ class SpreadsheetSetupFlow(
     }
 
     private fun reminder(snapshot: SpreadsheetSnapshot): Reminder? =
-        when (val status = AutomationStatusEvaluator.evaluate(snapshot.metadata, now())) {
+        when (val status = AutomationStatusEvaluator.evaluate(snapshot.metadata, now(), ::badSheetValue)) {
             AutomationStatus.On -> null
             else -> Reminder(status, snapshot.metadata[AutomationStatusEvaluator.ENABLE_URL])
         }
@@ -208,12 +210,16 @@ class SpreadsheetSetupFlow(
         )
     }
 
+    /** Feature 005 US3: an unreadable automation timestamp in the metadata. */
+    private fun badSheetValue(value: String) = monitoring.badValue(NonFatalIssue.BAD_SHEET_DATA, value)
+
     /** Maps Google failures to [SetupState.Error] for [step] (FR-011). */
     private suspend fun guarded(step: SetupStep, rewriteId: String? = null, block: suspend () -> SetupState): SetupState =
         try {
             block()
         } catch (e: ApiError) {
             if (step == SetupStep.Renaming) failedRewriteId = rewriteId
+            monitoring.failure(NonFatalIssue.SETUP_STEP_FAILED, e, "setup", "step=${step.name}")
             SetupState.Error(step, e)
         }
 }

@@ -21,7 +21,13 @@ sealed interface AuthOutcome {
     data class NeedsUserConsent(val consent: ConsentRequest) : AuthOutcome
     data object Denied : AuthOutcome
     data object Unavailable : AuthOutcome
+
+    /** A Google error other than a network error or a cancel; handled like [Denied]. */
+    data class Failed(val statusCode: Int) : AuthOutcome
 }
+
+/** An authorization that did not succeed, as a non-fatal event (feature 005). */
+class AuthorizationFailed(outcome: AuthOutcome) : Exception("Authorization failed: $outcome")
 
 /** Gets API access for the chosen account (research R3). */
 interface ApiAuthorizer {
@@ -44,7 +50,7 @@ class GoogleApiAuthorizer(context: Context) : ApiAuthorizer {
         return try {
             toOutcome(client.authorize(request).await())
         } catch (e: ApiException) {
-            AuthorizationMapper.decideFailure(e.statusCode == CommonStatusCodes.NETWORK_ERROR).toOutcome(null)
+            AuthorizationMapper.decideFailure(e.statusCode == CommonStatusCodes.NETWORK_ERROR, e.statusCode).toOutcome(null)
         } catch (e: IOException) {
             AuthorizationMapper.decideFailure(networkError = true).toOutcome(null)
         }
@@ -53,7 +59,7 @@ class GoogleApiAuthorizer(context: Context) : ApiAuthorizer {
     override fun resultFromConsent(data: Intent?): AuthOutcome = try {
         toOutcome(client.getAuthorizationResultFromIntent(data))
     } catch (e: ApiException) {
-        AuthorizationMapper.decideFailure(e.statusCode == CommonStatusCodes.NETWORK_ERROR).toOutcome(null)
+        AuthorizationMapper.decideFailure(e.statusCode == CommonStatusCodes.NETWORK_ERROR, e.statusCode).toOutcome(null)
     }
 
     private fun toOutcome(result: AuthorizationResult): AuthOutcome =
@@ -65,5 +71,6 @@ class GoogleApiAuthorizer(context: Context) : ApiAuthorizer {
         AuthDecision.NeedsUserConsent -> AuthOutcome.NeedsUserConsent(ConsentRequest(pendingIntent))
         AuthDecision.Denied -> AuthOutcome.Denied
         AuthDecision.Unavailable -> AuthOutcome.Unavailable
+        is AuthDecision.Failed -> AuthOutcome.Failed(statusCode)
     }
 }
