@@ -14,6 +14,23 @@ class AutomationStatusEvaluatorTest {
     private fun status(vararg entries: Pair<String, String>) =
         AutomationStatusEvaluator.evaluate(mapOf(*entries), now)
 
+    // Feature 005 US3: an unreadable timestamp is skipped as before and named once
+    @Test
+    fun `an unreadable timestamp is skipped and reported`() {
+        val bad = mutableListOf<String>()
+        val metadata = mapOf("workout_rec.script_id" to "s1", "workout_rec.automation_enabled_at" to ago(2), "workout_rec.last_daily_run" to "yesterday")
+        assertEquals(AutomationStatus.On, AutomationStatusEvaluator.evaluate(metadata, now) { bad += it })
+        assertEquals(listOf("automation-timestamp"), bad)
+    }
+
+    @Test
+    fun `readable timestamps report nothing`() {
+        val bad = mutableListOf<String>()
+        val metadata = mapOf("workout_rec.script_id" to "s1", "workout_rec.automation_enabled_at" to ago(2), "workout_rec.last_daily_run" to ago(1))
+        AutomationStatusEvaluator.evaluate(metadata, now) { bad += it }
+        assertEquals(emptyList<String>(), bad)
+    }
+
     @Test
     fun `no script id is ScriptMissing`() {
         assertEquals(AutomationStatus.ScriptMissing, status())

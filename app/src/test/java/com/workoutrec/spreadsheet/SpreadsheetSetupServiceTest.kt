@@ -1,10 +1,12 @@
 package com.workoutrec.spreadsheet
 
 import com.workoutrec.fakes.FakeDriveApi
+import com.workoutrec.fakes.FakeMonitoring
 import com.workoutrec.fakes.FakeSheetsApi
 import com.workoutrec.google.ApiError
 import com.workoutrec.google.DriveFile
 import com.workoutrec.google.TabsAndMetadata
+import com.workoutrec.monitoring.NonFatalIssue
 import java.time.LocalDate
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.jsonObject
@@ -20,7 +22,8 @@ class SpreadsheetSetupServiceTest {
     private val log = mutableListOf<String>()
     private val drive = FakeDriveApi(log = log)
     private val sheets = FakeSheetsApi(log = log)
-    private val service = SpreadsheetSetupService(drive, sheets, today = { LocalDate.of(2026, 10, 3) })
+    private val monitoring = FakeMonitoring()
+    private val service = SpreadsheetSetupService(drive, sheets, today = { LocalDate.of(2026, 10, 3) }, monitoring = monitoring)
 
     @Test
     fun `find returns the newest of several files`() = runTest {
@@ -48,6 +51,8 @@ class SpreadsheetSetupServiceTest {
         assertEquals(listOf("create", "create", "batchUpdate:new-sheet"), log)
         assertEquals(ReferenceStructure.minimalCreateRequest("Europe/Moscow"), sheets.createBodies[1])
         assertEquals(ReferenceStructure.completionRequests(), sheets.batchUpdates.single())
+        // Feature 005 US3: the fallback is reported
+        assertEquals(listOf(NonFatalIssue.SPREADSHEET_CREATE_FALLBACK to "code=400"), monitoring.nonFatals.map { it.issue to it.details })
     }
 
     @Test
@@ -125,6 +130,8 @@ class SpreadsheetSetupServiceTest {
         assertTrue(service.exists("a"))
         assertFalse(service.exists("b"))
         assertFalse(service.exists("gone"))
+        // A missing file is the answer, not an error.
+        assertEquals(0, monitoring.nonFatals.size)
     }
 
     @Test(expected = ApiError.Offline::class)

@@ -36,3 +36,6 @@ class ReportedApiError(message: String, original: Throwable) : Exception(message
 
 /** A value the app could not read and replaced with a default; names the value, never its content. */
 class BadValue(val value: String) : Exception("Unreadable $value")
+
+/** Reports [value] (a fixed name such as `sheet-time-zone`) as unreadable under [issue]. */
+fun Monitoring.badValue(issue: NonFatalIssue, value: String) = nonFatal(issue, BadValue(value), "value=$value")

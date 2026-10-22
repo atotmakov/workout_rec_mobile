@@ -1,21 +1,15 @@
 package com.workoutrec.workout.data
 
-import java.time.LocalDate
-import com.workoutrec.workout.ShownPayment
-import com.workoutrec.workout.PendingPayment
-import com.workoutrec.workout.PaymentRow
-import com.workoutrec.money.MoneySummary
-import com.workoutrec.money.MoneyStore
-import com.workoutrec.money.MoneyError
 import com.workoutrec.automation.AutomationStatus
-import kotlinx.coroutines.flow.first
-import com.workoutrec.workout.ShownExercise
-import com.workoutrec.workout.ExerciseUpdate
-import com.workoutrec.workout.ExerciseCoalescer
-import com.workoutrec.workout.ExerciseChangeKind
-import com.workoutrec.workout.ExerciseChange
 import com.workoutrec.log.LoggingStore
 import com.workoutrec.log.PastWorkoutStore
+import com.workoutrec.money.MoneyError
+import com.workoutrec.money.MoneyStore
+import com.workoutrec.money.MoneySummary
+import com.workoutrec.monitoring.Monitoring
+import com.workoutrec.monitoring.NoMonitoring
+import com.workoutrec.monitoring.NonFatalIssue
+import com.workoutrec.monitoring.badValue
 import com.workoutrec.sync.LogSyncStore
 import com.workoutrec.sync.NoticeKind
 import com.workoutrec.sync.SyncNotice
@@ -24,17 +18,27 @@ import com.workoutrec.workout.Coalescer
 import com.workoutrec.workout.DisplayModel
 import com.workoutrec.workout.DisplaySet
 import com.workoutrec.workout.Exercise
+import com.workoutrec.workout.ExerciseChange
+import com.workoutrec.workout.ExerciseChangeKind
+import com.workoutrec.workout.ExerciseCoalescer
+import com.workoutrec.workout.ExerciseUpdate
 import com.workoutrec.workout.LogRow
+import com.workoutrec.workout.PaymentRow
 import com.workoutrec.workout.PendingChange
+import com.workoutrec.workout.PendingPayment
 import com.workoutrec.workout.PendingUpdate
 import com.workoutrec.workout.Reps
 import com.workoutrec.workout.SetKey
 import com.workoutrec.workout.SetRef
 import com.workoutrec.workout.SetValues
+import com.workoutrec.workout.ShownExercise
+import com.workoutrec.workout.ShownPayment
 import com.workoutrec.workout.Weight
+import java.time.LocalDate
 import java.util.UUID
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 /** The phone's workout data for screens and sync (data-model.md). */
@@ -42,6 +46,8 @@ class WorkoutRepository(
     private val dao: WorkoutDao,
     private val clock: () -> Long = System::currentTimeMillis,
     private val newId: () -> String = { UUID.randomUUID().toString() },
+    /** Feature 005 US3: unreadable saved values are reported. */
+    private val monitoring: Monitoring = NoMonitoring,
 ) : LoggingStore, LogSyncStore, PastWorkoutStore, MoneyStore {
 
     private val cachedExercises: Flow<List<Exercise>> = dao.exercises().map { list -> list.map { Exercise(it.name, it.muscleGroup) } }
@@ -141,7 +147,9 @@ class WorkoutRepository(
 
     val hasPendingPayment: Flow<Boolean> = dao.pendingPayments().map { it.isNotEmpty() }
 
-    val moneySummary: Flow<MoneySummary?> = dao.moneySummary().map { it?.toDomain() }
+    val moneySummary: Flow<MoneySummary?> = dao.moneySummary().map { it?.toDomain(::badSavedValue) }
+
+    private fun badSavedValue(value: String) = monitoring.badValue(NonFatalIssue.BAD_SAVED_STATE, value)
 
     /** Saved on the phone first, appended to the money tab by the sync (FR-009b). */
     suspend fun addPayment(date: LocalDate, workouts: Int, sumHundredths: Long) =
@@ -189,12 +197,22 @@ internal fun PaymentRowEntity.toDomain() = PaymentRow(rowIndex, LocalDate.parse(
 
 internal fun PendingPaymentEntity.toDomain() = PendingPayment(id, LocalDate.parse(date), workouts, sumHundredths, createdAt)
 
-internal fun MoneySummaryEntity.toDomain() = MoneySummary(
+internal fun MoneySummaryEntity.toDomain(onBadValue: (String) -> Unit = {}) = MoneySummary(
     balance,
     lastDailyRun,
-    runCatching { AutomationStatus.valueOf(automation) }.getOrDefault(AutomationStatus.ScriptMissing),
+    try {
+        AutomationStatus.valueOf(automation)
+    } catch (e: IllegalArgumentException) {
+        onBadValue("automation-status")
+        AutomationStatus.ScriptMissing
+    },
     downloadedAt,
-    runCatching { MoneyError.valueOf(error) }.getOrDefault(MoneyError.OTHER),
+    try {
+        MoneyError.valueOf(error)
+    } catch (e: IllegalArgumentException) {
+        onBadValue("money-error")
+        MoneyError.OTHER
+    },
 )
 
 internal fun PendingExerciseChangeEntity.toDomain() =

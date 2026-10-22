@@ -178,6 +178,17 @@ class LogSyncErrorsTest {
         assertTrue(monitoring.nonFatals.isEmpty())
     }
 
+    // Feature 005 US3: an unreadable sheet time zone falls back to UTC and is reported
+    @Test
+    fun `an unknown sheet time zone is read as UTC and reported`() = runTest {
+        sheets.timeZone = "Mars/Base"
+        store.pending += set
+        assertEquals(SyncOutcome.Synced(wrote = true), monitoredSync.run())
+        val event = monitoring.nonFatals.single()
+        assertEquals(NonFatalIssue.BAD_SHEET_DATA to "value=sheet-time-zone", event.issue to event.details)
+        assertTrue("Mars/Base" !in event.error.message.orEmpty())
+    }
+
     @Test
     fun `a successful run reports nothing`() = runTest {
         store.pending += set
