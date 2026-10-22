@@ -32,3 +32,13 @@ Screen numbers refer to the screen gallery (`ScreenGalleryTest`).
 - The per-set labels "In the spreadsheet" and "Not in the spreadsheet yet" are removed;
   the sync icon (1a) already tells whether anything waits.
 - A done set shows only weight × reps; tapping it still opens the edit dialog.
+
+## 2. Bottom tabs (feature 004)
+
+- A bar at the bottom with Today, History, Exercises and Money, as in the YouTube app; each tab
+  keeps its place, the bar hides while logging.
+- History takes the "Workouts" and "Enter a past workout" links off Today (which also removes the
+  gap left by 1a).
+- Exercises: add, rename and delete exercises from the phone. Money: the balance with a "calculated
+  once a day" note, the payments, and Add payment.
+- Spec, plan and tasks: `specs/004-bottom-tab-navigation/`.

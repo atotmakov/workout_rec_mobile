@@ -160,25 +160,25 @@ and lands in the money tab after sync; the balance note reflects the automation 
 
 ### Tests for User Story 4 ⚠️
 
-- [ ] T048 [P] [US4] Write failing tests in `test/money/PaymentValuesTest.kt`: date not after today in the spreadsheet time zone, default today; workouts whole number 1–999; sum decimal ≥ 0, ≤ 9,999,999.99, up to 2 decimals, "1 500,50" and "1500.5" parsed; date → serial (whole days from 1899-12-30) (research R8)
-- [ ] T049 [P] [US4] Write failing tests in `test/money/BalanceNoteTest.kt`: `On` → last calculation time; `Stopped` → date + stopped + link; `NotEnabled` / `ScriptMissing` → not updated + link; extra line when a pending payment exists or a payment date is after `lastDailyRun` (research R7)
-- [ ] T050 [P] [US4] Write failing tests in `test/google/MoneyClientTest.kt` (MockWebServer) for call 23: exact query (ranges, `includeGridData`, `fields`); only existing tabs requested, missing → `MissingTab`; payment rows with `rowIndex`, non-numbers → null; balance number or null; metadata map; error mapping per contracts/sheets.md
-- [ ] T051 [P] [US4] Write failing tests in `test/workout/DisplayModelMoneyTest.kt`: payments = cache + pending (waiting), newest date first, same date pending first then higher row first; totals count only numbers
-- [ ] T052 [P] [US4] Write failing sync tests in `test/sync/LogSyncPaymentsTest.kt`: money read only with pending payments and an existing money tab; content matching per research R5 (two identical pending payments vs one existing row → one append); `appendCells` to money with serial, workouts, sum; money tab missing → payments kept, sets still synced; after a write a money refresh is requested
-- [ ] T053 [P] [US4] Write failing tests in `test/money/MoneyRefresherTest.kt`: refresh on open when older than 5 min, on pull always, once per app start, after a sync that wrote payments; never under the sync mutex; failures stored in `money_summary.error` with cached values kept
-- [ ] T054 [P] [US4] Write failing Compose UI tests in `androidTest/money/MoneyScreenTest.kt`: `money_balance` positive and negative ("workouts owed", error colour), `money_balance_note` variants with link, `money_downloaded`, `money_totals`, `money_payment_<i>` order and waiting mark, `money_empty`, `money_error`; `money_add` → `payment_dialog` with defaults (today, last workouts/sum), future dates disabled, Save disabled while invalid
+- [X] T048 [P] [US4] Write failing tests in `test/money/PaymentValuesTest.kt`: date not after today in the spreadsheet time zone, default today; workouts whole number 1–999; sum decimal ≥ 0, ≤ 9,999,999.99, up to 2 decimals, "1 500,50" and "1500.5" parsed; date → serial (whole days from 1899-12-30) (research R8)
+- [X] T049 [P] [US4] Write failing tests in `test/money/BalanceNoteTest.kt`: `On` → last calculation time; `Stopped` → date + stopped + link; `NotEnabled` / `ScriptMissing` → not updated + link; extra line when a pending payment exists or a payment date is after `lastDailyRun` (research R7)
+- [X] T050 [P] [US4] Write failing tests in `test/google/MoneyClientTest.kt` (MockWebServer) for call 23: exact query (ranges, `includeGridData`, `fields`); only existing tabs requested, missing → `MissingTab`; payment rows with `rowIndex`, non-numbers → null; balance number or null; metadata map; error mapping per contracts/sheets.md
+- [X] T051 [P] [US4] Write failing tests in `test/workout/DisplayModelMoneyTest.kt`: payments = cache + pending (waiting), newest date first, same date pending first then higher row first; totals count only numbers
+- [X] T052 [P] [US4] Write failing sync tests in `test/sync/LogSyncPaymentsTest.kt`: money read only with pending payments and an existing money tab; content matching per research R5 (two identical pending payments vs one existing row → one append); `appendCells` to money with serial, workouts, sum; money tab missing → payments kept, sets still synced; after a write a money refresh is requested
+- [X] T053 [P] [US4] Write failing tests in `test/money/MoneyRefresherTest.kt`: refresh on open when older than 5 min, on pull always, once per app start, after a sync that wrote payments; never under the sync mutex; failures stored in `money_summary.error` with cached values kept — *The 5-minute freshness applies only after a successful download; after a failure, opening Money tries again at once.*
+- [X] T054 [P] [US4] Write failing Compose UI tests in `androidTest/money/MoneyScreenTest.kt`: `money_balance` positive and negative ("workouts owed", error colour), `money_balance_note` variants with link, `money_downloaded`, `money_totals`, `money_payment_<i>` order and waiting mark, `money_empty`, `money_error`; `money_add` → `payment_dialog` with defaults (today, last workouts/sum), future dates disabled, Save disabled while invalid
 
 ### Implementation for User Story 4
 
-- [ ] T055 [P] [US4] Implement `main/money/PaymentValues.kt` so T048 passes
-- [ ] T056 [P] [US4] Implement `main/money/BalanceNote.kt` (uses `main/automation/AutomationStatus.kt`) so T049 passes
-- [ ] T057 [P] [US4] Implement `main/google/MoneyClient.kt` (call 23) so T050 passes
-- [ ] T058 [US4] Extend `main/workout/DisplayModel.kt` and `main/workout/data/WorkoutRepository.kt` (`payments`, `moneySummary` flows, `addPayment`) so T051 passes
-- [ ] T059 [US4] Extend `main/sync/LogSync.kt` and `main/google/SheetsLogClient.kt` with payment matching and money `appendCells` so T052 passes
-- [ ] T060 [US4] Implement `main/money/MoneyRefresher.kt` and start it from `main/AppContainer.kt` (app start) so T053 passes
-- [ ] T061 [US4] Implement `main/money/MoneyViewModel.kt`, `MoneyScreen.kt`, `PaymentDialog.kt` (Material 3 `DatePicker` with future dates disabled); "Enable automation" link reuses `main/home/AutomationReminder.kt`'s action; wire into the money graph in `main/nav/TabGraphs.kt` so T054 passes
-- [ ] T062 [US4] Strings for Money (balance, owed, notes, totals, dialog labels and errors, empty and error states) in both `strings.xml`
-- [ ] T063 [P] [US4] Gallery shots `60-money`, `61-money-owed`, `62-money-automation-off`, `63-payment-dialog`, `64-money-empty` in `debug/gallery/ScreenGallery.kt`; render
+- [X] T055 [P] [US4] Implement `main/money/PaymentValues.kt` so T048 passes
+- [X] T056 [P] [US4] Implement `main/money/BalanceNote.kt` (uses `main/automation/AutomationStatus.kt`) so T049 passes
+- [X] T057 [P] [US4] Implement `main/google/MoneyClient.kt` (call 23) so T050 passes
+- [X] T058 [US4] Extend `main/workout/DisplayModel.kt` and `main/workout/data/WorkoutRepository.kt` (`payments`, `moneySummary` flows, `addPayment`) so T051 passes
+- [X] T059 [US4] Extend `main/sync/LogSync.kt` and `main/google/SheetsLogClient.kt` with payment matching and money `appendCells` so T052 passes
+- [X] T060 [US4] Implement `main/money/MoneyRefresher.kt` and start it from `main/AppContainer.kt` (app start) so T053 passes
+- [X] T061 [US4] Implement `main/money/MoneyViewModel.kt`, `MoneyScreen.kt`, `PaymentDialog.kt` (Material 3 `DatePicker` with future dates disabled); "Enable automation" link reuses `main/home/AutomationReminder.kt`'s action; wire into the money graph in `main/nav/TabGraphs.kt` so T054 passes
+- [X] T062 [US4] Strings for Money (balance, owed, notes, totals, dialog labels and errors, empty and error states) in both `strings.xml`
+- [X] T063 [P] [US4] Gallery shots `60-money`, `61-money-owed`, `62-money-automation-off`, `63-payment-dialog`, `64-money-empty` in `debug/gallery/ScreenGallery.kt`; render — *`41-money-coming-soon` and the "Coming soon" screen are gone: no tab uses it any more.*
 
 **Checkpoint**: all four tabs complete.
 
@@ -186,8 +186,8 @@ and lands in the money tab after sync; the balance note reflects the automation 
 
 ## Phase 7: Polish & Cross-Cutting
 
-- [ ] T064 [P] Check the bar at 360 dp and font scale 2.0 in RU and EN in the gallery (add a large-font shot `42-tabs-large-font-ru`) (SC-006)
-- [ ] T065 [P] Update `README.md` (app overview: tabs, adding exercises and payments in the app) and `design/redesign-brief.md` (idea F done → point 2 "Bottom tabs")
+- [X] T064 [P] Check the bar at 360 dp and font scale 2.0 in RU and EN in the gallery (add a large-font shot `42-tabs-large-font-ru`) (SC-006) — *Shot `42-tabs-large-font` (360 dp, font scale 2.0). Bar labels now stop growing at 1.3× so all four stay readable; only "Упражнения" is shortened at 360 dp.*
+- [X] T065 [P] Update `README.md` (app overview: tabs, adding exercises and payments in the app) and `design/redesign-brief.md` (idea F done → point 2 "Bottom tabs")
 - [ ] T066 Publish the before/after gallery as an artifact for review
 - [ ] T067 Run the device scenarios in [quickstart.md](quickstart.md) on the emulator and the test phone, including the SC-002 timing in scenario 2; record results in `specs/004-bottom-tab-navigation/quickstart-results.md`
 - [ ] T068 Final CI green; merge; confirm the internal-track build and the 1 → 2 upgrade from the Play build on the phone

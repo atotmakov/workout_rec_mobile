@@ -1,5 +1,7 @@
 package com.workoutrec
 
+import com.workoutrec.google.MoneyClient
+import com.workoutrec.money.MoneyRefresher
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
@@ -126,6 +128,15 @@ class AppContainer(context: Context, val monitoringSettings: MonitoringSettings)
     val syncStatusStore: SyncStatusStore = DataStoreSyncStatusStore(appContext.syncDataStore)
     val sheetsLogClient = SheetsLogClient(googleHttp)
 
+    /** Feature 004 US4: the money and balance tabs (call 23), apart from the set sync. */
+    val moneyRefresher: MoneyRefresher by lazy {
+        MoneyRefresher(
+            MoneyClient(googleHttp),
+            workoutRepository,
+            sheet = { syncStatusStore.current().sheet?.takeIf { it.spreadsheetId == settingsStore.binding.first()?.spreadsheetId } },
+        )
+    }
+
     /** Lives as long as the process; sync runs outlive screens (research R2). */
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
@@ -137,6 +148,8 @@ class AppContainer(context: Context, val monitoringSettings: MonitoringSettings)
             spreadsheetId = { settingsStore.binding.first()?.spreadsheetId },
             log = diagnosticLog::write,
             monitoring = monitoring,
+            // Feature 004 research R6: the Money tab shows the new payments' rows.
+            onPaymentsWritten = { moneyRefresher.refresh() },
         ),
         appScope,
         enqueueBackground = {

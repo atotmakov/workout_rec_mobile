@@ -1,11 +1,11 @@
 package com.workoutrec
 
+import com.workoutrec.money.MoneyRoute
 import com.workoutrec.exercises.ExerciseDetailRoute
 import com.workoutrec.exercises.ExercisesRoute
 import com.workoutrec.nav.logToday
 import androidx.navigation.NavDestination.Companion.hierarchy
 import com.workoutrec.home.AccountActions
-import com.workoutrec.nav.PlaceholderTabScreen
 import com.workoutrec.nav.Tab
 import com.workoutrec.nav.TabRoutes
 import com.workoutrec.nav.TabScaffold
@@ -131,6 +131,9 @@ private fun AppNavHost(container: AppContainer) {
             Tab.entries.forEach { navController.clearBackStack(it.route) }
         }
     }
+
+    // Feature 004 FR-010: money and balance download once per app start, in the background.
+    LaunchedEffect(state) { if (state == SetupState.Ready) container.moneyRefresher.onAppStart() }
 
     val account by container.settingsStore.account.collectAsState(initial = null)
     val waiting by container.workoutRepository.waitingCount.collectAsState(initial = 0)
@@ -261,7 +264,9 @@ private fun AppNavHost(container: AppContainer) {
                         }
                     },
                     money = {
-                        composable(TabRoutes.MONEY) { PlaceholderTabScreen(R.string.tab_money, actions = accountActions) }
+                        composable(TabRoutes.MONEY) {
+                            MoneyRoute(container, onEnableAutomation = { viewModel.onAction(SetupAction.FixAutomation) }, actions = accountActions)
+                        }
                     },
                 )
             }

@@ -2,6 +2,11 @@ package com.workoutrec.sync
 
 import com.workoutrec.google.ApiError
 import com.workoutrec.google.DrillsWrite
+import com.workoutrec.google.MoneyAppend
+import com.workoutrec.google.MoneyWrite
+import com.workoutrec.money.PaymentValues
+import com.workoutrec.workout.PendingPayment
+import kotlin.math.abs
 import com.workoutrec.google.LogAndDrills
 import com.workoutrec.google.LogAppend
 import com.workoutrec.google.LogEdit
@@ -46,6 +51,9 @@ interface LogSyncStore {
     /** Feature 004: waiting exercise changes, oldest first. */
     suspend fun exerciseChangesNow(): List<ExerciseChange> = emptyList()
 
+    /** Feature 004: payments added in the app and not in the money tab yet. */
+    suspend fun paymentsNow(): List<PendingPayment> = emptyList()
+
     /**
      * One transaction: replace caches, remove handled changes, add notices (data-model "Sync run");
      * feature 004: remove handled exercise changes and give waiting sets of a dropped rename their
@@ -58,6 +66,7 @@ interface LogSyncStore {
         notices: List<SyncNotice>,
         doneExerciseIds: Collection<String> = emptyList(),
         renamesBack: Map<String, String> = emptyMap(),
+        donePaymentIds: Collection<String> = emptyList(),
     )
 
     /** The bound spreadsheet changed: drop caches, edits, deletes and notices; keep new sets (research R13). */
@@ -81,6 +90,8 @@ class LogSync(
     private val log: (String) -> Unit = {},
     /** Feature 003: handled errors as non-fatal events (FR-005). */
     private val monitoring: Monitoring = NoMonitoring,
+    /** Feature 004 research R6: payments reached the money tab; the Money tab downloads again. */
+    private val onPaymentsWritten: suspend () -> Unit = {},
 ) {
 
     /** Never throws for Google or network errors; they become [SyncOutcome.Failed] (contracts "Errors"). */
@@ -119,7 +130,9 @@ class LogSync(
         val sheet = profile.section("info").use { sheetInfo(id) }
         val zone = zoneOf(sheet.timeZone)
 
-        var read = profile.section("read").use { sheets.readLogAndDrills(id) }
+        // Feature 004 research R5: payments are matched by content, so the money tab is read when some wait.
+        val payments = store.paymentsNow().sortedBy { it.createdAt }.takeIf { sheet.moneySheetId != null }.orEmpty()
+        var read = profile.section("read").use { sheets.readLogAndDrills(id, withMoney = payments.isNotEmpty()) }
         var rows = rowsOf(read, zone)
         // Feature 004 research R5: exercise changes first, so a dropped rename's sets keep the old name.
         val exercisePlan = ExercisePlan.of(store.exerciseChangesNow().sortedBy { it.createdAt }, read.drills, read.log)
@@ -171,7 +184,22 @@ class LogSync(
         }
 
         // Step 5: one atomic write, then a fresh read for the caches.
-        val wrote = appends.isNotEmpty() || deletes.isNotEmpty() || edits.isNotEmpty() || exercisePlan.writes
+        val paymentsDone = mutableListOf<String>()
+        val paymentAppends = mutableListOf<PendingPayment>()
+        val existing = read.money.map { Triple(it.serial, it.workouts, it.sum) }.toMutableList()
+        payments.forEach { payment ->
+            val match = existing.firstOrNull { (serial, workouts, sum) ->
+                serial == PaymentValues.serial(payment.date) && workouts == payment.workouts.toDouble() &&
+                    sum != null && abs(sum - payment.sumHundredths / 100.0) < 0.005
+            }
+            if (match != null) {
+                existing.remove(match)
+                paymentsDone += payment.id
+            } else {
+                paymentAppends += payment
+            }
+        }
+        val wrote = appends.isNotEmpty() || deletes.isNotEmpty() || edits.isNotEmpty() || exercisePlan.writes || paymentAppends.isNotEmpty()
         val exercisesDone = exercisePlan.done.toMutableList()
         if (wrote) {
             profile.section("write").use {
@@ -184,9 +212,13 @@ class LogSync(
                     drills = exercisePlan.takeIf { it.writes }?.let { plan ->
                         DrillsWrite(sheet.drillsSheetId ?: 0, sheet.recSheetId, plan.deletes, plan.renames, plan.replaces, plan.appends)
                     },
+                    money = sheet.moneySheetId?.takeIf { paymentAppends.isNotEmpty() }?.let { moneySheetId ->
+                        MoneyWrite(moneySheetId, paymentAppends.map { MoneyAppend(PaymentValues.serial(it.date), it.workouts, it.sumHundredths / 100.0) })
+                    },
                 )
                 done += written + appends.map { it.id }
                 exercisesDone += exercisePlan.written
+                paymentsDone += paymentAppends.map { it.id }
                 read = sheets.readLogAndDrills(id)
                 rows = rowsOf(read, zone)
             }
@@ -194,9 +226,10 @@ class LogSync(
 
         // Step 6.
         profile.section("commit").use {
-            store.commit(read.drills.map { Exercise(it.name, it.muscleGroup) }, rows, done, notices, exercisesDone, exercisePlan.renamesBack)
+            store.commit(read.drills.map { Exercise(it.name, it.muscleGroup) }, rows, done, notices, exercisesDone, exercisePlan.renamesBack, paymentsDone)
             status.markSuccess(now())
         }
+        if (paymentAppends.isNotEmpty()) onPaymentsWritten()
         log("sync: done, wrote ${appends.size} new, ${edits.size} edited, ${deletes.size} deleted, ${exercisePlan.written.size} exercise changes")
         return SyncOutcome.Synced(wrote)
     }

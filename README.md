@@ -74,19 +74,29 @@ Either step can be skipped for now; a reminder stays on the main screen until bo
 
 ## Logging workouts
 
-The main screen is today's workout (spec [002](specs/002-log-workout/spec.md)).
+A bar at the bottom has four tabs (spec [004](specs/004-bottom-tab-navigation/spec.md)): **Today**,
+**History**, **Exercises** and **Money**. Today is today's workout (spec
+[002](specs/002-log-workout/spec.md)).
 
 - **Add exercise** lists the exercises of the `drills` tab (muscle group in column A, exercise in
-  column B); add exercises there in the web UI. Pick one, choose how many sets, then confirm each
+  column B). Pick one, choose how many sets, then confirm each
   set. Weight and reps start from your previous workout with that exercise (shown in gray until
   you change them); − / + change the weight by 0.5 kg and the reps by 1.
 - Every confirmed set is saved on the phone at once and appears as a row in the `log` tab (date
   and time, exercise, weight, reps) — right away when online, otherwise as soon as the phone is
-  online again, even if the app is closed. The main screen shows how many sets are waiting.
-- **Workouts** lists earlier days; tap a set (there, or in today's exercise) to change or delete
+  online again, even if the app is closed. The cloud icon in the top bar shows how many changes
+  are waiting; tap it for details and **Sync now**.
+- **History** lists earlier days; tap a set (there, or in today's exercise) to change or delete
   it, also when it is already in the spreadsheet or was typed in the web UI.
-- **Enter a past workout** adds a forgotten workout: date, start time and duration; the set times
+- **Enter a past workout** (the + in History) adds a forgotten workout: date, start time and duration; the set times
   are spread over the duration, so the daily job computes the right workout length.
+
+- **Exercises** adds, renames and deletes exercises in the `drills` tab, also offline. A rename
+  also renames the exercise in every `log` row and in the `rec` tab. Only exercises with no
+  logged sets can be deleted.
+- **Money** shows the paid workouts left (`balance` A1, calculated by the daily job) and the
+  payments of the `money` tab; **Add payment** adds a row there. A new payment changes the
+  balance at the next daily calculation.
 
 Troubleshooting:
 
@@ -95,6 +105,9 @@ Troubleshooting:
 | "Sign in again to sync" | Google access needs confirming; tap it and allow access |
 | "Can't sync: no connection" | Sets are safe on the phone; they sync when online |
 | A set "was changed in the spreadsheet…" | You and the web UI changed the same row; the spreadsheet version was kept |
+| "…was changed in the spreadsheet before your change reached it" (an exercise) | The exercise was renamed or removed in the web UI first; the spreadsheet version was kept |
+| "…has sets in the log, so it was not deleted" | The log has sets of that exercise, e.g. typed in the web UI |
+| "The balance is not updated" (Money) | The spreadsheet's daily automation is off; tap **Enable automation** |
 | "…its row there was not updated" | You deleted the first or last set of a day the daily job already counted; fix the `workout` row by hand if needed |
 
 ## Inspecting the automation status

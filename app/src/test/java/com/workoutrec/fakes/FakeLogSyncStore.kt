@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.StateFlow
 class FakeLogSyncStore(
     val pending: MutableList<PendingChange> = mutableListOf(),
     val exerciseChanges: MutableList<ExerciseChange> = mutableListOf(),
+    val payments: MutableList<com.workoutrec.workout.PendingPayment> = mutableListOf(),
 ) : LogSyncStore {
     var exercises: List<Exercise> = emptyList()
     var rows: List<LogRow> = emptyList()
@@ -30,6 +31,8 @@ class FakeLogSyncStore(
 
     override suspend fun exerciseChangesNow(): List<ExerciseChange> = exerciseChanges.toList()
 
+    override suspend fun paymentsNow(): List<com.workoutrec.workout.PendingPayment> = payments.toList()
+
     override suspend fun commit(
         exercises: List<Exercise>,
         rows: List<LogRow>,
@@ -37,7 +40,9 @@ class FakeLogSyncStore(
         notices: List<SyncNotice>,
         doneExerciseIds: Collection<String>,
         renamesBack: Map<String, String>,
+        donePaymentIds: Collection<String>,
     ) {
+        payments.removeAll { it.id in donePaymentIds }
         commits++
         this.exercises = exercises
         this.rows = rows
