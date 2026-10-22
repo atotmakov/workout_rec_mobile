@@ -32,6 +32,13 @@ App version in reports = `versionName` (`0.1.N`) and `versionCode` (`N`), where 
 Limits: non-fatals at most 1 per issue per 30 min and 20 per day per process (data-model
 `NonFatalLimiter`).
 
+**Feature 005** adds 12 non-fatal keys (money refresh, setup steps and check, sign-in,
+authorization, sync around a run, sign-out cleanup, sync log, create fallback, bad sheet data, bad
+saved state, and `no-connection` at INFO). Since 005, `sync-failed` and `token-failed` no longer
+cover no-connection failures, which go to `no-connection`; Google's error text is never sent; and
+info events have their own budget of 5 a day, so the 20 a day count only errors and warnings. See
+[005 contracts/issues.md](../../005-error-reporting-audit/contracts/issues.md).
+
 ## Never sent (FR-013)
 
 - Workout data: exercise names, weights, reps, set times, drafts.

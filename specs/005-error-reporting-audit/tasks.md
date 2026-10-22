@@ -179,9 +179,9 @@ in `DeviceState.kt` failed the guard with `diag/DeviceState.kt:81 Exception`.
 
 ## Phase 7: Polish & Cross-Cutting Concerns
 
-- [ ] T044 [P] Write `test/monitoring/ReportPrivacyTest.kt` (SC-003): run the US1–US3 failure scenarios with fixtures containing the exercise name `Bench press`, sum `1234.50`, email `tester@example.com` and token `ya29.test-token`; add a MockWebServer error reply that repeats the exercise name and sum for sync, money refresh and setup; assert no report's `details` or error messages (whole cause chain) contain any of them
-- [ ] T045 [P] Update feature 003 `specs/003-app-monitoring-tracer/contracts/monitoring.md` "Events" to point to `specs/005-error-reporting-audit/contracts/issues.md` for the new keys and the `SYNC_FAILED`/`TOKEN_FAILED` change
-- [ ] T046 [P] README.md "Monitoring" (or the nearest section): one paragraph on the reporting rule (report through `Monitoring.failure`/`nonFatal`, or list the site in `app/src/test/resources/normal-outcomes.txt` with a reason)
+- [X] T044 [P] Write `test/monitoring/ReportPrivacyTest.kt` (SC-003): run the US1–US3 failure scenarios with fixtures containing the exercise name `Bench press`, sum `1234.50`, email `tester@example.com` and token `ya29.test-token`; add a MockWebServer error reply that repeats the exercise name and sum for sync, money refresh and setup; assert no report's `details` or error messages (whole cause chain) contain any of them
+- [X] T045 [P] Update feature 003 `specs/003-app-monitoring-tracer/contracts/monitoring.md` "Events" to point to `specs/005-error-reporting-audit/contracts/issues.md` for the new keys and the `SYNC_FAILED`/`TOKEN_FAILED` change
+- [X] T046 [P] README.md "Monitoring" (or the nearest section): one paragraph on the reporting rule (report through `Monitoring.failure`/`nonFatal`, or list the site in `app/src/test/resources/normal-outcomes.txt` with a reason)
 - [ ] T047 Run `./gradlew :app:testDebugUnitTest :app:lintDebug :app:assembleDebug` locally; open the PR; CI green including `connectedDebugAndroidTest` unchanged (SC-004); merge per the standing rule
 - [ ] T048 Device quickstart #8–#12 on a build from master after the Play internal release: money tab renamed → `money-refresh-failed`; offline → one `no-connection`; cancel picker → nothing; test error → `diagnostics-test`; switch off → nothing (SC-006). Record results in `specs/005-error-reporting-audit/quickstart.md`
 
