@@ -1,0 +1,45 @@
+package fixture
+
+// Every site here passes: it reports or passes the error on.
+class Reporting(private val monitoring: Monitoring) {
+
+    fun direct() = try {
+        work()
+    } catch (e: IllegalStateException) {
+        monitoring.nonFatal(NonFatalIssue.SYNC_FAILED, e)
+    }
+
+    fun helper() = try {
+        work()
+    } catch (e: ApiError) {
+        monitoring.failure(NonFatalIssue.SYNC_FAILED, e, "sync")
+    }
+
+    fun callback(onBadValue: (String) -> Unit) = try {
+        work()
+    } catch (e: IllegalArgumentException) {
+        onBadValue("sync-phase")
+    }
+
+    fun bad() = try {
+        work()
+    } catch (e: DateTimeException) {
+        monitoring.badValue(NonFatalIssue.BAD_SHEET_DATA, "sheet-time-zone")
+    }
+
+    fun rethrow() = try {
+        work()
+    } catch (e: CancellationException) {
+        log("cancelled")
+        throw e
+    }
+
+    fun convert() = try {
+        work()
+    } catch (e: IOException) { throw Mapper.from(e) }
+
+    fun flow() = values.catch { e -> monitoring.nonFatal(NonFatalIssue.SYNC_FAILED, e) }
+
+    // A comment mentioning runCatching or catch (e: Exception) { } is not a site.
+    val text = "runCatching { catch (e: Exception) { } }"
+}

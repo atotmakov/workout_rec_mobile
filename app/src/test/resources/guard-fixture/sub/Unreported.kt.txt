@@ -1,0 +1,31 @@
+package fixture.sub
+
+// Sites here do not report; only the listed one passes.
+class Unreported {
+
+    fun swallowed() = try {
+        work()
+    } catch (e: IOException) {
+    }
+
+    fun tricky() = try {
+        work()
+    } catch (e: IllegalStateException) {
+        val brace = "{ ${if (flag) "}" else "{"} }"
+        // }
+        val c = '}'
+        fallback()
+    }
+
+    fun listed() = try {
+        parse()
+    } catch (e: DateTimeParseException) {
+        null
+    }
+
+    fun caught() = runCatching { work() }.getOrNull()
+
+    fun flow() = values.catch { emit(empty) }
+
+    val handler = CoroutineExceptionHandler { _, _ -> }
+}
