@@ -280,7 +280,8 @@ the last at 19:00, and that the next daily run adds a 60-minute workout row.
 - **FR-009**: Sync MUST write each set exactly once, including when a sync is interrupted and
   repeated.
 - **FR-010**: The app MUST show the sync state in one icon in the top bar of every screen that has
-  one: all synced, the number of sets waiting, or a sync running; a failing sync or a needed
+  one: all synced, the number of changes waiting (sets, and since feature 004 also exercise
+  changes and payments, 004 FR-012), or a sync running; a failing sync or a needed
   sign-in shows the waiting icon in a warning colour. Tapping it shows the reason, the last sync
   time and Sync now (or Sign in). Single sets carry no sync label (redesign brief 1a, 1b).
 - **FR-011**: When an exercise is picked, the app MUST show the most recent earlier day's sets for
@@ -298,8 +299,9 @@ the last at 19:00, and that the next daily run adds a 60-minute workout row.
 - **FR-013a**: Edits and deletions of sets already in the log tab MUST change or remove exactly
   that row and no other; they MUST work offline (saved on the phone and applied at the next
   sync), and when several changes are pending for one set only the final state is applied.
-- **FR-014**: Signing out or switching account (feature 001) with unsynced sets MUST first try to
-  sync, and MUST warn with the number of unsynced sets before discarding them.
+- **FR-014**: Signing out or switching account (feature 001) with unsynced changes MUST first try
+  to sync, and MUST warn with the number of unsynced changes (sets, exercise changes and payments,
+  004 FR-012) before discarding them.
 - **FR-015**: Conflict resolution between app and sheet edits (constitution III):
   - new sets are only appended and never overwrite, move or reorder existing rows;
   - an edit or deletion from the app is applied only if the row still has the values the app

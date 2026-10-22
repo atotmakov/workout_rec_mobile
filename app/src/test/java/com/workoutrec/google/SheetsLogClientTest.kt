@@ -41,7 +41,7 @@ class SheetsLogClientTest {
             ),
         )
         // sheetId 0 is omitted by proto3 JSON.
-        assertEquals(LogSheetInfo("Europe/Moscow", 0), client.logSheetInfo("id1"))
+        assertEquals(LogSheetInfo("Europe/Moscow", 0, drillsSheetId = 7), client.logSheetInfo("id1"))
         val url = server.takeRequest().requestUrl!!
         assertEquals("/v4/spreadsheets/id1", url.encodedPath)
         assertEquals("properties.timeZone,sheets.properties(sheetId,title)", url.queryParameter("fields"))
@@ -100,7 +100,44 @@ class SheetsLogClientTest {
             ),
             result.log,
         )
-        assertEquals(listOf(SheetDrill("back", "pull-up"), SheetDrill("", "plank"), SheetDrill("chest", "bench")), result.drills)
+        // Feature 004: drills keep their sheet row (row 2 → 1) for renames and deletes.
+        assertEquals(listOf(SheetDrill("back", "pull-up", 1), SheetDrill("", "plank", 2), SheetDrill("chest", "bench", 4)), result.drills)
+    }
+
+    // Feature 004 contracts/sheets.md call 20
+    @Test
+    fun `call 20 also returns the drills, rec, money and balance sheet ids`() = runTest {
+        server.enqueue(
+            MockResponse().setBody(
+                """{"properties":{"timeZone":"UTC"},"sheets":[
+                     {"properties":{"title":"log"}},{"properties":{"sheetId":7,"title":"drills"}},
+                     {"properties":{"sheetId":8,"title":"rec"}},{"properties":{"sheetId":9,"title":"money"}},
+                     {"properties":{"sheetId":10,"title":"balance"}}]}""",
+            ),
+        )
+        assertEquals(LogSheetInfo("UTC", 0, drillsSheetId = 7, recSheetId = 8, moneySheetId = 9, balanceSheetId = 10), client.logSheetInfo("id1"))
+    }
+
+    @Test
+    fun `call 20 reports missing optional tabs as null`() = runTest {
+        server.enqueue(MockResponse().setBody("""{"properties":{"timeZone":"UTC"},"sheets":[{"properties":{"sheetId":1,"title":"log"}},{"properties":{"sheetId":2,"title":"drills"}}]}"""))
+        assertEquals(LogSheetInfo("UTC", 1, drillsSheetId = 2), client.logSheetInfo("id1"))
+    }
+
+    // Feature 004 contracts/sheets.md call 21, research R5
+    @Test
+    fun `call 21 reads the money tab only when asked`() = runTest {
+        server.enqueue(
+            MockResponse().setBody(
+                """{"valueRanges":[{},{},{"values":[[46000, 8, 8000], ["", 4, 4000], [46030, "x", 12000.5]]}]}""",
+            ),
+        )
+        val result = client.readLogAndDrills("id1", withMoney = true)
+        assertEquals(listOf("log!A2:D", "drills!A2:B", "money!A2:C"), server.takeRequest().requestUrl!!.queryParameterValues("ranges"))
+        assertEquals(
+            listOf(SheetMoneyRow(1, 46000.0, 8.0, 8000.0), SheetMoneyRow(2, null, 4.0, 4000.0), SheetMoneyRow(3, 46030.0, null, 12000.5)),
+            result.money,
+        )
     }
 
     @Test

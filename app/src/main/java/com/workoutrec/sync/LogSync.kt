@@ -198,11 +198,12 @@ class LogSync(
         else -> SyncPhase.Failing(FailReason.OTHER)
     }
 
-    /** Call 20, once per spreadsheet (research R8). */
+    /** Call 20, once per spreadsheet (research R8), and again for a cache from before feature 004. */
     private suspend fun sheetInfo(id: String): SheetInfoCache {
-        status.current().sheet?.takeIf { it.spreadsheetId == id }?.let { return it }
+        status.current().sheet?.takeIf { it.spreadsheetId == id && it.drillsSheetId != null }?.let { return it }
         val info = sheets.logSheetInfo(id)
-        return SheetInfoCache(id, info.timeZone, info.logSheetId).also { status.setSheet(it) }
+        return SheetInfoCache(id, info.timeZone, info.logSheetId, info.drillsSheetId, info.recSheetId, info.moneySheetId, info.balanceSheetId)
+            .also { status.setSheet(it) }
     }
 
     private fun zoneOf(timeZone: String): ZoneId =

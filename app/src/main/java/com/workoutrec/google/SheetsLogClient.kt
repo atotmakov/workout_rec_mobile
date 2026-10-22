@@ -15,16 +15,27 @@ import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.Request
 
-/** Call 20 result. */
-data class LogSheetInfo(val timeZone: String, val logSheetId: Int)
+/** Call 20 result; feature 004 adds the drills, rec, money and balance sheets (null when missing). */
+data class LogSheetInfo(
+    val timeZone: String,
+    val logSheetId: Int,
+    val drillsSheetId: Int = 0,
+    val recSheetId: Int? = null,
+    val moneySheetId: Int? = null,
+    val balanceSheetId: Int? = null,
+)
 
 /** A valid set row of the log tab; [rowIndex] is the 0-based sheet row (row 2 → 1). */
 data class SheetLogRow(val rowIndex: Int, val serial: Double, val exercise: String, val weight: Double, val reps: Int)
 
-data class SheetDrill(val muscleGroup: String, val name: String)
+/** A drills row; [rowIndex] is the 0-based sheet row (row 2 → 1), for renames and deletes (feature 004). */
+data class SheetDrill(val muscleGroup: String, val name: String, val rowIndex: Int = 0)
 
-/** Call 21 result. */
-data class LogAndDrills(val log: List<SheetLogRow>, val drills: List<SheetDrill>)
+/** A money row as read for matching payments (feature 004 research R5); null cells were not numbers. */
+data class SheetMoneyRow(val rowIndex: Int, val serial: Double?, val workouts: Double?, val sum: Double?)
+
+/** Call 21 result; [money] only when asked for. */
+data class LogAndDrills(val log: List<SheetLogRow>, val drills: List<SheetDrill>, val money: List<SheetMoneyRow> = emptyList())
 
 data class LogEdit(val rowIndex: Int, val exercise: String, val weight: Double, val reps: Int)
 
@@ -36,7 +47,7 @@ class MissingTabException(val tab: String) : Exception("Missing tab $tab")
 /** Sheets calls 20–22 (contracts/sheets-log.md). */
 interface SheetsLogApi {
     suspend fun logSheetInfo(spreadsheetId: String): LogSheetInfo
-    suspend fun readLogAndDrills(spreadsheetId: String): LogAndDrills
+    suspend fun readLogAndDrills(spreadsheetId: String, withMoney: Boolean = false): LogAndDrills
     suspend fun writeLog(
         spreadsheetId: String,
         logSheetId: Int,
@@ -74,14 +85,22 @@ class SheetsLogClient(
         val response = GoogleJson.decodeFromString<InfoResponse>(http.execute(Request.Builder().url(url).build()))
         val sheetIds = response.sheets.associate { it.properties.title to it.properties.sheetId }
         listOf(LOG, DRILLS).firstOrNull { it !in sheetIds }?.let { throw MissingTabException(it) }
-        return LogSheetInfo(response.properties.timeZone, sheetIds.getValue(LOG))
+        return LogSheetInfo(
+            timeZone = response.properties.timeZone,
+            logSheetId = sheetIds.getValue(LOG),
+            drillsSheetId = sheetIds.getValue(DRILLS),
+            recSheetId = sheetIds[REC],
+            moneySheetId = sheetIds[MONEY],
+            balanceSheetId = sheetIds[BALANCE],
+        )
     }
 
     /** Call 21. */
-    override suspend fun readLogAndDrills(spreadsheetId: String): LogAndDrills {
+    override suspend fun readLogAndDrills(spreadsheetId: String, withMoney: Boolean): LogAndDrills {
         val url = spreadsheets().addPathSegment("$spreadsheetId").addPathSegment("values:batchGet")
             .addQueryParameter("ranges", "$LOG!A2:D")
             .addQueryParameter("ranges", "$DRILLS!A2:B")
+            .apply { if (withMoney) addQueryParameter("ranges", "$MONEY!A2:C") }
             .addQueryParameter("valueRenderOption", "UNFORMATTED_VALUE")
             .addQueryParameter("dateTimeRenderOption", "SERIAL_NUMBER")
             .addQueryParameter("majorDimension", "ROWS")
@@ -89,11 +108,15 @@ class SheetsLogClient(
         val response = GoogleJson.decodeFromString<BatchGetResponse>(http.execute(Request.Builder().url(url).build()))
         val logValues = response.valueRanges.getOrNull(0)?.values.orEmpty()
         val drillValues = response.valueRanges.getOrNull(1)?.values.orEmpty()
+        val moneyValues = response.valueRanges.getOrNull(2)?.values.orEmpty()
         return LogAndDrills(
             log = logValues.mapIndexedNotNull { i, cells -> logRow(i + 1, cells) },
-            drills = drillValues.mapNotNull { cells ->
+            drills = drillValues.mapIndexedNotNull { i, cells ->
                 val name = cells.text(1)
-                if (name.isEmpty()) null else SheetDrill(cells.text(0), name)
+                if (name.isEmpty()) null else SheetDrill(cells.text(0), name, i + 1)
+            },
+            money = moneyValues.mapIndexedNotNull { i, cells ->
+                if (cells.isEmpty()) null else SheetMoneyRow(i + 1, cells.number(0), cells.number(1), cells.number(2))
             },
         )
     }
@@ -164,6 +187,9 @@ class SheetsLogClient(
     private companion object {
         const val LOG = "log"
         const val DRILLS = "drills"
+        const val REC = "rec"
+        const val MONEY = "money"
+        const val BALANCE = "balance"
 
         /** A set row: A is a number, B is not blank, C is a number or blank (0), D is a whole number ≥ 1. */
         fun logRow(rowIndex: Int, cells: List<JsonElement>): SheetLogRow? {

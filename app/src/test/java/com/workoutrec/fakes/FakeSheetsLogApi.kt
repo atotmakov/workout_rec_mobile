@@ -18,6 +18,10 @@ import kotlinx.coroutines.awaitCancellation
 class FakeSheetsLogApi(
     var timeZone: String = "UTC",
     var logSheetId: Int = 0,
+    var drillsSheetId: Int = 1,
+    var recSheetId: Int? = null,
+    var moneySheetId: Int? = null,
+    var balanceSheetId: Int? = null,
     var tabs: Set<String> = setOf("log", "drills"),
     val log: MutableList<Cells> = mutableListOf(),
     var drills: List<SheetDrill> = emptyList(),
@@ -52,10 +56,10 @@ class FakeSheetsLogApi(
         calls += "info:$spreadsheetId"
         maybeFail("info")
         listOf("log", "drills").firstOrNull { it !in tabs }?.let { throw MissingTabException(it) }
-        return LogSheetInfo(timeZone, logSheetId)
+        return LogSheetInfo(timeZone, logSheetId, drillsSheetId, recSheetId, moneySheetId, balanceSheetId)
     }
 
-    override suspend fun readLogAndDrills(spreadsheetId: String): LogAndDrills {
+    override suspend fun readLogAndDrills(spreadsheetId: String, withMoney: Boolean): LogAndDrills {
         calls += "read:$spreadsheetId"
         maybeFail("read")
         return LogAndDrills(

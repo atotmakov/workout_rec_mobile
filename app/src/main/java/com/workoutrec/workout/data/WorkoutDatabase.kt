@@ -1,6 +1,7 @@
 package com.workoutrec.workout.data
 
 import android.content.Context
+import androidx.room.AutoMigration
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
@@ -13,9 +14,15 @@ import androidx.room.RoomDatabase
         PendingChangeEntity::class,
         PastWorkoutDraftEntity::class,
         SyncNoticeEntity::class,
+        PendingExerciseChangeEntity::class,
+        PendingPaymentEntity::class,
+        PaymentRowEntity::class,
+        MoneySummaryEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = true,
+    // Feature 004 research R9: version 2 only adds tables.
+    autoMigrations = [AutoMigration(from = 1, to = 2)],
 )
 abstract class WorkoutDatabase : RoomDatabase() {
 

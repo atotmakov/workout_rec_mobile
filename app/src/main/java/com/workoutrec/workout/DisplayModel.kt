@@ -53,6 +53,10 @@ object DisplayModel {
 
     fun pendingCount(pending: List<PendingChange>): Int = pending.count { it.draftId == null }
 
+    /** Feature 004 FR-012: everything waiting on the phone, for the sync icon and the sign-out warning. */
+    fun waitingCount(pending: List<PendingChange>, exerciseChanges: Int, payments: Int): Int =
+        pendingCount(pending) + exerciseChanges + payments
+
     private fun PendingChange.toDisplay() = DisplaySet(key, SyncState.NOT_SYNCED, SetRef.Pending(id))
 }
 

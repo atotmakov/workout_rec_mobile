@@ -34,6 +34,11 @@ class WorkoutRepository(
 
     val pending: Flow<List<PendingChange>> = dao.pending().map { list -> list.map { it.toDomain() } }
 
+    /** Sets, exercise changes and payments not in the spreadsheet yet (feature 004 FR-012). */
+    val waitingCount: Flow<Int> = combine(pending, dao.exerciseChanges(), dao.pendingPayments()) { sets, exercises, payments ->
+        DisplayModel.waitingCount(sets, exercises.size, payments.size)
+    }
+
     /** Cached log with pending changes applied (research R9). */
     override val displaySets: Flow<List<DisplaySet>> =
         combine(dao.logRows(), pending) { rows, changes -> DisplayModel.sets(rows.map { it.toDomain() }, changes) }

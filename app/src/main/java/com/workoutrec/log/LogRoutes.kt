@@ -70,10 +70,10 @@ val LocalSyncSignIn = staticCompositionLocalOf<() -> Unit> { {} }
 @Composable
 fun SyncStatusAction(container: AppContainer) {
     val status by container.syncStatusStore.status.collectAsState(initial = SyncStatus())
-    val pending by container.workoutRepository.pending.collectAsState(initial = emptyList())
+    val waiting by container.workoutRepository.waitingCount.collectAsState(initial = 0)
     val scope = rememberCoroutineScope()
     SyncStatusButton(
-        pendingCount = DisplayModel.pendingCount(pending),
+        pendingCount = waiting,
         phase = status.phase,
         lastSuccessAt = status.lastSuccessAt,
         zone = status.zone(),

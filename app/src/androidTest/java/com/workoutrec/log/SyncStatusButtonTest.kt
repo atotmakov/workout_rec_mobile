@@ -42,6 +42,10 @@ class SyncStatusButtonTest {
     fun saysHowManySetsWait() {
         show(pendingCount = 3, phase = SyncPhase.Idle)
         compose.onNodeWithContentDescription(context.resources.getQuantityString(R.plurals.sync_pending, 3, 3)).assertIsDisplayed()
+        // Feature 004 FR-012: the count includes exercise changes and payments.
+        if (context.resources.configuration.locales[0].language == "en") {
+            compose.onNodeWithContentDescription("3 changes not in the spreadsheet yet").assertIsDisplayed()
+        }
     }
 
     @Test

@@ -70,7 +70,6 @@ import com.workoutrec.setup.SetupProgressScreen
 import com.workoutrec.setup.SetupState
 import com.workoutrec.setup.SetupViewModel
 import com.workoutrec.ui.theme.WorkoutRecTheme
-import com.workoutrec.workout.DisplayModel
 import java.time.LocalDate
 import kotlinx.coroutines.launch
 
@@ -131,7 +130,7 @@ private fun AppNavHost(container: AppContainer) {
     }
 
     val account by container.settingsStore.account.collectAsState(initial = null)
-    val pending by container.workoutRepository.pending.collectAsState(initial = emptyList())
+    val waiting by container.workoutRepository.waitingCount.collectAsState(initial = 0)
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     // The phone's sets belong to this account's spreadsheet; they go when the account does.
@@ -154,7 +153,7 @@ private fun AppNavHost(container: AppContainer) {
                 account = it,
                 onSwitchAccount = onSwitchAccount,
                 onSignOut = onSignOut,
-                unsyncedCount = DisplayModel.pendingCount(pending),
+                unsyncedCount = waiting,
                 // Research R13: try to sync first, so the warning counts only what is really left.
                 onMenuOpened = container.syncScheduler::requestSync,
                 onShareLog = onShareLog,
@@ -183,7 +182,7 @@ private fun AppNavHost(container: AppContainer) {
                                     account = it,
                                     onSwitchAccount = onSwitchAccount,
                                     onSignOut = onSignOut,
-                                    unsyncedCount = DisplayModel.pendingCount(pending),
+                                    unsyncedCount = waiting,
                                     onMenuOpened = container.syncScheduler::requestSync,
                                     onShareLog = onShareLog,
                                     diagnostics = diagnosticsMenuState(container),

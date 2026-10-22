@@ -21,7 +21,16 @@ sealed interface SyncPhase {
 }
 
 /** Call 20 values cached per spreadsheet (research R8). */
-data class SheetInfoCache(val spreadsheetId: String, val timeZone: String, val logSheetId: Int)
+data class SheetInfoCache(
+    val spreadsheetId: String,
+    val timeZone: String,
+    val logSheetId: Int,
+    /** Feature 004; null in a cache written before it, which makes the sync read call 20 again. */
+    val drillsSheetId: Int? = null,
+    val recSheetId: Int? = null,
+    val moneySheetId: Int? = null,
+    val balanceSheetId: Int? = null,
+)
 
 /** The last background sync run, shown while sets wait (quickstart-results.md issue 1). */
 data class BackgroundRun(val at: Long, val result: String) {
@@ -64,6 +73,10 @@ class DataStoreSyncStatusStore(private val dataStore: DataStore<Preferences>) : 
     private val spreadsheetKey = stringPreferencesKey("sync.spreadsheetId")
     private val timeZoneKey = stringPreferencesKey("sync.timeZone")
     private val logSheetKey = intPreferencesKey("sync.logSheetId")
+    private val drillsSheetKey = intPreferencesKey("sync.drillsSheetId")
+    private val recSheetKey = intPreferencesKey("sync.recSheetId")
+    private val moneySheetKey = intPreferencesKey("sync.moneySheetId")
+    private val balanceSheetKey = intPreferencesKey("sync.balanceSheetId")
     private val backgroundAtKey = longPreferencesKey("sync.background.at")
     private val backgroundResultKey = stringPreferencesKey("sync.background.result")
 
@@ -76,7 +89,7 @@ class DataStoreSyncStatusStore(private val dataStore: DataStore<Preferences>) : 
             lastSuccessAt = prefs[lastSuccessKey],
             background = prefs[backgroundAtKey]?.let { at -> BackgroundRun(at, prefs[backgroundResultKey].orEmpty()) },
             sheet = if (spreadsheetId != null && timeZone != null && logSheetId != null) {
-                SheetInfoCache(spreadsheetId, timeZone, logSheetId)
+                SheetInfoCache(spreadsheetId, timeZone, logSheetId, prefs[drillsSheetKey], prefs[recSheetKey], prefs[moneySheetKey], prefs[balanceSheetKey])
             } else {
                 null
             },
@@ -100,10 +113,17 @@ class DataStoreSyncStatusStore(private val dataStore: DataStore<Preferences>) : 
                 it.remove(spreadsheetKey)
                 it.remove(timeZoneKey)
                 it.remove(logSheetKey)
+                listOf(drillsSheetKey, recSheetKey, moneySheetKey, balanceSheetKey).forEach { key -> it.remove(key) }
             } else {
                 it[spreadsheetKey] = sheet.spreadsheetId
                 it[timeZoneKey] = sheet.timeZone
                 it[logSheetKey] = sheet.logSheetId
+                mapOf(
+                    drillsSheetKey to sheet.drillsSheetId,
+                    recSheetKey to sheet.recSheetId,
+                    moneySheetKey to sheet.moneySheetId,
+                    balanceSheetKey to sheet.balanceSheetId,
+                ).forEach { (key, value) -> if (value == null) it.remove(key) else it[key] = value }
             }
         }
     }
