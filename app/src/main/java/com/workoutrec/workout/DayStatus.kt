@@ -8,6 +8,9 @@ enum class DayStatus { PAID, FREE }
 /** A date's status as the app knows it; [pending] = chosen on the phone, not in the sheet yet. */
 data class KnownStatus(val date: LocalDate, val status: DayStatus, val pending: Boolean)
 
+/** A status waiting for sync; [lastSeen] is the sheet's value when it was chosen (null = no row then). */
+data class PendingStatus(val date: LocalDate, val status: DayStatus, val lastSeen: DayStatus?)
+
 /** The `workout` tab's "work alone" column and the default (research R1, R3). */
 object DayStatusRules {
 

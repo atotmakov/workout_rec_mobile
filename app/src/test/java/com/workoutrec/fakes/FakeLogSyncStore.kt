@@ -4,6 +4,7 @@ import com.workoutrec.sync.BackgroundRun
 import com.workoutrec.sync.FailReason
 import com.workoutrec.sync.LogSyncStore
 import com.workoutrec.sync.SheetInfoCache
+import com.workoutrec.sync.StatusCommit
 import com.workoutrec.sync.SyncNotice
 import com.workoutrec.sync.SyncPhase
 import com.workoutrec.sync.SyncStatus
@@ -12,6 +13,9 @@ import com.workoutrec.workout.Exercise
 import com.workoutrec.workout.ExerciseChange
 import com.workoutrec.workout.LogRow
 import com.workoutrec.workout.PendingChange
+import com.workoutrec.workout.KnownStatus
+import com.workoutrec.workout.PendingStatus
+import java.time.LocalDate
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -20,7 +24,16 @@ class FakeLogSyncStore(
     val pending: MutableList<PendingChange> = mutableListOf(),
     val exerciseChanges: MutableList<ExerciseChange> = mutableListOf(),
     val payments: MutableList<com.workoutrec.workout.PendingPayment> = mutableListOf(),
+    /** Feature 006: waiting day statuses. */
+    val statuses: MutableList<PendingStatus> = mutableListOf(),
 ) : LogSyncStore {
+    /** The last commit's cache of the workout tab; null = not read. */
+    var cachedStatuses: List<KnownStatus>? = null
+    val syncedStatusDates = mutableListOf<LocalDate>()
+    val droppedStatusDates = mutableListOf<LocalDate>()
+
+    override suspend fun statusesNow(): List<PendingStatus> = statuses.toList()
+
     var exercises: List<Exercise> = emptyList()
     var rows: List<LogRow> = emptyList()
     val notices = mutableListOf<SyncNotice>()
@@ -41,7 +54,12 @@ class FakeLogSyncStore(
         doneExerciseIds: Collection<String>,
         renamesBack: Map<String, String>,
         donePaymentIds: Collection<String>,
+        statuses: StatusCommit,
     ) {
+        syncedStatusDates += statuses.synced
+        droppedStatusDates += statuses.dropped
+        this.statuses.removeAll { it.date in statuses.synced || it.date in statuses.dropped }
+        cachedStatuses = statuses.cached
         payments.removeAll { it.id in donePaymentIds }
         commits++
         this.exercises = exercises

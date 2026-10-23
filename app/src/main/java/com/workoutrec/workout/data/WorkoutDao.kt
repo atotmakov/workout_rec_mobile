@@ -108,8 +108,15 @@ abstract class WorkoutDao {
         doneExerciseIds: List<String> = emptyList(),
         renamesBack: Map<String, String> = emptyMap(),
         donePaymentIds: List<String> = emptyList(),
+        syncedStatusDates: List<String> = emptyList(),
+        droppedStatusDates: List<String> = emptyList(),
+        cachedStatuses: List<DayStatusEntity>? = null,
     ) {
         replaceCaches(exercises, rows)
+        // Feature 006: written statuses stop waiting; then the fresh workout tab replaces the cache.
+        if (syncedStatusDates.isNotEmpty()) markStatusesSynced(syncedStatusDates)
+        if (droppedStatusDates.isNotEmpty()) dropPendingStatuses(droppedStatusDates)
+        cachedStatuses?.let { replaceCachedStatuses(it) }
         if (donePaymentIds.isNotEmpty()) deletePayments(donePaymentIds)
         if (doneIds.isNotEmpty()) deletePending(doneIds)
         if (notices.isNotEmpty()) insertNotices(notices)

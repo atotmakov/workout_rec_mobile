@@ -140,10 +140,24 @@ fun TodayRoute(
             }
         }
     }
-    TodayScreen(groups, onAddExercise, onOpenExercise, modifier, refreshing = refreshing, onRefresh = refresh) {
-        header()
-        SyncNoticeList(notices, onDismiss = { id -> scope.launch { container.workoutRepository.dismissNotice(id) } })
-    }
+    // Feature 006 US1: today's Paid/Free, saved at once and sent with the next sync.
+    val statuses by container.workoutRepository.statuses.collectAsState(initial = emptyList())
+    val known = remember(statuses) { statuses.associate { it.date to it.status } }
+    TodayScreen(
+        groups, onAddExercise, onOpenExercise, modifier, refreshing = refreshing, onRefresh = refresh,
+        header = {
+            header()
+            SyncNoticeList(notices, onDismiss = { id -> scope.launch { container.workoutRepository.dismissNotice(id) } })
+        },
+        today = LocalDate.now(zone),
+        statuses = known,
+        onDayStatus = { status ->
+            scope.launch {
+                container.workoutRepository.setStatus(LocalDate.now(zone), status)
+                container.syncScheduler.requestSync()
+            }
+        },
+    )
 }
 
 /** The History tab's first screen (feature 004 US2); [actions] are the sync icon and the avatar. */

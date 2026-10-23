@@ -313,10 +313,16 @@ private fun TodayFrame(
                 unsyncedCount = pendingCount,
                 syncStatus = { SampleSyncStatus(pendingCount, phase) },
             ) { modifier ->
-                TodayScreen(groups, onAddExercise = {}, onOpenExercise = {}, modifier = modifier) {
-                    automation?.let { AutomationReminder(status = it, onFix = {}) }
-                    SyncNoticeList(notices, onDismiss = {})
-                }
+                TodayScreen(
+                    groups, onAddExercise = {}, onOpenExercise = {}, modifier = modifier,
+                    header = {
+                        automation?.let { AutomationReminder(status = it, onFix = {}) }
+                        SyncNoticeList(notices, onDismiss = {})
+                    },
+                    // Feature 006: the Paid/Free control with no earlier day (Free).
+                    today = java.time.LocalDate.now(),
+                    onDayStatus = {},
+                )
             }
         }
     }

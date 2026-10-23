@@ -58,8 +58,14 @@ object DisplayModel {
     fun pendingCount(pending: List<PendingChange>): Int = pending.count { it.draftId == null }
 
     /** Feature 004 FR-012: everything waiting on the phone, for the sync icon and the sign-out warning. */
-    fun waitingCount(pending: List<PendingChange>, exerciseChanges: Int, payments: Int): Int =
-        pendingCount(pending) + exerciseChanges + payments
+    fun waitingCount(pending: List<PendingChange>, exerciseChanges: Int, payments: Int, statuses: Int = 0): Int =
+        pendingCount(pending) + exerciseChanges + payments + statuses
+
+    /** Feature 006 data-model "Waiting count": statuses of days with a set, the ones sync can send. */
+    fun waitingStatuses(statuses: List<PendingStatus>, sets: List<DisplaySet>, zone: ZoneId): Int {
+        val days = sets.mapTo(mutableSetOf()) { SheetTime.workoutDay(it.key.time, zone) }
+        return statuses.count { it.date in days }
+    }
 
     /** Feature 004: the drills list with the app's waiting exercise changes applied (data-model.md). */
     fun exercises(cache: List<Exercise>, changes: List<ExerciseChange>, sets: List<DisplaySet>): List<ShownExercise> {

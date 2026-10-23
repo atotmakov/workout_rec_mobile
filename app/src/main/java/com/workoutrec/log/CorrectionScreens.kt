@@ -209,6 +209,14 @@ fun SyncNoticeList(notices: List<Pair<Long, SyncNotice>>, onDismiss: (Long) -> U
                             // Feature 004: about an exercise; only its name is known.
                             NoticeKind.EXERCISE_CHANGE_DROPPED -> stringResource(R.string.notice_exercise_change_dropped, notice.key.exercise)
                             NoticeKind.EXERCISE_IN_USE -> stringResource(R.string.notice_exercise_in_use, notice.key.exercise)
+                            // Feature 006 research R4: the sheet's newer status was kept.
+                            NoticeKind.DAY_STATUS_DROPPED -> notice.dayStatus!!.let { (date, kept) ->
+                                stringResource(
+                                    R.string.notice_day_status_dropped,
+                                    date.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale)),
+                                    stringResource(kept.label),
+                                )
+                            }
                         },
                         style = MaterialTheme.typography.bodyMedium,
                     )
