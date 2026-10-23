@@ -27,8 +27,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * Issue #35: leaving the tabs for setup (sign out, switch account) after visiting other tabs
- * crashed. Same graph shape as `MainActivity`: setup next to [mainTabs].
+ * Issue #35: leaving the tabs for setup (sign out, switch account, failed sign-in) crashed. Same graph shape as `MainActivity`: setup next to [mainTabs].
  */
 @RunWith(AndroidJUnit4::class)
 class LeaveTabsTest {
