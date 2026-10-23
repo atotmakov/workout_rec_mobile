@@ -6,9 +6,9 @@ import com.workoutrec.exercises.ExercisesRoute
 import com.workoutrec.nav.logToday
 import androidx.navigation.NavDestination.Companion.hierarchy
 import com.workoutrec.home.AccountActions
-import com.workoutrec.nav.Tab
 import com.workoutrec.nav.TabRoutes
 import com.workoutrec.nav.TabScaffold
+import com.workoutrec.nav.leaveTabs
 import com.workoutrec.nav.mainTabs
 import android.app.Activity
 import android.os.Bundle
@@ -125,11 +125,7 @@ private fun AppNavHost(container: AppContainer) {
     // Leave the tabs whenever setup needs the user again (e.g. reminder tapped, spreadsheet deleted).
     LaunchedEffect(state, backStack) {
         val inTabs = backStack?.destination?.hierarchy?.any { it.route == TabRoutes.MAIN } == true
-        if (inTabs && state != SetupState.Ready) {
-            navController.navigate(Routes.SETUP) { popUpTo(TabRoutes.MAIN) { inclusive = true } }
-            // Feature 004 research R1: the next account starts on fresh tabs.
-            Tab.entries.forEach { navController.clearBackStack(it.route) }
-        }
+        if (inTabs && state != SetupState.Ready) navController.leaveTabs(Routes.SETUP)
     }
 
     // Feature 004 FR-010: money and balance download once per app start, in the background.
