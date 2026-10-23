@@ -1,5 +1,6 @@
 package com.workoutrec.log
 
+import com.workoutrec.workout.DayStatus
 import com.workoutrec.workout.DisplaySet
 import com.workoutrec.workout.PastWorkoutError
 import com.workoutrec.workout.Reps
@@ -37,8 +38,10 @@ class PastWorkoutViewModelTest {
     private val store = object : PastWorkoutStore {
         override val displaySets = MutableStateFlow<List<DisplaySet>>(emptyList())
         val saved = mutableListOf<SetKey>()
-        override suspend fun confirmSets(keys: List<SetKey>) {
+        var savedStatus: DayStatus? = null
+        override suspend fun confirmSets(keys: List<SetKey>, status: DayStatus?) {
             saved += keys
+            savedStatus = status
         }
     }
     private var syncRequests = 0
@@ -122,5 +125,24 @@ class PastWorkoutViewModelTest {
         assertTrue(store.saved.isEmpty())
         assertTrue(vm.state.value.sets.isEmpty())
         assertFalse(vm.save())
+    }
+
+    // Feature 006 spec US4 scenario 2, FR-014: the dialog's choice is saved with the sets
+    @Test
+    fun `the chosen status is saved with the workout`() = runTest {
+        val vm = vm()
+        vm.setup(yesterday, LocalTime.of(18, 0), 60, DayStatus.PAID)
+        vm.addSet(squat(20, 10))
+        assertTrue(vm.save())
+        assertEquals(DayStatus.PAID, store.savedStatus)
+    }
+
+    @Test
+    fun `without a choice the default is left to the phone data`() = runTest {
+        val vm = vm()
+        vm.setup(yesterday, LocalTime.of(18, 0), 60)
+        vm.addSet(squat(20, 10))
+        vm.save()
+        assertEquals(null, store.savedStatus)
     }
 }

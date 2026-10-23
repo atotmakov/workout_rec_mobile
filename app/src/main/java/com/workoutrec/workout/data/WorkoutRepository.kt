@@ -12,9 +12,12 @@ import com.workoutrec.monitoring.NonFatalIssue
 import com.workoutrec.monitoring.badValue
 import com.workoutrec.sync.LogSyncStore
 import com.workoutrec.sync.NoticeKind
+import com.workoutrec.sync.StatusCommit
 import com.workoutrec.sync.SyncNotice
 import com.workoutrec.workout.ChangeKind
 import com.workoutrec.workout.Coalescer
+import com.workoutrec.workout.DayStatus
+import com.workoutrec.workout.DayStatusRules
 import com.workoutrec.workout.DisplayModel
 import com.workoutrec.workout.DisplaySet
 import com.workoutrec.workout.Exercise
@@ -22,23 +25,29 @@ import com.workoutrec.workout.ExerciseChange
 import com.workoutrec.workout.ExerciseChangeKind
 import com.workoutrec.workout.ExerciseCoalescer
 import com.workoutrec.workout.ExerciseUpdate
+import com.workoutrec.workout.KnownStatus
 import com.workoutrec.workout.LogRow
 import com.workoutrec.workout.PaymentRow
 import com.workoutrec.workout.PendingChange
 import com.workoutrec.workout.PendingPayment
+import com.workoutrec.workout.PendingStatus
 import com.workoutrec.workout.PendingUpdate
 import com.workoutrec.workout.Reps
 import com.workoutrec.workout.SetKey
 import com.workoutrec.workout.SetRef
 import com.workoutrec.workout.SetValues
+import com.workoutrec.workout.SheetTime
 import com.workoutrec.workout.ShownExercise
 import com.workoutrec.workout.ShownPayment
 import com.workoutrec.workout.Weight
 import java.time.LocalDate
+import java.time.ZoneId
+import java.time.ZoneOffset
 import java.util.UUID
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 
 /** The phone's workout data for screens and sync (data-model.md). */
@@ -48,6 +57,8 @@ class WorkoutRepository(
     private val newId: () -> String = { UUID.randomUUID().toString() },
     /** Feature 005 US3: unreadable saved values are reported. */
     private val monitoring: Monitoring = NoMonitoring,
+    /** Feature 006: days are the spreadsheet's days (research R8 of 002). */
+    private val zone: Flow<ZoneId> = flowOf(ZoneOffset.UTC),
 ) : LoggingStore, LogSyncStore, PastWorkoutStore, MoneyStore {
 
     private val cachedExercises: Flow<List<Exercise>> = dao.exercises().map { list -> list.map { Exercise(it.name, it.muscleGroup) } }
@@ -69,21 +80,54 @@ class WorkoutRepository(
     /** What the picker and the edit dialog offer: the shown list (FR-001, feature 004 SC-004). */
     val exercises: Flow<List<Exercise>> = shownExercises.map { list -> list.map { Exercise(it.name, it.muscleGroup) } }
 
-    /** Sets, exercise changes and payments not in the spreadsheet yet (feature 004 FR-012). */
-    val waitingCount: Flow<Int> = combine(pending, dao.exerciseChanges(), dao.pendingPayments()) { sets, exercises, payments ->
-        DisplayModel.waitingCount(sets, exercises.size, payments.size)
+    /** Feature 006: every date's known status, the phone's waiting choices included. */
+    val statuses: Flow<List<KnownStatus>> = dao.statuses().map { list -> list.map { it.toKnown() } }
+
+    private val waitingStatuses: Flow<Int> = combine(dao.statuses(), displaySets, zone) { rows, sets, zone ->
+        DisplayModel.waitingStatuses(rows.filter { it.pending }.map { it.toPending() }, sets, zone)
     }
 
-    /** Saves a confirmed set before any network activity (FR-005). Returns its pending ID. */
+    /** Sets, exercise changes, payments and day statuses not in the spreadsheet yet (feature 004 FR-012, 006 FR-009). */
+    val waitingCount: Flow<Int> = combine(pending, dao.exerciseChanges(), dao.pendingPayments(), waitingStatuses) { sets, exercises, payments, statuses ->
+        DisplayModel.waitingCount(sets, exercises.size, payments.size, statuses)
+    }
+
+    /** Feature 006: the user picked [status] for [date] (Today, a day's details); it waits for sync. */
+    suspend fun setStatus(date: LocalDate, status: DayStatus) = dao.chooseStatus(date.toString(), status == DayStatus.FREE, clock())
+
+    override suspend fun statusesNow(): List<PendingStatus> = dao.statusesNow().filter { it.pending }.map { it.toPending() }
+
+    /**
+     * Saves a confirmed set before any network activity (FR-005). Returns its pending ID. Feature
+     * 006: a day's first set also fixes the day's status to the default (research R2).
+     */
     override suspend fun confirmSet(key: SetKey): String {
         val id = newId()
-        dao.upsertPending(PendingChange(id, ChangeKind.NEW, key, createdAt = clock()).toEntity())
+        val created = clock()
+        dao.insertSetsWithDefaults(listOf(PendingChange(id, ChangeKind.NEW, key, createdAt = created).toEntity()), defaultsFor(listOf(key), created))
         return id
     }
 
-    override suspend fun confirmSets(keys: List<SetKey>) {
+    override suspend fun confirmSets(keys: List<SetKey>, status: DayStatus?) {
         val created = clock()
-        dao.insertSets(keys.mapIndexed { i, key -> PendingChange(newId(), ChangeKind.NEW, key, createdAt = created + i).toEntity() })
+        val zone = zone.first()
+        dao.insertSetsWithDefaults(
+            keys.mapIndexed { i, key -> PendingChange(newId(), ChangeKind.NEW, key, createdAt = created + i).toEntity() },
+            defaultsFor(keys, created),
+            // Feature 006 FR-014: a past workout is one day; the dialog's choice is that day's status.
+            chosen = status?.let { s ->
+                keys.firstOrNull()?.let { DayStatusEntity(SheetTime.workoutDay(it.time, zone).toString(), s == DayStatus.FREE, pending = true, updatedAt = created, lastSeenFree = null) }
+            },
+        )
+    }
+
+    /** One default status per day of [keys]; the DAO skips days that already have one. */
+    private suspend fun defaultsFor(keys: List<SetKey>, created: Long): List<DayStatusEntity> {
+        val zone = zone.first()
+        val known = dao.statusesNow().associate { LocalDate.parse(it.date) to if (it.free) DayStatus.FREE else DayStatus.PAID }
+        return keys.map { SheetTime.workoutDay(it.time, zone) }.distinct().map { date ->
+            DayStatusEntity(date.toString(), DayStatusRules.defaultFor(date, known) == DayStatus.FREE, pending = true, updatedAt = created, lastSeenFree = null)
+        }
     }
 
     suspend fun replaceCaches(exercises: List<Exercise>, rows: List<LogRow>) =
@@ -175,6 +219,7 @@ class WorkoutRepository(
         doneExerciseIds: Collection<String>,
         renamesBack: Map<String, String>,
         donePaymentIds: Collection<String>,
+        statuses: StatusCommit,
     ) {
         val created = clock()
         dao.commitSync(
@@ -187,11 +232,22 @@ class WorkoutRepository(
             doneExerciseIds.toList(),
             renamesBack,
             donePaymentIds.toList(),
+            statuses.synced.map { it.toString() },
+            statuses.dropped.map { it.toString() },
+            statuses.cached?.map { DayStatusEntity(it.date.toString(), it.status == DayStatus.FREE, pending = false, updatedAt = created, lastSeenFree = null) },
         )
     }
 
     override suspend fun keepOnlyNewSets() = dao.keepOnlyNewSets()
 }
+
+internal fun DayStatusEntity.toKnown() = KnownStatus(LocalDate.parse(date), if (free) DayStatus.FREE else DayStatus.PAID, pending)
+
+internal fun DayStatusEntity.toPending() = PendingStatus(
+    LocalDate.parse(date),
+    if (free) DayStatus.FREE else DayStatus.PAID,
+    lastSeenFree?.let { if (it) DayStatus.FREE else DayStatus.PAID },
+)
 
 internal fun PaymentRowEntity.toDomain() = PaymentRow(rowIndex, LocalDate.parse(date), workouts, sumHundredths)
 

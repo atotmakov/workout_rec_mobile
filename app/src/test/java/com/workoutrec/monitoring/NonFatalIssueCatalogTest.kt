@@ -29,6 +29,9 @@ class NonFatalIssueCatalogTest {
             NonFatalIssue.BAD_SHEET_DATA to ("bad-sheet-data" to WARNING),
             NonFatalIssue.BAD_SAVED_STATE to ("bad-saved-state" to WARNING),
             NonFatalIssue.NO_CONNECTION to ("no-connection" to INFO),
+            // Feature 006
+            NonFatalIssue.WORKOUT_TAB_MISSING to ("workout-tab-missing" to WARNING),
+            NonFatalIssue.SCRIPT_UPGRADE_FAILED to ("script-upgrade-failed" to WARNING),
         )
         assertEquals(expected, NonFatalIssue.entries.associateWith { it.key to it.severity })
     }

@@ -7,7 +7,7 @@ auth/AccountPicker.kt | GetCredentialCancellationException | 1 | the user cancel
 auth/AccountPicker.kt | GetCredentialException | 1 | turned into PickResult.Failed; SetupViewModel reports sign-in-failed
 auth/ApiAuthorizer.kt | ApiException | 2 | turned into an AuthOutcome; SetupViewModel and AccountRepository report it
 auth/ApiAuthorizer.kt | IOException | 1 | turned into AuthOutcome.Unavailable; the caller reports no-connection
-log/PastWorkoutScreens.kt | DateTimeParseException | 2 | text the user typed; the form shows it as invalid
+log/PastWorkoutScreens.kt | DateTimeParseException | 3 | text the user typed; the form shows it as invalid (feature 006: also while typing, to follow the date with the Paid/Free default)
 log/LogRoutes.kt | DateTimeException | 1 | same sheet time zone that sync reports (LogSync.zoneOf); runs in composition
 spreadsheet/SpreadsheetSetupService.kt | ApiError.NotFound | 1 | "file gone" is the answer the existence check asks for
 setup/SpreadsheetSetupFlow.kt | ApiError.AppsScriptApiDisabled | 1 | a setup instruction shown to the user, not an error

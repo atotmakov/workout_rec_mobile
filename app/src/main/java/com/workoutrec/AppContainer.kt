@@ -1,5 +1,6 @@
 package com.workoutrec
 
+import com.workoutrec.log.zone
 import com.workoutrec.google.MoneyClient
 import com.workoutrec.money.MoneyRefresher
 import android.content.Context
@@ -52,6 +53,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import okhttp3.OkHttpClient
 
 private val Context.settingsDataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
@@ -132,8 +134,12 @@ class AppContainer(context: Context, val monitoringSettings: MonitoringSettings)
     )
 
     // Feature 002: workout logging (plan.md).
-    val workoutRepository = WorkoutRepository(WorkoutDatabase.create(appContext).dao(), monitoring = monitoring)
     val syncStatusStore: SyncStatusStore = DataStoreSyncStatusStore(appContext.syncDataStore, monitoring)
+    val workoutRepository = WorkoutRepository(
+        WorkoutDatabase.create(appContext).dao(),
+        monitoring = monitoring,
+        zone = syncStatusStore.status.map { it.zone() },
+    )
     val sheetsLogClient = SheetsLogClient(googleHttp)
 
     /** Feature 004 US4: the money and balance tabs (call 23), apart from the set sync. */

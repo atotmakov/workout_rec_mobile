@@ -84,4 +84,10 @@ class FakeScriptInstaller(
         failNext?.let { failNext = null; throw it }
         return InstalledScript("script-1", "https://enable")
     }
+
+    override suspend fun upgrade(spreadsheetId: String, scriptId: String, timeZone: String, existingIds: Map<String, Int>) {
+        log += "upgrade:$spreadsheetId:$scriptId"
+        if (apiDisabled) throw ApiError.AppsScriptApiDisabled("User has not enabled the Apps Script API")
+        failNext?.let { failNext = null; throw it }
+    }
 }

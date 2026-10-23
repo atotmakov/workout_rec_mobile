@@ -97,6 +97,11 @@ A bar at the bottom has four tabs (spec [004](specs/004-bottom-tab-navigation/sp
   it, also when it is already in the spreadsheet or was typed in the web UI.
 - **Enter a past workout** (the + in History) adds a forgotten workout: date, start time and duration; the set times
   are spread over the duration, so the daily job computes the right workout length.
+- **Paid | Free** (spec [006](specs/006-workout-paid-status/spec.md)): each workout day is paid
+  (with the coach, it uses a prepaid workout) or free (alone). Today has the control; a day's
+  details in History and **Enter a past workout** have it too, and History shows each day's
+  status. A new day starts with the previous workout day's status (the first one is free). It is
+  stored in the `workout` tab's "work alone" column (`1` = free), which the balance already uses.
 
 - **Exercises** adds, renames and deletes exercises in the `drills` tab, also offline. A rename
   also renames the exercise in every `log` row and in the `rec` tab. Only exercises with no
@@ -132,4 +137,6 @@ workout_rec.structure_version = 1
 ```
 
 The daily job (`dailyJob`) runs at about 03:00 in the spreadsheet's time zone: it adds a row to
-`workout` for each new day in `log`, then recalculates `balance!A1`.
+`workout` for each new day in `log` (with the previous day's paid/free status), fills the duration
+of rows the app added, then recalculates `balance!A1`. The app updates the attached script on start
+when `workout_rec.script_version` is older than its own.

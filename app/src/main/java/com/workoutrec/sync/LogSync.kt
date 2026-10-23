@@ -12,6 +12,10 @@ import com.workoutrec.google.LogAppend
 import com.workoutrec.google.LogEdit
 import com.workoutrec.google.MissingTabException
 import com.workoutrec.google.SheetsLogApi
+import com.workoutrec.google.SheetWorkoutRow
+import com.workoutrec.google.WorkoutAppend
+import com.workoutrec.google.WorkoutUpdate
+import com.workoutrec.google.WorkoutWrite
 import com.workoutrec.monitoring.Monitoring
 import com.workoutrec.monitoring.NoMonitoring
 import com.workoutrec.monitoring.NonFatalIssue
@@ -20,31 +24,54 @@ import com.workoutrec.monitoring.failure
 import com.workoutrec.monitoring.Profile
 import com.workoutrec.monitoring.ProfileTarget
 import com.workoutrec.workout.ChangeKind
+import com.workoutrec.workout.DayStatus
 import com.workoutrec.workout.Exercise
 import com.workoutrec.workout.ExerciseChange
+import com.workoutrec.workout.KnownStatus
 import com.workoutrec.workout.LogRow
 import com.workoutrec.workout.PendingChange
+import com.workoutrec.workout.PendingStatus
 import com.workoutrec.workout.Reps
 import com.workoutrec.workout.RowLocator
 import com.workoutrec.workout.SetKey
 import com.workoutrec.workout.SheetTime
 import com.workoutrec.workout.Weight
 import java.time.DateTimeException
+import java.time.LocalDate
 import java.time.ZoneId
 import java.time.ZoneOffset
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.withTimeout
 
-enum class NoticeKind { CONFLICT_DROPPED, WORKOUT_ROW_NOT_UPDATED, EXERCISE_CHANGE_DROPPED, EXERCISE_IN_USE }
+enum class NoticeKind { CONFLICT_DROPPED, WORKOUT_ROW_NOT_UPDATED, EXERCISE_CHANGE_DROPPED, EXERCISE_IN_USE, DAY_STATUS_DROPPED }
 
 /** A message about a sync result (data-model.md `sync_notice`). */
 data class SyncNotice(val kind: NoticeKind, val key: SetKey) {
     companion object {
         /** Feature 004: a notice about an exercise; only the name is used. */
         fun exercise(kind: NoticeKind, name: String) = SyncNotice(kind, SetKey(0, name, Weight.ofHundredths(0), Reps(0)))
+
+        /** Feature 006 research R4: the sheet's newer status for [date] was kept; stored as epoch day and status name. */
+        fun dayStatus(date: LocalDate, kept: DayStatus) =
+            SyncNotice(NoticeKind.DAY_STATUS_DROPPED, SetKey(date.toEpochDay(), kept.name, Weight.ofHundredths(0), Reps(0)))
     }
+
+    /** The date and kept status of a [NoticeKind.DAY_STATUS_DROPPED] notice. */
+    val dayStatus: Pair<LocalDate, DayStatus>?
+        get() = if (kind == NoticeKind.DAY_STATUS_DROPPED) {
+            LocalDate.ofEpochDay(key.time) to (DayStatus.entries.firstOrNull { it.name == key.exercise } ?: DayStatus.PAID)
+        } else {
+            null
+        }
 }
+
+/** Feature 006: the day statuses part of one sync result; [cached] is null when the tab wasn't read. */
+data class StatusCommit(
+    val synced: Collection<LocalDate> = emptyList(),
+    val dropped: Collection<LocalDate> = emptyList(),
+    val cached: List<KnownStatus>? = null,
+)
 
 /** The phone data the sync reads and writes (implemented by `WorkoutRepository`). */
 interface LogSyncStore {
@@ -55,6 +82,9 @@ interface LogSyncStore {
 
     /** Feature 004: payments added in the app and not in the money tab yet. */
     suspend fun paymentsNow(): List<PendingPayment> = emptyList()
+
+    /** Feature 006: day statuses chosen on the phone and not in the workout tab yet. */
+    suspend fun statusesNow(): List<PendingStatus> = emptyList()
 
     /**
      * One transaction: replace caches, remove handled changes, add notices (data-model "Sync run");
@@ -69,6 +99,7 @@ interface LogSyncStore {
         doneExerciseIds: Collection<String> = emptyList(),
         renamesBack: Map<String, String> = emptyMap(),
         donePaymentIds: Collection<String> = emptyList(),
+        statuses: StatusCommit = StatusCommit(),
     )
 
     /** The bound spreadsheet changed: drop caches, edits, deletes and notices; keep new sets (research R13). */
@@ -134,7 +165,9 @@ class LogSync(
 
         // Feature 004 research R5: payments are matched by content, so the money tab is read when some wait.
         val payments = store.paymentsNow().sortedBy { it.createdAt }.takeIf { sheet.moneySheetId != null }.orEmpty()
-        var read = profile.section("read").use { sheets.readLogAndDrills(id, withMoney = payments.isNotEmpty()) }
+        // Feature 006 research R6: the workout tab is read with the log whenever it exists.
+        val withWorkout = sheet.workoutSheetId != null
+        var read = profile.section("read").use { sheets.readLogAndDrills(id, withMoney = payments.isNotEmpty(), withWorkout = withWorkout) }
         var rows = rowsOf(read, zone)
         // Feature 004 research R5: exercise changes first, so a dropped rename's sets keep the old name.
         val exercisePlan = ExercisePlan.of(store.exerciseChangesNow().sortedBy { it.createdAt }, read.drills, read.log)
@@ -201,7 +234,10 @@ class LogSync(
                 paymentAppends += payment
             }
         }
-        val wrote = appends.isNotEmpty() || deletes.isNotEmpty() || edits.isNotEmpty() || exercisePlan.writes || paymentAppends.isNotEmpty()
+        val statusPlan = planStatuses(sheet, read, rows, appends, zone)
+        notices += statusPlan.notices
+        val wrote = appends.isNotEmpty() || deletes.isNotEmpty() || edits.isNotEmpty() || exercisePlan.writes || paymentAppends.isNotEmpty() ||
+            statusPlan.write != null
         val exercisesDone = exercisePlan.done.toMutableList()
         if (wrote) {
             profile.section("write").use {
@@ -217,24 +253,87 @@ class LogSync(
                     money = sheet.moneySheetId?.takeIf { paymentAppends.isNotEmpty() }?.let { moneySheetId ->
                         MoneyWrite(moneySheetId, paymentAppends.map { MoneyAppend(PaymentValues.serial(it.date), it.workouts, it.sumHundredths / 100.0) })
                     },
+                    workout = statusPlan.write,
                 )
                 done += written + appends.map { it.id }
                 exercisesDone += exercisePlan.written
                 paymentsDone += paymentAppends.map { it.id }
-                read = sheets.readLogAndDrills(id)
+                read = sheets.readLogAndDrills(id, withWorkout = withWorkout)
                 rows = rowsOf(read, zone)
             }
         }
 
         // Step 6.
         profile.section("commit").use {
-            store.commit(read.drills.map { Exercise(it.name, it.muscleGroup) }, rows, done, notices, exercisesDone, exercisePlan.renamesBack, paymentsDone)
+            val statuses = StatusCommit(
+                synced = statusPlan.synced + statusPlan.written.takeIf { wrote }.orEmpty(),
+                dropped = statusPlan.dropped,
+                cached = if (withWorkout) firstRows(read).map { KnownStatus(it.date, it.status, pending = false) } else null,
+            )
+            store.commit(read.drills.map { Exercise(it.name, it.muscleGroup) }, rows, done, notices, exercisesDone, exercisePlan.renamesBack, paymentsDone, statuses)
             status.markSuccess(now())
         }
         if (paymentAppends.isNotEmpty()) onPaymentsWritten()
         log("sync: done, wrote ${appends.size} new, ${edits.size} edited, ${deletes.size} deleted, ${exercisePlan.written.size} exercise changes")
         return SyncOutcome.Synced(wrote)
     }
+
+    /** Feature 006: what the run does with the waiting day statuses (research R4). */
+    private class StatusPlan(
+        val write: WorkoutWrite?,
+        /** Already right in the sheet. */
+        val synced: List<LocalDate>,
+        /** Sent in [write]; synced once the write succeeds. */
+        val written: List<LocalDate>,
+        val dropped: List<LocalDate>,
+        val notices: List<SyncNotice>,
+    )
+
+    /**
+     * Contracts/sheets.md "What gets written". A status changed in the sheet since the phone change
+     * wins (it is newer); a row that appeared since a change made without one (the nightly script)
+     * is not a conflict. A day without sets waits: the sheet gets no row without a workout.
+     */
+    private suspend fun planStatuses(sheet: SheetInfoCache, read: LogAndDrills, rows: List<LogRow>, appends: List<PendingChange>, zone: ZoneId): StatusPlan {
+        val waiting = store.statusesNow().sortedBy { it.date }
+        val workoutSheetId = sheet.workoutSheetId
+        if (workoutSheetId == null) {
+            if (waiting.isNotEmpty()) monitoring.nonFatal(NonFatalIssue.WORKOUT_TAB_MISSING, MissingTabException("workout"), "operation=sync")
+            return StatusPlan(null, emptyList(), emptyList(), emptyList(), emptyList())
+        }
+        val byDate = firstRows(read).associateBy { it.date }
+        val days = (rows.map { it.key.time } + appends.map { it.key.time }).mapTo(mutableSetOf()) { SheetTime.workoutDay(it, zone) }
+        val synced = mutableListOf<LocalDate>()
+        val written = mutableListOf<LocalDate>()
+        val dropped = mutableListOf<LocalDate>()
+        val notices = mutableListOf<SyncNotice>()
+        val updates = mutableListOf<WorkoutUpdate>()
+        val newRows = mutableListOf<WorkoutAppend>()
+        waiting.forEach { status ->
+            val row = byDate[status.date]
+            when {
+                row != null && status.lastSeen != null && row.status != status.lastSeen -> {
+                    dropped += status.date
+                    notices += SyncNotice.dayStatus(status.date, row.status)
+                }
+                status.date !in days -> Unit
+                row == null -> {
+                    newRows += WorkoutAppend(PaymentValues.serial(status.date), status.status)
+                    written += status.date
+                }
+                row.status == status.status -> synced += status.date
+                else -> {
+                    updates += WorkoutUpdate(row.rowIndex, status.status)
+                    written += status.date
+                }
+            }
+        }
+        val write = WorkoutWrite(workoutSheetId, updates, newRows).takeUnless { it.isEmpty }
+        return StatusPlan(write, synced, written, dropped, notices)
+    }
+
+    /** Several rows for one date: only the first counts (spec edge case). */
+    private fun firstRows(read: LogAndDrills): List<SheetWorkoutRow> = read.workout.distinctBy { it.date }
 
     /**
      * The daily script added a workout row for a past day once, from its first and last set; deleting
@@ -262,11 +361,13 @@ class LogSync(
         else -> SyncPhase.Failing(FailReason.OTHER)
     }
 
-    /** Call 20, once per spreadsheet (research R8), and again for a cache from before feature 004. */
+    /** Call 20, once per spreadsheet (research R8), and again for a cache from before feature 004 or 006. */
     private suspend fun sheetInfo(id: String): SheetInfoCache {
-        status.current().sheet?.takeIf { it.spreadsheetId == id && it.drillsSheetId != null }?.let { return it }
+        status.current().sheet
+            ?.takeIf { it.spreadsheetId == id && it.drillsSheetId != null && it.version >= SheetInfoCache.VERSION }
+            ?.let { return it }
         val info = sheets.logSheetInfo(id)
-        return SheetInfoCache(id, info.timeZone, info.logSheetId, info.drillsSheetId, info.recSheetId, info.moneySheetId, info.balanceSheetId)
+        return SheetInfoCache(id, info.timeZone, info.logSheetId, info.drillsSheetId, info.recSheetId, info.moneySheetId, info.balanceSheetId, info.workoutSheetId)
             .also { status.setSheet(it) }
     }
 

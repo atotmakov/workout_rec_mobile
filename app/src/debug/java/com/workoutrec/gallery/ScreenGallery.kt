@@ -213,7 +213,7 @@ object ScreenGallery {
         },
         GalleryScreen("31-past-workout-dialog") {
             RouteFrame(stringResource(R.string.past_workout_title)) { }
-            PastWorkoutDialog(initialDate = Samples.YESTERDAY, onStart = { _, _, _ -> null }, onDismiss = {})
+            PastWorkoutDialog(initialDate = Samples.YESTERDAY, onStart = { _, _, _, _ -> null }, onDismiss = {})
         },
         GalleryScreen("32-past-workout-editor") {
             RouteFrame(stringResource(R.string.past_workout_title)) { modifier ->
@@ -313,10 +313,16 @@ private fun TodayFrame(
                 unsyncedCount = pendingCount,
                 syncStatus = { SampleSyncStatus(pendingCount, phase) },
             ) { modifier ->
-                TodayScreen(groups, onAddExercise = {}, onOpenExercise = {}, modifier = modifier) {
-                    automation?.let { AutomationReminder(status = it, onFix = {}) }
-                    SyncNoticeList(notices, onDismiss = {})
-                }
+                TodayScreen(
+                    groups, onAddExercise = {}, onOpenExercise = {}, modifier = modifier,
+                    header = {
+                        automation?.let { AutomationReminder(status = it, onFix = {}) }
+                        SyncNoticeList(notices, onDismiss = {})
+                    },
+                    // Feature 006: the Paid/Free control with no earlier day (Free).
+                    today = java.time.LocalDate.now(),
+                    onDayStatus = {},
+                )
             }
         }
     }

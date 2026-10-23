@@ -169,6 +169,11 @@
     <string name="exercise_waiting">Not in the spreadsheet yet</string>
     <string name="notice_exercise_change_dropped">%1$s was changed in the spreadsheet before your change reached it; the spreadsheet version is kept.</string>
     <string name="notice_exercise_in_use">%1$s has sets in the log, so it was not deleted.</string>
+    <!-- Feature 006 -->
+    <string name="notice_day_status_dropped">Changed in the spreadsheet: %1$s kept as %2$s.</string>
+    <string name="day_status_paid">Paid</string>
+    <string name="day_status_free">Free</string>
+    <string name="day_status_title">Workout</string>
     <!-- Feature 004 US4: Money tab -->
     <plurals name="money_left">
         <item quantity="one">paid workout left</item>

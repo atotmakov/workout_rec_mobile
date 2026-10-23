@@ -37,4 +37,11 @@ data class DisplaySet(val key: SetKey, val syncState: SyncState, val ref: SetRef
 
 data class ExerciseGroup(val exercise: String, val sets: List<DisplaySet>)
 
-data class DaySummary(val date: LocalDate, val exerciseCount: Int, val setCount: Int)
+data class DaySummary(
+    val date: LocalDate,
+    val exerciseCount: Int,
+    val setCount: Int,
+    /** Feature 006: the day's shown status, and whether it waits for sync. */
+    val status: DayStatus = DayStatus.FREE,
+    val statusPending: Boolean = false,
+)

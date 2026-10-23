@@ -2,6 +2,7 @@ package com.workoutrec.log
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.workoutrec.workout.DayStatus
 import com.workoutrec.workout.DisplaySet
 import com.workoutrec.workout.PastWorkoutError
 import com.workoutrec.workout.PastWorkoutTimes
@@ -25,8 +26,11 @@ import kotlinx.coroutines.launch
 interface PastWorkoutStore {
     val displaySets: Flow<List<DisplaySet>>
 
-    /** Saves all sets of the workout in one transaction (research R10). */
-    suspend fun confirmSets(keys: List<SetKey>)
+    /**
+     * Saves all sets of the workout in one transaction (research R10); feature 006: [status] is
+     * the day's chosen status, null for the default.
+     */
+    suspend fun confirmSets(keys: List<SetKey>, status: DayStatus? = null)
 }
 
 /** A set of the draft with the time it will get. */
@@ -49,7 +53,7 @@ class PastWorkoutViewModel(
     private val zone: () -> ZoneId = ZoneId::systemDefault,
 ) : ViewModel() {
 
-    private data class Draft(val date: LocalDate, val start: Long, val durationMinutes: Int, val sets: List<SetValues>) {
+    private data class Draft(val date: LocalDate, val start: Long, val durationMinutes: Int, val sets: List<SetValues>, val status: DayStatus?) {
         fun withTimes(): List<DraftSet> =
             sets.zip(PastWorkoutTimes.times(start, durationMinutes, sets.size)) { values, time -> DraftSet(values, time) }
     }
@@ -68,10 +72,10 @@ class PastWorkoutViewModel(
         }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, PastWorkoutState())
 
-    fun setup(date: LocalDate, start: LocalTime, durationMinutes: Int): PastWorkoutError? {
+    fun setup(date: LocalDate, start: LocalTime, durationMinutes: Int, status: DayStatus? = null): PastWorkoutError? {
         val today = Instant.ofEpochMilli(clockMillis()).atZone(zone()).toLocalDate()
         PastWorkoutTimes.validate(date, today, durationMinutes)?.let { return it }
-        draft.value = Draft(date, LocalDateTime.of(date, start).atZone(zone()).toEpochSecond(), durationMinutes, emptyList())
+        draft.value = Draft(date, LocalDateTime.of(date, start).atZone(zone()).toEpochSecond(), durationMinutes, emptyList(), status)
         return null
     }
 
@@ -90,7 +94,7 @@ class PastWorkoutViewModel(
         val keys = d.withTimes().map { SetKey(it.time, it.values.exercise, it.values.weight, it.values.reps) }
         draft.value = null
         viewModelScope.launch {
-            store.confirmSets(keys)
+            store.confirmSets(keys, d.status)
             requestSync()
         }
         return true

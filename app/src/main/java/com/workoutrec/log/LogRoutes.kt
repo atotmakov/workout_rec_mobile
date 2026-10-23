@@ -36,6 +36,7 @@ import com.workoutrec.monitoring.ScreenProfile
 import com.workoutrec.setup.Browser
 import com.workoutrec.sync.RefreshPolicy
 import com.workoutrec.sync.SyncStatus
+import com.workoutrec.workout.DayStatusRules
 import com.workoutrec.workout.DisplayModel
 import com.workoutrec.workout.DisplaySet
 import com.workoutrec.workout.History
@@ -140,10 +141,24 @@ fun TodayRoute(
             }
         }
     }
-    TodayScreen(groups, onAddExercise, onOpenExercise, modifier, refreshing = refreshing, onRefresh = refresh) {
-        header()
-        SyncNoticeList(notices, onDismiss = { id -> scope.launch { container.workoutRepository.dismissNotice(id) } })
-    }
+    // Feature 006 US1: today's Paid/Free, saved at once and sent with the next sync.
+    val statuses by container.workoutRepository.statuses.collectAsState(initial = emptyList())
+    val known = remember(statuses) { statuses.associate { it.date to it.status } }
+    TodayScreen(
+        groups, onAddExercise, onOpenExercise, modifier, refreshing = refreshing, onRefresh = refresh,
+        header = {
+            header()
+            SyncNoticeList(notices, onDismiss = { id -> scope.launch { container.workoutRepository.dismissNotice(id) } })
+        },
+        today = LocalDate.now(zone),
+        statuses = known,
+        onDayStatus = { status ->
+            scope.launch {
+                container.workoutRepository.setStatus(LocalDate.now(zone), status)
+                container.syncScheduler.requestSync()
+            }
+        },
+    )
 }
 
 /** The History tab's first screen (feature 004 US2); [actions] are the sync icon and the avatar. */
@@ -157,7 +172,8 @@ fun WorkoutsRoute(
     val sets by container.workoutRepository.displaySets.collectAsState(initial = emptyList())
     val status by container.syncStatusStore.status.collectAsState(initial = SyncStatus())
     val zone = status.zone()
-    val days = remember(sets, zone) { DisplayModel.pastDays(sets, LocalDate.now(zone), zone) }
+    val statuses by container.workoutRepository.statuses.collectAsState(initial = emptyList())
+    val days = remember(sets, zone, statuses) { DisplayModel.pastDays(sets, LocalDate.now(zone), zone, statuses) }
     HistoryScreen(days, onOpenDay, onPastWorkout, actions = actions)
 }
 
@@ -168,6 +184,10 @@ fun DayRoute(container: AppContainer, date: LocalDate, onBack: () -> Unit) {
     val status by container.syncStatusStore.status.collectAsState(initial = SyncStatus())
     val zone = status.zone()
     val groups = remember(sets, date, zone) { DisplayModel.day(sets, date, zone) }
+    // Feature 006 US3: the day's status, the same stored value Today's control shows.
+    val statuses by container.workoutRepository.statuses.collectAsState(initial = emptyList())
+    val dayStatus = remember(statuses, date) { DayStatusRules.shown(date, statuses.associate { it.date to it.status }) }
+    val scope = rememberCoroutineScope()
     var editing by remember { mutableStateOf<DisplaySet?>(null) }
     val locale = LocalConfiguration.current.locales[0]
     Scaffold(
@@ -179,7 +199,15 @@ fun DayRoute(container: AppContainer, date: LocalDate, onBack: () -> Unit) {
             )
         },
     ) { padding ->
-        DayDetailScreen(groups, onEditSet = { editing = it }, modifier = Modifier.padding(padding))
+        DayDetailScreen(
+            groups, onEditSet = { editing = it }, modifier = Modifier.padding(padding), status = dayStatus,
+            onStatus = { changed ->
+                scope.launch {
+                    container.workoutRepository.setStatus(date, changed)
+                    container.syncScheduler.requestSync()
+                }
+            },
+        )
     }
     editing?.let { set -> EditSetRoute(container, set, zone, onDone = { editing = null }) }
 }
@@ -327,10 +355,12 @@ fun PastWorkoutRoute(container: AppContainer, onDone: () -> Unit) {
     ) { padding ->
         Box(Modifier.padding(padding)) {
             if (state.date == null) {
+                val statuses by container.workoutRepository.statuses.collectAsState(initial = emptyList())
                 PastWorkoutDialog(
                     initialDate = LocalDate.now(zone).minusDays(1),
-                    onStart = { date, start, duration -> viewModel.setup(date, start, duration) },
+                    onStart = { date, start, duration, dayStatus -> viewModel.setup(date, start, duration, dayStatus) },
                     onDismiss = onDone,
+                    statuses = remember(statuses) { statuses.associate { it.date to it.status } },
                 )
             } else {
                 PastWorkoutEditor(

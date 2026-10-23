@@ -175,6 +175,11 @@
     <string name="exercise_waiting">Ещё не в таблице</string>
     <string name="notice_exercise_change_dropped">«%1$s» изменили в таблице раньше, чем туда дошло ваше изменение; оставлена версия из таблицы.</string>
     <string name="notice_exercise_in_use">У «%1$s» есть подходы в журнале, поэтому оно не удалено.</string>
+    <!-- Feature 006 -->
+    <string name="notice_day_status_dropped">Изменено в таблице: %1$s оставлено как «%2$s».</string>
+    <string name="day_status_paid">Платная</string>
+    <string name="day_status_free">Бесплатная</string>
+    <string name="day_status_title">Тренировка</string>
     <!-- Feature 004 US4: Money tab -->
     <!-- The number is shown in large type above this label; the label only agrees with it. -->
     <plurals name="money_left" tools:ignore="ImpliedQuantity">

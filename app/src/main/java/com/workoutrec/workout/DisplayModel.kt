@@ -42,11 +42,16 @@ object DisplayModel {
             .groupBy { it.key.exercise }
             .map { (exercise, groupSets) -> ExerciseGroup(exercise, groupSets) }
 
-    fun pastDays(sets: List<DisplaySet>, today: LocalDate, zone: ZoneId): List<DaySummary> =
-        sets.groupBy { SheetTime.workoutDay(it.key.time, zone) }
+    fun pastDays(sets: List<DisplaySet>, today: LocalDate, zone: ZoneId, statuses: List<KnownStatus> = emptyList()): List<DaySummary> {
+        val known = statuses.associate { it.date to it.status }
+        val pending = statuses.filter { it.pending }.mapTo(mutableSetOf()) { it.date }
+        return sets.groupBy { SheetTime.workoutDay(it.key.time, zone) }
             .filterKeys { it < today }
-            .map { (date, daySets) -> DaySummary(date, daySets.map { it.key.exercise }.distinct().size, daySets.size) }
+            .map { (date, daySets) ->
+                DaySummary(date, daySets.map { it.key.exercise }.distinct().size, daySets.size, DayStatusRules.shown(date, known), date in pending)
+            }
             .sortedByDescending { it.date }
+    }
 
     fun recentExercises(sets: List<DisplaySet>, limit: Int = 5): List<String> =
         sets.groupBy { it.key.exercise }
@@ -58,8 +63,14 @@ object DisplayModel {
     fun pendingCount(pending: List<PendingChange>): Int = pending.count { it.draftId == null }
 
     /** Feature 004 FR-012: everything waiting on the phone, for the sync icon and the sign-out warning. */
-    fun waitingCount(pending: List<PendingChange>, exerciseChanges: Int, payments: Int): Int =
-        pendingCount(pending) + exerciseChanges + payments
+    fun waitingCount(pending: List<PendingChange>, exerciseChanges: Int, payments: Int, statuses: Int = 0): Int =
+        pendingCount(pending) + exerciseChanges + payments + statuses
+
+    /** Feature 006 data-model "Waiting count": statuses of days with a set, the ones sync can send. */
+    fun waitingStatuses(statuses: List<PendingStatus>, sets: List<DisplaySet>, zone: ZoneId): Int {
+        val days = sets.mapTo(mutableSetOf()) { SheetTime.workoutDay(it.key.time, zone) }
+        return statuses.count { it.date in days }
+    }
 
     /** Feature 004: the drills list with the app's waiting exercise changes applied (data-model.md). */
     fun exercises(cache: List<Exercise>, changes: List<ExerciseChange>, sets: List<DisplaySet>): List<ShownExercise> {

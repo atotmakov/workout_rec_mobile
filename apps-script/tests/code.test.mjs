@@ -145,6 +145,31 @@ test('dailyJob appends three-value workout rows, then balance, then last run (in
   assert.ok(ss.metadataValue('workout_rec.last_daily_run'));
 });
 
+// Feature 006 contracts/apps-script.md: durations of rows the app added, and the default flag.
+test('dailyJob fills empty durations, appends new days with the previous flag, then the balance', () => {
+  const { ss, ctx, fakes } = setup({
+    log: [
+      ['Date', 'Drill', 'W', 'R'],
+      [new Date('2026-01-12T10:00:00Z'), 'жим', 20, 10],
+      [new Date('2026-01-12T11:00:00Z'), 'тяга', 30, 8],
+      [new Date('2026-01-14T09:00:00Z'), 'жим', 22, 10],
+    ],
+    workout: [
+      ['date', 'duration, min', 'work alone'],
+      [new Date('2026-01-12T00:00:00Z'), '', 1],
+    ],
+    money: [['date', 'workouts', 'sum'], [new Date('2026-01-01T00:00:00Z'), 24, 24000]],
+  });
+  ctx.dailyJob();
+  const kinds = fakes.calls.map((c) => c[0] === 'setValue' ? `setValue ${c[1]}` : c[0]);
+  assert.deepEqual(kinds, ['setValue workout!B2', 'appendRow', 'setValue balance!A1', 'addMetadata']);
+  assert.equal(fakes.calls[0][2], 60);
+  const appended = fakes.calls[1][2];
+  assert.equal(appended[0].toISOString().slice(0, 10), '2026-01-14');
+  assert.deepEqual(appended.slice(1), [0, 1], 'one set: 0 minutes; copies the free day before');
+  assert.equal(ss.getSheetByName('balance').cell(1, 1), 24, '24 paid - 0 counted (both days free)');
+});
+
 test('dailyJob updates last run instead of adding a second entry', () => {
   const { ss, ctx } = setup();
   ctx.dailyJob();

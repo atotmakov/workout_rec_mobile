@@ -36,4 +36,22 @@ class SheetInfoRefreshTest {
         LogSync(FakeLogSyncStore(), sheets, status, spreadsheetId = { "s1" }).run()
         assertEquals(listOf("read:s1"), sheets.calls)
     }
+
+    // Feature 006 research R6: a cache from before the workout tab was known is read again once
+    @Test
+    fun `a version 1 cache is read again and stores the workout id`() = runTest {
+        val status = FakeSyncStatusStore(SyncStatus(sheet = SheetInfoCache("s1", "UTC", 3, drillsSheetId = 4, version = 1)))
+        val sheets = FakeSheetsLogApi(logSheetId = 3, drillsSheetId = 4, workoutSheetId = 9)
+        LogSync(FakeLogSyncStore(), sheets, status, spreadsheetId = { "s1" }).run()
+        assertEquals("info:s1", sheets.calls.first())
+        assertEquals(SheetInfoCache("s1", "UTC", 3, drillsSheetId = 4, workoutSheetId = 9, version = 2), status.status.value.sheet)
+    }
+
+    @Test
+    fun `a version 2 cache without a workout tab is used as it is`() = runTest {
+        val status = FakeSyncStatusStore(SyncStatus(sheet = SheetInfoCache("s1", "UTC", 3, drillsSheetId = 4, version = 2)))
+        val sheets = FakeSheetsLogApi(logSheetId = 3, drillsSheetId = 4)
+        LogSync(FakeLogSyncStore(), sheets, status, spreadsheetId = { "s1" }).run()
+        assertEquals(listOf("read:s1"), sheets.calls)
+    }
 }

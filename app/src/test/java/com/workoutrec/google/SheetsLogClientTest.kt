@@ -1,5 +1,7 @@
 package com.workoutrec.google
 
+import com.workoutrec.workout.DayStatus
+import java.time.LocalDate
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.double
@@ -258,5 +260,98 @@ class SheetsLogClientTest {
         } catch (e: ApiError) {
             assertTrue(e is ApiError.NotFound)
         }
+    }
+
+    // Feature 006 contracts/sheets.md: the workout tab
+
+    @Test
+    fun `call 20 also returns the workout sheet id`() = runTest {
+        server.enqueue(
+            MockResponse().setBody(
+                """{"properties":{"timeZone":"UTC"},"sheets":[{"properties":{"sheetId":1,"title":"log"}},
+                   {"properties":{"sheetId":2,"title":"drills"}},{"properties":{"sheetId":9,"title":"workout"}}]}""",
+            ),
+        )
+        assertEquals(9, client.logSheetInfo("id1").workoutSheetId)
+        server.enqueue(MockResponse().setBody("""{"properties":{"timeZone":"UTC"},"sheets":[{"properties":{"sheetId":1,"title":"log"}},{"properties":{"sheetId":2,"title":"drills"}}]}"""))
+        assertEquals(null, client.logSheetInfo("id1").workoutSheetId)
+    }
+
+    @Test
+    fun `call 21 reads the workout tab after the money tab and parses its rows`() = runTest {
+        server.enqueue(
+            MockResponse().setBody(
+                """{"valueRanges":[{"values":[]},{"values":[]},
+                   {"values":[[46034,8,8000]]},
+                   {"values":[[46030.75,45,0],["x",10,1],[46031,"",1],[46032,30,"1"],[],[46033,20]]}]}""",
+            ),
+        )
+        val read = client.readLogAndDrills("id1", withMoney = true, withWorkout = true)
+        assertEquals(listOf("log!A2:D", "drills!A2:B", "money!A2:C", "workout!A2:C"), server.takeRequest().requestUrl!!.queryParameterValues("ranges"))
+        assertEquals(listOf(SheetMoneyRow(1, 46034.0, 8.0, 8000.0)), read.money)
+        assertEquals(
+            listOf(
+                SheetWorkoutRow(1, LocalDate.of(2026, 1, 8), DayStatus.PAID),
+                SheetWorkoutRow(3, LocalDate.of(2026, 1, 9), DayStatus.FREE),
+                SheetWorkoutRow(4, LocalDate.of(2026, 1, 10), DayStatus.FREE),
+                SheetWorkoutRow(6, LocalDate.of(2026, 1, 11), DayStatus.PAID),
+            ),
+            read.workout,
+        )
+    }
+
+    @Test
+    fun `call 21 reads the workout tab without the money tab`() = runTest {
+        server.enqueue(MockResponse().setBody("""{"valueRanges":[{"values":[]},{"values":[]},{"values":[[46034,0,1]]}]}"""))
+        val read = client.readLogAndDrills("id1", withWorkout = true)
+        assertEquals(listOf("log!A2:D", "drills!A2:B", "workout!A2:C"), server.takeRequest().requestUrl!!.queryParameterValues("ranges"))
+        assertEquals(emptyList<SheetMoneyRow>(), read.money)
+        assertEquals(listOf(SheetWorkoutRow(1, LocalDate.of(2026, 1, 12), DayStatus.FREE)), read.workout)
+    }
+
+    @Test
+    fun `call 22 updates the status column, then appends new workout rows last`() = runTest {
+        server.enqueue(MockResponse().setBody("""{"replies":[]}"""))
+        client.writeLog(
+            spreadsheetId = "id1",
+            logSheetId = 4,
+            deletes = emptyList(),
+            edits = emptyList(),
+            appends = listOf(LogAppend(46034.5, "row", 30.0, 12)),
+            money = MoneyWrite(6, listOf(MoneyAppend(46034.0, 8, 8000.0))),
+            workout = WorkoutWrite(
+                workoutSheetId = 9,
+                updates = listOf(WorkoutUpdate(3, DayStatus.FREE), WorkoutUpdate(5, DayStatus.PAID)),
+                appends = listOf(WorkoutAppend(46033.0, DayStatus.PAID), WorkoutAppend(46034.0, DayStatus.FREE)),
+            ),
+        )
+        val requests = GoogleJson.parseToJsonElement(server.takeRequest().body.readUtf8()).jsonObject["requests"]!!.jsonArray.map { it.jsonObject }
+        assertEquals(listOf("appendCells", "appendCells", "updateCells", "updateCells", "appendCells"), requests.map { it.keys.single() })
+
+        val update = requests[2]["updateCells"]!!.jsonObject
+        assertEquals(listOf(9, 3, 2), listOf("sheetId", "rowIndex", "columnIndex").map { update["start"]!!.jsonObject[it]!!.jsonPrimitive.int })
+        assertEquals("userEnteredValue", update["fields"]!!.jsonPrimitive.content)
+        val cell = update["rows"]!!.jsonArray.single().jsonObject["values"]!!.jsonArray.single().jsonObject["userEnteredValue"]!!.jsonObject
+        assertEquals(1.0, cell["numberValue"]!!.jsonPrimitive.double, 0.0)
+        assertEquals(5, requests[3]["updateCells"]!!.jsonObject["start"]!!.jsonObject["rowIndex"]!!.jsonPrimitive.int)
+
+        val append = requests[4]["appendCells"]!!.jsonObject
+        assertEquals(9, append["sheetId"]!!.jsonPrimitive.int)
+        assertEquals("userEnteredValue", append["fields"]!!.jsonPrimitive.content)
+        val rows = append["rows"]!!.jsonArray.map { it.jsonObject["values"]!!.jsonArray.map { v -> v.jsonObject } }
+        assertEquals(46033.0, rows[0][0]["userEnteredValue"]!!.jsonObject["numberValue"]!!.jsonPrimitive.double, 0.0)
+        assertEquals(JsonObject(emptyMap()), rows[0][1])
+        assertEquals(0.0, rows[0][2]["userEnteredValue"]!!.jsonObject["numberValue"]!!.jsonPrimitive.double, 0.0)
+        assertEquals(1.0, rows[1][2]["userEnteredValue"]!!.jsonObject["numberValue"]!!.jsonPrimitive.double, 0.0)
+    }
+
+    @Test
+    fun `call 22 is sent for workout statuses alone`() = runTest {
+        server.enqueue(MockResponse().setBody("""{"replies":[]}"""))
+        client.writeLog("id1", 0, emptyList(), emptyList(), emptyList(), workout = WorkoutWrite(9, listOf(WorkoutUpdate(1, DayStatus.FREE)), emptyList()))
+        val requests = GoogleJson.parseToJsonElement(server.takeRequest().body.readUtf8()).jsonObject["requests"]!!.jsonArray
+        assertEquals(listOf("updateCells"), requests.map { (it as JsonObject).keys.single() })
+        client.writeLog("id1", 0, emptyList(), emptyList(), emptyList(), workout = WorkoutWrite(9, emptyList(), emptyList()))
+        assertEquals(1, server.requestCount)
     }
 }

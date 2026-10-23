@@ -3,6 +3,7 @@ package com.workoutrec.setup
 import com.workoutrec.automation.AutomationStatus
 import com.workoutrec.automation.AutomationStatusEvaluator
 import com.workoutrec.automation.ScriptInstall
+import com.workoutrec.automation.ScriptInstaller
 import com.workoutrec.data.SelectedAccount
 import com.workoutrec.data.SettingsStore
 import com.workoutrec.data.SpreadsheetBinding
@@ -16,6 +17,7 @@ import com.workoutrec.spreadsheet.SpreadsheetSetup
 import com.workoutrec.spreadsheet.SpreadsheetSnapshot
 import com.workoutrec.spreadsheet.StructureCheckResult
 import java.time.Instant
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 
 /**
@@ -68,7 +70,27 @@ class SpreadsheetSetupFlow(
         }
         val snapshot = setup.check(binding.spreadsheetId).snapshot
         bind(account, binding.spreadsheetId, snapshot.metadata)
+        upgradeScript(binding.spreadsheetId, snapshot)
         return RefreshResult.Status(reminder(snapshot))
+    }
+
+    /**
+     * Feature 006 research R7: an attached script older than the app's is replaced in the
+     * background. A failure changes nothing the user sees; the next app start tries again.
+     */
+    private suspend fun upgradeScript(spreadsheetId: String, snapshot: SpreadsheetSnapshot) {
+        val scriptId = snapshot.metadata[AutomationStatusEvaluator.SCRIPT_ID]?.takeIf { it.isNotBlank() } ?: return
+        val version = snapshot.metadata[AutomationStatusEvaluator.SCRIPT_VERSION]?.toIntOrNull() ?: 1
+        if (version >= ScriptInstaller.SCRIPT_VERSION) return
+        try {
+            installer.upgrade(spreadsheetId, scriptId, timeZone(), snapshot.metadataIds)
+            log("setup: script upgraded to version ${ScriptInstaller.SCRIPT_VERSION}")
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log("setup: script upgrade failed: ${e::class.simpleName}")
+            monitoring.failure(NonFatalIssue.SCRIPT_UPGRADE_FAILED, e, "script-upgrade")
+        }
     }
 
     private suspend fun findSpreadsheet(account: SelectedAccount): SetupState = guarded(SetupStep.Finding) {

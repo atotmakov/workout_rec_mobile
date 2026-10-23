@@ -1,5 +1,8 @@
 package com.workoutrec.log
 
+import com.workoutrec.workout.DayStatus
+import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -49,5 +52,29 @@ class HistoryTabTest {
         compose.onNodeWithTag(HistoryTags.EMPTY).assertIsDisplayed()
         compose.onNodeWithTag(HistoryTags.EMPTY_PAST_WORKOUT).performClick()
         assertEquals(1, started)
+    }
+
+    // Feature 006 spec US3, contracts/screens.md "History list"
+    @Test
+    fun eachDayShowsItsStatusAndAWaitingMark() {
+        val paid = LocalDate.of(2026, 10, 14)
+        val free = LocalDate.of(2026, 10, 15)
+        compose.setContent {
+            HistoryScreen(
+                days = listOf(DaySummary(free, 1, 1, DayStatus.FREE, statusPending = true), DaySummary(paid, 1, 1, DayStatus.PAID, statusPending = false)),
+                onOpenDay = {},
+                onPastWorkout = {},
+            )
+        }
+        compose.onNodeWithTag(CorrectionTags.dayStatusLabel(paid), useUnmergedTree = true).assertTextEquals(context.getString(R.string.day_status_paid))
+        compose.onNodeWithTag(CorrectionTags.dayStatusLabel(free), useUnmergedTree = true).assertTextEquals(context.getString(R.string.day_status_free))
+        compose.onNodeWithTag(CorrectionTags.dayStatusWaiting(free), useUnmergedTree = true).assertExists()
+        compose.onNodeWithTag(CorrectionTags.dayStatusWaiting(paid), useUnmergedTree = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun dayDetailsShowTheDaysStatus() {
+        compose.setContent { DayDetailScreen(groups = emptyList(), onEditSet = {}, status = DayStatus.FREE) }
+        compose.onNodeWithTag("${CorrectionTags.DAY_STATUS}_free").assertIsSelected()
     }
 }

@@ -22,8 +22,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.workoutrec.R
+import com.workoutrec.workout.DayStatus
+import com.workoutrec.workout.DayStatusRules
 import com.workoutrec.workout.ExerciseGroup
 import com.workoutrec.workout.SetKey
+import java.time.LocalDate
 import java.util.Locale
 
 /** Test tags of contracts/screens.md "Main (Today)". */
@@ -31,6 +34,7 @@ object TodayTags {
     const val SCREEN = "today_screen"
     const val EMPTY = "today_empty"
     const val ADD_EXERCISE = "add_exercise"
+    const val DAY_STATUS = "today_day_status"
     fun exercise(index: Int) = "today_exercise_$index"
 }
 
@@ -46,6 +50,10 @@ fun TodayScreen(
     refreshing: Boolean = false,
     onRefresh: () -> Unit = {},
     header: @Composable () -> Unit = {},
+    /** Feature 006: today's date and the known statuses; the control shows when [onDayStatus] is set. */
+    today: LocalDate? = null,
+    statuses: Map<LocalDate, DayStatus> = emptyMap(),
+    onDayStatus: ((DayStatus) -> Unit)? = null,
 ) {
     val locale = LocalConfiguration.current.locales[0]
     // One scrolling list, so pulling down works even on an empty day.
@@ -53,6 +61,10 @@ fun TodayScreen(
         LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             item {
                 Column(Modifier.padding(top = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    if (today != null && onDayStatus != null) {
+                        // Spec FR-002, FR-003: today's own status, else the previous workout day's.
+                        DayStatusControl(DayStatusRules.shown(today, statuses), onDayStatus, TodayTags.DAY_STATUS)
+                    }
                     header()
                     if (groups.isEmpty()) {
                         Text(stringResource(R.string.today_empty), modifier = Modifier.testTag(TodayTags.EMPTY))

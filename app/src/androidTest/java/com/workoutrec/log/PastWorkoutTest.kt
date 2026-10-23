@@ -1,5 +1,8 @@
 package com.workoutrec.log
 
+import com.workoutrec.workout.DayStatus
+import androidx.compose.ui.test.performTextReplacement
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextContains
@@ -32,7 +35,7 @@ class PastWorkoutTest {
         compose.setContent {
             PastWorkoutDialog(
                 initialDate = LocalDate.of(2026, 1, 11),
-                onStart = { date, start, duration -> started = Triple(date, start, duration); null },
+                onStart = { date, start, duration, _ -> started = Triple(date, start, duration); null },
                 onDismiss = {},
             )
         }
@@ -67,5 +70,40 @@ class PastWorkoutTest {
         compose.onAllNodesWithTag(PastWorkoutTags.SET)[1].assertTextContains("× 8", substring = true)
         compose.onNodeWithTag(PastWorkoutTags.SAVE).performClick()
         assertEquals(1, saved)
+    }
+
+    // Feature 006 spec US4 scenarios 2-3, FR-014; contracts/screens.md "Past-workout dialog"
+    private val statuses = mapOf(LocalDate.of(2026, 1, 9) to DayStatus.FREE, LocalDate.of(2026, 1, 10) to DayStatus.PAID)
+
+    @Test
+    fun theDialogOffersTheDefaultForItsDate() {
+        var chosen: DayStatus? = null
+        compose.setContent {
+            PastWorkoutDialog(initialDate = LocalDate.of(2026, 1, 11), statuses = statuses, onStart = { _, _, _, status -> chosen = status; null }, onDismiss = {})
+        }
+        compose.onNodeWithTag("${PastWorkoutTags.STATUS}_paid").assertIsSelected()
+        compose.onNodeWithTag(PastWorkoutTags.START).performClick()
+        assertEquals(DayStatus.PAID, chosen)
+    }
+
+    @Test
+    fun theStatusFollowsTheDateUntilTheUserPicksOne() {
+        var chosen: DayStatus? = null
+        compose.setContent {
+            PastWorkoutDialog(initialDate = LocalDate.of(2026, 1, 11), statuses = statuses, onStart = { _, _, _, status -> chosen = status; null }, onDismiss = {})
+        }
+        compose.onNodeWithTag(PastWorkoutTags.DATE).performTextReplacement("2026-01-09")
+        compose.onNodeWithTag("${PastWorkoutTags.STATUS}_free").assertIsSelected()
+        compose.onNodeWithTag("${PastWorkoutTags.STATUS}_paid").performClick()
+        compose.onNodeWithTag(PastWorkoutTags.DATE).performTextReplacement("2026-01-05")
+        compose.onNodeWithTag("${PastWorkoutTags.STATUS}_paid").assertIsSelected()
+        compose.onNodeWithTag(PastWorkoutTags.START).performClick()
+        assertEquals(DayStatus.PAID, chosen)
+    }
+
+    @Test
+    fun aDateWithNoEarlierWorkoutIsFree() {
+        compose.setContent { PastWorkoutDialog(initialDate = LocalDate.of(2026, 1, 1), statuses = statuses, onStart = { _, _, _, _ -> null }, onDismiss = {}) }
+        compose.onNodeWithTag("${PastWorkoutTags.STATUS}_free").assertIsSelected()
     }
 }

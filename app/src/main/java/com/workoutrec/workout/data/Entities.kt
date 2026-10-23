@@ -98,6 +98,20 @@ data class PaymentRowEntity(
     val sumHundredths: Long?,
 )
 
+/**
+ * Feature 006 data-model.md: a date's Paid/Free status; [date] is ISO yyyy-MM-dd. [pending] rows
+ * were chosen on the phone and wait for sync; the others are the cache of the `workout` tab.
+ * [lastSeenFree] is the tab's value when the phone change was made (null = no row then).
+ */
+@Entity(tableName = "day_status")
+data class DayStatusEntity(
+    @PrimaryKey val date: String,
+    val free: Boolean,
+    val pending: Boolean,
+    val updatedAt: Long,
+    val lastSeenFree: Boolean?,
+)
+
 /** The balance and what is known about its calculation; one row with [id] 1. */
 @Entity(tableName = "money_summary")
 data class MoneySummaryEntity(

@@ -27,38 +27,80 @@ test('autoFillPlan treats null and undefined as empty', () => {
   assert.deepEqual(logic.autoFillPlan(['Drill', 'a', null, undefined, 'x'], 5), [4, 3]);
 });
 
-test('dailyWorkoutRows adds one three-value row per new day with duration in minutes', () => {
+// Feature 006 contracts/apps-script.md: workoutRowsPlan replaces dailyWorkoutRows.
+const day = (iso, minutes, flag) => [d(iso + 'T00:00:00Z'), minutes, flag];
+
+test('workoutRowsPlan adds one three-value row per new day with duration in minutes', () => {
   const log = [
     [d('2026-01-12T10:00:00Z'), 'жим', 20, 10],
     [d('2026-01-12T11:31:00Z'), 'тяга', 30, 8],
     [d('2026-01-14T09:00:00Z'), 'жим', 22, 10],
     [d('2026-01-14T10:29:30Z'), 'жим', 22, 9],
   ];
-  const rows = logic.dailyWorkoutRows(log, new Set(), dayKey);
-  assert.equal(rows.length, 2);
-  assert.deepEqual(rows.map((r) => r.length), [3, 3]);
-  assert.deepEqual(rows.map((r) => dayKey(r[0])), ['2026-01-12', '2026-01-14']);
-  assert.deepEqual(rows.map((r) => r[1]), [91, 90]);
-  assert.deepEqual(rows.map((r) => r[2]), [0, 0]);
+  const plan = logic.workoutRowsPlan(log, [], dayKey);
+  assert.deepEqual(plan.appends.map((r) => r.length), [3, 3]);
+  assert.deepEqual(plan.appends.map((r) => dayKey(r[0])), ['2026-01-12', '2026-01-14']);
+  assert.deepEqual(plan.appends.map((r) => r[1]), [91, 90]);
+  assert.deepEqual(plan.durations, []);
 });
 
-test('dailyWorkoutRows skips days already in workout and non-date rows', () => {
+test('workoutRowsPlan skips days already in workout and non-date rows', () => {
   const log = [
     [d('2026-01-12T10:00:00Z'), 'жим', 20, 10],
     ['', 'пусто', '', ''],
     [d('2026-01-16T10:00:00Z'), 'жим', 20, 10],
   ];
-  const rows = logic.dailyWorkoutRows(log, new Set(['2026-01-12']), dayKey);
-  assert.deepEqual(rows.map((r) => dayKey(r[0])), ['2026-01-16']);
-  assert.equal(rows[0][1], 0);
+  const plan = logic.workoutRowsPlan(log, [day('2026-01-12', 45, 0)], dayKey);
+  assert.deepEqual(plan.appends.map((r) => dayKey(r[0])), ['2026-01-16']);
+  assert.equal(plan.appends[0][1], 0);
 });
 
-test('dailyWorkoutRows orders rows by date even when the log is unsorted', () => {
+test('workoutRowsPlan orders new rows by date even when the log is unsorted', () => {
   const log = [
     [d('2026-02-02T10:00:00Z'), 'a', 1, 1],
     [d('2026-01-20T10:00:00Z'), 'b', 1, 1],
   ];
-  assert.deepEqual(logic.dailyWorkoutRows(log, new Set(), dayKey).map((r) => dayKey(r[0])), ['2026-01-20', '2026-02-02']);
+  assert.deepEqual(logic.workoutRowsPlan(log, [], dayKey).appends.map((r) => dayKey(r[0])), ['2026-01-20', '2026-02-02']);
+});
+
+test('workoutRowsPlan: the first workout ever is free', () => {
+  const plan = logic.workoutRowsPlan([[d('2026-01-12T10:00:00Z'), 'a', 1, 1]], [], dayKey);
+  assert.equal(plan.appends[0][2], 1);
+});
+
+test('workoutRowsPlan: a new day copies the latest earlier day flag', () => {
+  const log = [[d('2026-01-20T10:00:00Z'), 'a', 1, 1]];
+  assert.equal(logic.workoutRowsPlan(log, [day('2026-01-10', 30, 1), day('2026-01-12', 30, 0)], dayKey).appends[0][2], 0);
+  assert.equal(logic.workoutRowsPlan(log, [day('2026-01-12', 30, 0), day('2026-01-10', 30, '1')], dayKey).appends[0][2], 0);
+  assert.equal(logic.workoutRowsPlan(log, [day('2026-01-12', 30, '1')], dayKey).appends[0][2], 1);
+  assert.equal(logic.workoutRowsPlan(log, [day('2026-01-12', 30, '')], dayKey).appends[0][2], 0);
+});
+
+test('workoutRowsPlan: later days do not count for the default', () => {
+  const log = [[d('2026-01-12T10:00:00Z'), 'a', 1, 1]];
+  assert.equal(logic.workoutRowsPlan(log, [day('2026-01-20', 30, 0)], dayKey).appends[0][2], 1);
+});
+
+test('workoutRowsPlan: a second new day copies the first new day flag', () => {
+  const log = [
+    [d('2026-01-14T10:00:00Z'), 'a', 1, 1],
+    [d('2026-01-13T10:00:00Z'), 'a', 1, 1],
+  ];
+  const plan = logic.workoutRowsPlan(log, [day('2026-01-12', 30, 0)], dayKey);
+  assert.deepEqual(plan.appends.map((r) => r[2]), [0, 0]);
+});
+
+test('workoutRowsPlan fills only empty durations of rows whose day is in the log', () => {
+  const log = [
+    [d('2026-01-12T10:00:00Z'), 'a', 1, 1],
+    [d('2026-01-12T11:15:00Z'), 'a', 1, 1],
+    [d('2026-01-13T10:00:00Z'), 'a', 1, 1],
+  ];
+  const rows = [day('2026-01-12', '', 1), day('2026-01-13', 50, 0), day('2026-01-11', '', 0), ['', '', '']];
+  const plan = logic.workoutRowsPlan(log, rows, dayKey);
+  // Sheet row numbers: header is row 1, so rows[0] is row 2.
+  assert.deepEqual(plan.durations, [{ row: 2, minutes: 75 }]);
+  assert.deepEqual(plan.appends, []);
 });
 
 test('balance is paid workouts minus counted workouts', () => {
