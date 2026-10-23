@@ -10,5 +10,6 @@ listed here so the feature's history stays in one place.
    sign-in from any tab closed the app with "Restore State failed: route tab/today cannot be
    found from the current destination … route=setup". Research R1's "the next account starts on
    fresh tabs" cleared the tabs' saved stacks after navigating to setup, where the nested tab
-   graphs can't be found, so it crashed every time, even straight from Today. The stacks are now cleared first (`nav.leaveTabs`), covered by
-   `androidTest/nav/LeaveTabsTest.kt`; no UI test had left the tabs for setup before.
+   graphs can't be found, so it crashed every time, even straight from Today. The stacks are
+   now cleared first (`nav.leaveTabs`), covered by `androidTest/nav/LeaveTabsTest.kt`; no UI
+   test had left the tabs for setup before.
