@@ -18,11 +18,12 @@ import androidx.room.RoomDatabase
         PendingPaymentEntity::class,
         PaymentRowEntity::class,
         MoneySummaryEntity::class,
+        DayStatusEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
-    // Feature 004 research R9: version 2 only adds tables.
-    autoMigrations = [AutoMigration(from = 1, to = 2)],
+    // Feature 004 research R9: version 2 only adds tables; feature 006 R9: version 3 adds a table and a nullable column.
+    autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3)],
 )
 abstract class WorkoutDatabase : RoomDatabase() {
 

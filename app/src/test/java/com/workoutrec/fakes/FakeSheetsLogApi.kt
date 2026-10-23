@@ -12,6 +12,10 @@ import com.workoutrec.google.MissingTabException
 import com.workoutrec.google.SheetDrill
 import com.workoutrec.google.SheetLogRow
 import com.workoutrec.google.SheetsLogApi
+import com.workoutrec.google.SheetWorkoutRow
+import com.workoutrec.google.WorkoutWrite
+import com.workoutrec.money.PaymentValues
+import com.workoutrec.workout.DayStatusRules
 import kotlinx.coroutines.awaitCancellation
 
 /**
@@ -31,7 +35,16 @@ class FakeSheetsLogApi(
     /** The rec tab's chosen exercise. */
     var recA1: String? = null,
     val money: MutableList<MoneyCells> = mutableListOf(),
+    /** Feature 006: null = no `workout` tab. */
+    var workoutSheetId: Int? = null,
+    val workout: MutableList<WorkoutCells> = mutableListOf(),
 ) : SheetsLogApi {
+
+    /** A `workout` row: date serial (null = not a date), duration, "work alone" as stored. */
+    data class WorkoutCells(val serial: Double?, val duration: Any? = null, val alone: Any? = 0.0)
+
+    val workoutReads get() = workoutReadCount
+    private var workoutReadCount = 0
 
     data class MoneyCells(val serial: Double, val workouts: Double, val sum: Double)
 
@@ -43,7 +56,14 @@ class FakeSheetsLogApi(
     val calls = mutableListOf<String>()
     val writes = mutableListOf<Write>()
 
-    data class Write(val deletes: List<Int>, val edits: List<LogEdit>, val appends: List<LogAppend>, val drills: DrillsWrite? = null, val money: MoneyWrite? = null)
+    data class Write(
+        val deletes: List<Int>,
+        val edits: List<LogEdit>,
+        val appends: List<LogAppend>,
+        val drills: DrillsWrite? = null,
+        val money: MoneyWrite? = null,
+        val workout: WorkoutWrite? = null,
+    )
 
     /** Fails the next call to [call] (`info`, `read` or `write`) with [error]. */
     private val failures = mutableMapOf<String, Exception>()
@@ -66,16 +86,22 @@ class FakeSheetsLogApi(
         calls += "info:$spreadsheetId"
         maybeFail("info")
         listOf("log", "drills").firstOrNull { it !in tabs }?.let { throw MissingTabException(it) }
-        return LogSheetInfo(timeZone, logSheetId, drillsSheetId, recSheetId, moneySheetId, balanceSheetId)
+        return LogSheetInfo(timeZone, logSheetId, drillsSheetId, recSheetId, moneySheetId, balanceSheetId, workoutSheetId)
     }
 
-    override suspend fun readLogAndDrills(spreadsheetId: String, withMoney: Boolean): LogAndDrills {
+    override suspend fun readLogAndDrills(spreadsheetId: String, withMoney: Boolean, withWorkout: Boolean): LogAndDrills {
         calls += "read:$spreadsheetId"
         maybeFail("read")
         return LogAndDrills(
             log = log.mapIndexed { i, c -> SheetLogRow(i + 1, c.serial, c.exercise, c.weight, c.reps) },
             drills = drills.mapIndexed { i, d -> d.copy(rowIndex = i + 1) },
             money = if (withMoney) money.mapIndexed { i, m -> SheetMoneyRow(i + 1, m.serial, m.workouts, m.sum) }.also { moneyReads++ } else emptyList(),
+            workout = if (withWorkout) {
+                workoutReadCount++
+                workout.mapIndexedNotNull { i, w -> w.serial?.let { SheetWorkoutRow(i + 1, PaymentValues.dateOf(it), DayStatusRules.fromSheet(w.alone)) } }
+            } else {
+                emptyList()
+            },
         )
     }
 
@@ -87,13 +113,19 @@ class FakeSheetsLogApi(
         appends: List<LogAppend>,
         drills: DrillsWrite?,
         money: MoneyWrite?,
+        workout: WorkoutWrite?,
     ) {
         val drillsPart = drills?.takeUnless { it.isEmpty }
         val moneyPart = money?.takeUnless { it.appends.isEmpty() }
-        if (deletes.isEmpty() && edits.isEmpty() && appends.isEmpty() && drillsPart == null && moneyPart == null) return
+        val workoutPart = workout?.takeUnless { it.isEmpty }
+        if (deletes.isEmpty() && edits.isEmpty() && appends.isEmpty() && drillsPart == null && moneyPart == null && workoutPart == null) return
         calls += "write:$spreadsheetId"
         maybeFail("write")
-        writes += Write(deletes, edits, appends, drillsPart, moneyPart)
+        writes += Write(deletes, edits, appends, drillsPart, moneyPart, workoutPart)
+        workoutPart?.let { w ->
+            w.updates.forEach { this.workout[it.rowIndex - 1] = this.workout[it.rowIndex - 1].copy(alone = DayStatusRules.toSheet(it.status).toDouble()) }
+            w.appends.forEach { this.workout += WorkoutCells(it.serial, null, DayStatusRules.toSheet(it.status).toDouble()) }
+        }
         moneyPart?.appends?.forEach { this.money += MoneyCells(it.serial, it.workouts.toDouble(), it.sum) }
         val ops = deletes.map { it to null } + edits.map { it.rowIndex to it }
         ops.sortedByDescending { it.first }.forEach { (row, edit) ->

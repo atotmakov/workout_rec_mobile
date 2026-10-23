@@ -49,6 +49,8 @@ data class PastWorkoutDraftEntity(
     val date: String,
     val start: String,
     val durationMinutes: Int,
+    /** Feature 006: the dialog's Paid/Free choice; null in drafts saved before schema 3. */
+    val free: Boolean? = null,
 )
 
 /** A message about a sync result; `kind` is CONFLICT_DROPPED or WORKOUT_ROW_NOT_UPDATED. */
@@ -96,6 +98,20 @@ data class PaymentRowEntity(
     val date: String,
     val workouts: Double?,
     val sumHundredths: Long?,
+)
+
+/**
+ * Feature 006 data-model.md: a date's Paid/Free status; [date] is ISO yyyy-MM-dd. [pending] rows
+ * were chosen on the phone and wait for sync; the others are the cache of the `workout` tab.
+ * [lastSeenFree] is the tab's value when the phone change was made (null = no row then).
+ */
+@Entity(tableName = "day_status")
+data class DayStatusEntity(
+    @PrimaryKey val date: String,
+    val free: Boolean,
+    val pending: Boolean,
+    val updatedAt: Long,
+    val lastSeenFree: Boolean?,
 )
 
 /** The balance and what is known about its calculation; one row with [id] 1. */

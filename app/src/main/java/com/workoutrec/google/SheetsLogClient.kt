@@ -1,5 +1,9 @@
 package com.workoutrec.google
 
+import com.workoutrec.money.PaymentValues
+import com.workoutrec.workout.DayStatus
+import com.workoutrec.workout.DayStatusRules
+import java.time.LocalDate
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -23,6 +27,8 @@ data class LogSheetInfo(
     val recSheetId: Int? = null,
     val moneySheetId: Int? = null,
     val balanceSheetId: Int? = null,
+    /** Feature 006: null when the spreadsheet has no `workout` tab. */
+    val workoutSheetId: Int? = null,
 )
 
 /** A valid set row of the log tab; [rowIndex] is the 0-based sheet row (row 2 → 1). */
@@ -34,8 +40,16 @@ data class SheetDrill(val muscleGroup: String, val name: String, val rowIndex: I
 /** A money row as read for matching payments (feature 004 research R5); null cells were not numbers. */
 data class SheetMoneyRow(val rowIndex: Int, val serial: Double?, val workouts: Double?, val sum: Double?)
 
-/** Call 21 result; [money] only when asked for. */
-data class LogAndDrills(val log: List<SheetLogRow>, val drills: List<SheetDrill>, val money: List<SheetMoneyRow> = emptyList())
+/** A `workout` row with a date (feature 006 contracts/sheets.md); [rowIndex] is 0-based (row 2 → 1). */
+data class SheetWorkoutRow(val rowIndex: Int, val date: LocalDate, val status: DayStatus)
+
+/** Call 21 result; [money] and [workout] only when asked for. */
+data class LogAndDrills(
+    val log: List<SheetLogRow>,
+    val drills: List<SheetDrill>,
+    val money: List<SheetMoneyRow> = emptyList(),
+    val workout: List<SheetWorkoutRow> = emptyList(),
+)
 
 data class LogEdit(val rowIndex: Int, val exercise: String, val weight: Double, val reps: Int)
 
@@ -66,13 +80,24 @@ data class MoneyAppend(val serial: Double, val workouts: Int, val sum: Double)
 /** Feature 004: the money part of call 22. */
 data class MoneyWrite(val moneySheetId: Int, val appends: List<MoneyAppend>)
 
+/** Feature 006: a day's status into column C of an existing `workout` row. */
+data class WorkoutUpdate(val rowIndex: Int, val status: DayStatus)
+
+/** Feature 006: a new `workout` row: date serial, empty duration (the script fills it), status. */
+data class WorkoutAppend(val serial: Double, val status: DayStatus)
+
+/** Feature 006: the `workout` part of call 22. */
+data class WorkoutWrite(val workoutSheetId: Int, val updates: List<WorkoutUpdate>, val appends: List<WorkoutAppend>) {
+    val isEmpty: Boolean get() = updates.isEmpty() && appends.isEmpty()
+}
+
 /** The spreadsheet has no `log` or `drills` tab (contracts/sheets-log.md, failure `Structure`). */
 class MissingTabException(val tab: String) : Exception("Missing tab $tab")
 
 /** Sheets calls 20–22 (contracts/sheets-log.md). */
 interface SheetsLogApi {
     suspend fun logSheetInfo(spreadsheetId: String): LogSheetInfo
-    suspend fun readLogAndDrills(spreadsheetId: String, withMoney: Boolean = false): LogAndDrills
+    suspend fun readLogAndDrills(spreadsheetId: String, withMoney: Boolean = false, withWorkout: Boolean = false): LogAndDrills
     suspend fun writeLog(
         spreadsheetId: String,
         logSheetId: Int,
@@ -81,6 +106,7 @@ interface SheetsLogApi {
         appends: List<LogAppend>,
         drills: DrillsWrite? = null,
         money: MoneyWrite? = null,
+        workout: WorkoutWrite? = null,
     )
 }
 
@@ -119,15 +145,17 @@ class SheetsLogClient(
             recSheetId = sheetIds[REC],
             moneySheetId = sheetIds[MONEY],
             balanceSheetId = sheetIds[BALANCE],
+            workoutSheetId = sheetIds[WORKOUT],
         )
     }
 
     /** Call 21. */
-    override suspend fun readLogAndDrills(spreadsheetId: String, withMoney: Boolean): LogAndDrills {
+    override suspend fun readLogAndDrills(spreadsheetId: String, withMoney: Boolean, withWorkout: Boolean): LogAndDrills {
         val url = spreadsheets().addPathSegment("$spreadsheetId").addPathSegment("values:batchGet")
             .addQueryParameter("ranges", "$LOG!A2:D")
             .addQueryParameter("ranges", "$DRILLS!A2:B")
             .apply { if (withMoney) addQueryParameter("ranges", "$MONEY!A2:C") }
+            .apply { if (withWorkout) addQueryParameter("ranges", "$WORKOUT!A2:C") }
             .addQueryParameter("valueRenderOption", "UNFORMATTED_VALUE")
             .addQueryParameter("dateTimeRenderOption", "SERIAL_NUMBER")
             .addQueryParameter("majorDimension", "ROWS")
@@ -135,7 +163,9 @@ class SheetsLogClient(
         val response = GoogleJson.decodeFromString<BatchGetResponse>(http.execute(Request.Builder().url(url).build()))
         val logValues = response.valueRanges.getOrNull(0)?.values.orEmpty()
         val drillValues = response.valueRanges.getOrNull(1)?.values.orEmpty()
-        val moneyValues = response.valueRanges.getOrNull(2)?.values.orEmpty()
+        // The optional ranges come back in request order.
+        val moneyValues = if (withMoney) response.valueRanges.getOrNull(2)?.values.orEmpty() else emptyList()
+        val workoutValues = if (withWorkout) response.valueRanges.getOrNull(if (withMoney) 3 else 2)?.values.orEmpty() else emptyList()
         return LogAndDrills(
             log = logValues.mapIndexedNotNull { i, cells -> logRow(i + 1, cells) },
             drills = drillValues.mapIndexedNotNull { i, cells ->
@@ -144,6 +174,9 @@ class SheetsLogClient(
             },
             money = moneyValues.mapIndexedNotNull { i, cells ->
                 if (cells.isEmpty()) null else SheetMoneyRow(i + 1, cells.number(0), cells.number(1), cells.number(2))
+            },
+            workout = workoutValues.mapIndexedNotNull { i, cells ->
+                cells.number(0)?.let { serial -> SheetWorkoutRow(i + 1, PaymentValues.dateOf(serial), DayStatusRules.fromSheet(cells.cell(2))) }
             },
         )
     }
@@ -160,10 +193,12 @@ class SheetsLogClient(
         appends: List<LogAppend>,
         drills: DrillsWrite?,
         money: MoneyWrite?,
+        workout: WorkoutWrite?,
     ) {
         val drillsPart = drills?.takeUnless { it.isEmpty }
         val moneyPart = money?.takeUnless { it.appends.isEmpty() }
-        if (deletes.isEmpty() && edits.isEmpty() && appends.isEmpty() && drillsPart == null && moneyPart == null) return
+        val workoutPart = workout?.takeUnless { it.isEmpty }
+        if (deletes.isEmpty() && edits.isEmpty() && appends.isEmpty() && drillsPart == null && moneyPart == null && workoutPart == null) return
         val byRow: List<Pair<Int, JsonObject>> =
             deletes.map { it to deleteRow(logSheetId, it) } + edits.map { it.rowIndex to editRow(logSheetId, it) }
         val drillsByRow: List<Pair<Int, JsonObject>> = drillsPart?.let { d ->
@@ -179,6 +214,9 @@ class SheetsLogClient(
             if (appends.isNotEmpty()) add(appendRows(logSheetId, appends))
             drillsPart?.appends?.takeIf { it.isNotEmpty() }?.let { add(appendDrills(drillsPart.drillsSheetId, it)) }
             moneyPart?.let { add(appendMoney(it)) }
+            // Feature 006: a separate tab, so its row indexes are not moved by log deletes.
+            workoutPart?.updates?.forEach { add(updateStatus(workoutPart.workoutSheetId, it)) }
+            workoutPart?.appends?.takeIf { it.isNotEmpty() }?.let { add(appendWorkouts(workoutPart.workoutSheetId, it)) }
         }
         val url = spreadsheets().addPathSegment("$spreadsheetId:batchUpdate").build()
         val body = buildJsonObject { put("requests", requests) }.toString().toJsonBody()
@@ -247,6 +285,39 @@ class SheetsLogClient(
         }
     }
 
+    private fun updateStatus(sheetId: Int, update: WorkoutUpdate) = buildJsonObject {
+        putJsonObject("updateCells") {
+            putJsonObject("start") {
+                put("sheetId", sheetId)
+                put("rowIndex", update.rowIndex)
+                put("columnIndex", 2)
+            }
+            putJsonArray("rows") { add(rowData(listOf(number(DayStatusRules.toSheet(update.status))))) }
+            put("fields", "userEnteredValue")
+        }
+    }
+
+    /** Column B is sent without a value: the script fills the duration at night (research R5). */
+    private fun appendWorkouts(sheetId: Int, appends: List<WorkoutAppend>) = buildJsonObject {
+        putJsonObject("appendCells") {
+            put("sheetId", sheetId)
+            putJsonArray("rows") {
+                appends.forEach { append ->
+                    add(
+                        buildJsonObject {
+                            putJsonArray("values") {
+                                add(buildJsonObject { put("userEnteredValue", number(append.serial)) })
+                                add(JsonObject(emptyMap()))
+                                add(buildJsonObject { put("userEnteredValue", number(DayStatusRules.toSheet(append.status))) })
+                            }
+                        },
+                    )
+                }
+            }
+            put("fields", "userEnteredValue")
+        }
+    }
+
     /** Whole-cell, case-sensitive: only cells that are exactly the old name change. */
     private fun findReplace(replace: NameReplace, range: JsonObject) = buildJsonObject {
         putJsonObject("findReplace") {
@@ -290,6 +361,7 @@ class SheetsLogClient(
         const val REC = "rec"
         const val MONEY = "money"
         const val BALANCE = "balance"
+        const val WORKOUT = "workout"
 
         /** A set row: A is a number, B is not blank, C is a number or blank (0), D is a whole number ≥ 1. */
         fun logRow(rowIndex: Int, cells: List<JsonElement>): SheetLogRow? {
@@ -303,6 +375,10 @@ class SheetsLogClient(
 
         fun List<JsonElement>.number(i: Int): Double? =
             (getOrNull(i) as? JsonPrimitive)?.takeIf { !it.isString }?.doubleOrNull
+
+        /** A cell as a number or a string, for values the sheet may hold either way. */
+        fun List<JsonElement>.cell(i: Int): Any? =
+            (getOrNull(i) as? JsonPrimitive)?.let { if (it.isString) it.content else it.doubleOrNull }
 
         fun List<JsonElement>.text(i: Int): String = (getOrNull(i) as? JsonPrimitive)?.content?.trim().orEmpty()
     }

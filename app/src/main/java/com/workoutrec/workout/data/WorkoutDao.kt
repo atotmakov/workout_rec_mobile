@@ -2,6 +2,7 @@ package com.workoutrec.workout.data
 
 import androidx.room.Dao
 import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Upsert
@@ -91,6 +92,7 @@ abstract class WorkoutDao {
         clearPayments()
         clearPaymentRows()
         clearMoneySummary()
+        clearStatuses()
     }
 
     /**
@@ -141,6 +143,8 @@ abstract class WorkoutDao {
         clearEditsAndDeletes()
         // Feature 004: new exercises still apply; renames and deletes were of the old drills tab.
         clearExerciseRenamesAndDeletes()
+        // Feature 006: chosen statuses still apply; the cache was of the old workout tab.
+        clearCachedStatuses()
     }
 
     @Upsert
@@ -219,4 +223,56 @@ abstract class WorkoutDao {
         insertPaymentRows(rows)
         upsertMoneySummary(summary)
     }
+
+    // Feature 006 data-model.md "Writes"
+
+    @Query("SELECT * FROM day_status ORDER BY date")
+    abstract fun statuses(): Flow<List<DayStatusEntity>>
+
+    @Query("SELECT * FROM day_status ORDER BY date")
+    abstract suspend fun statusesNow(): List<DayStatusEntity>
+
+    @Query("SELECT * FROM day_status WHERE date = :date")
+    abstract suspend fun statusFor(date: String): DayStatusEntity?
+
+    @Upsert
+    protected abstract suspend fun upsertStatus(status: DayStatusEntity)
+
+    /** Skips dates that already have a row: a pending one, or the cache. */
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    protected abstract suspend fun insertStatusesIfMissing(statuses: List<DayStatusEntity>)
+
+    /**
+     * The user picked a status: it waits for sync and remembers the tab's value it replaced; a
+     * date already waiting keeps the value seen before its first change (research R4).
+     */
+    @Transaction
+    open suspend fun chooseStatus(date: String, free: Boolean, updatedAt: Long) {
+        val current = statusFor(date)
+        val lastSeen = if (current?.pending == true) current.lastSeenFree else current?.free
+        upsertStatus(DayStatusEntity(date, free, pending = true, updatedAt = updatedAt, lastSeenFree = lastSeen))
+    }
+
+    /** A day's first set: the default waits for sync unless the date has a status (research R2). */
+    open suspend fun insertDefaultStatus(date: String, free: Boolean, updatedAt: Long) =
+        insertStatusesIfMissing(listOf(DayStatusEntity(date, free, pending = true, updatedAt = updatedAt, lastSeenFree = null)))
+
+    /** A fresh read of the workout tab; pending dates keep the phone's choice. */
+    @Transaction
+    open suspend fun replaceCachedStatuses(statuses: List<DayStatusEntity>) {
+        clearCachedStatuses()
+        insertStatusesIfMissing(statuses)
+    }
+
+    @Query("UPDATE day_status SET pending = 0, lastSeenFree = NULL WHERE date IN (:dates)")
+    abstract suspend fun markStatusesSynced(dates: List<String>)
+
+    @Query("DELETE FROM day_status WHERE pending = 1 AND date IN (:dates)")
+    abstract suspend fun dropPendingStatuses(dates: List<String>)
+
+    @Query("DELETE FROM day_status WHERE pending = 0")
+    protected abstract suspend fun clearCachedStatuses()
+
+    @Query("DELETE FROM day_status")
+    protected abstract suspend fun clearStatuses()
 }

@@ -262,11 +262,13 @@ class LogSync(
         else -> SyncPhase.Failing(FailReason.OTHER)
     }
 
-    /** Call 20, once per spreadsheet (research R8), and again for a cache from before feature 004. */
+    /** Call 20, once per spreadsheet (research R8), and again for a cache from before feature 004 or 006. */
     private suspend fun sheetInfo(id: String): SheetInfoCache {
-        status.current().sheet?.takeIf { it.spreadsheetId == id && it.drillsSheetId != null }?.let { return it }
+        status.current().sheet
+            ?.takeIf { it.spreadsheetId == id && it.drillsSheetId != null && it.version >= SheetInfoCache.VERSION }
+            ?.let { return it }
         val info = sheets.logSheetInfo(id)
-        return SheetInfoCache(id, info.timeZone, info.logSheetId, info.drillsSheetId, info.recSheetId, info.moneySheetId, info.balanceSheetId)
+        return SheetInfoCache(id, info.timeZone, info.logSheetId, info.drillsSheetId, info.recSheetId, info.moneySheetId, info.balanceSheetId, info.workoutSheetId)
             .also { status.setSheet(it) }
     }
 

@@ -29,7 +29,9 @@ fixed values below. They never contain sheet content, the account email or token
 | `SPREADSHEET_CREATE_FALLBACK` | `spreadsheet-create-fallback` | WARNING | `code=400` | `SpreadsheetSetupService.create` |
 | `BAD_SHEET_DATA` | `bad-sheet-data` | WARNING | `value=sheet-time-zone\|automation-timestamp` | `LogSync.zoneOf`, `AutomationStatusEvaluator` callers |
 | `BAD_SAVED_STATE` | `bad-saved-state` | WARNING | `value=sync-phase\|automation-status\|money-error` | `DataStoreSyncStatusStore.decode`, `WorkoutRepository` money summary |
-| `NO_CONNECTION` | `no-connection` | INFO | `operation=sync\|money-refresh\|setup\|setup-check\|authorization\|token` | `Monitoring.failure` (R1), `AccountRepository`, `SetupViewModel` |
+| `NO_CONNECTION` | `no-connection` | INFO | `operation=sync\|money-refresh\|setup\|setup-check\|authorization\|token\|script-upgrade` | `Monitoring.failure` (R1), `AccountRepository`, `SetupViewModel` |
+| `WORKOUT_TAB_MISSING` | `workout-tab-missing` | WARNING | `operation=sync` | `LogSync` (feature 006 R6): statuses wait while the spreadsheet has no `workout` tab |
+| `SCRIPT_UPGRADE_FAILED` | `script-upgrade-failed` | WARNING | `operation=script-upgrade` | `SpreadsheetSetupFlow.refresh` (feature 006 R7) |
 
 `ApiError` messages are replaced by `HTTP <code> <status>` before sending (research R10).
 
