@@ -33,6 +33,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.workoutrec.R
+import com.workoutrec.workout.DayStatus
+import com.workoutrec.workout.DayStatusRules
 import com.workoutrec.workout.Exercise
 import com.workoutrec.workout.Parsed
 import com.workoutrec.workout.PastWorkoutError
@@ -56,18 +58,30 @@ object PastWorkoutTags {
     const val DAY_HAS_SETS = "past_workout_day_has_sets"
     const val SET = "past_workout_set"
     const val SAVE = "past_workout_save"
+    const val DATE = "past_workout_date"
+    const val STATUS = "past_workout_status"
 }
 
 private val TIME = DateTimeFormatter.ofPattern("HH:mm")
 
-/** Date (not in the future), start time and duration (FR-006a). */
+/**
+ * Date (not in the future), start time and duration (FR-006a). Feature 006 FR-014: Paid or Free,
+ * following the date's status (or default) from [statuses] until the user picks one.
+ */
 @Composable
 fun PastWorkoutDialog(
     initialDate: LocalDate,
-    onStart: (date: LocalDate, start: LocalTime, durationMinutes: Int) -> PastWorkoutError?,
+    onStart: (date: LocalDate, start: LocalTime, durationMinutes: Int, status: DayStatus) -> PastWorkoutError?,
     onDismiss: () -> Unit,
+    statuses: Map<LocalDate, DayStatus> = emptyMap(),
 ) {
     var dateText by rememberSaveable { mutableStateOf(initialDate.toString()) }
+    var picked by rememberSaveable { mutableStateOf<DayStatus?>(null) }
+    val typedDate = try { LocalDate.parse(dateText.trim()) } catch (e: DateTimeParseException) { null }
+    // The last valid date typed decides the status shown until the user picks one.
+    var statusDate by remember { mutableStateOf(initialDate) }
+    if (typedDate != null && typedDate != statusDate) statusDate = typedDate
+    val status = picked ?: DayStatusRules.shown(statusDate, statuses)
     var startText by rememberSaveable { mutableStateOf(DEFAULT_START.format(TIME)) }
     var durationText by rememberSaveable { mutableStateOf(PastWorkoutTimes.DEFAULT_DURATION.toString()) }
     var error by remember { mutableStateOf<PastWorkoutError?>(null) }
@@ -78,9 +92,10 @@ fun PastWorkoutDialog(
         title = { Text(stringResource(R.string.past_workout_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Field(dateText, { dateText = it }, stringResource(R.string.past_workout_date), KeyboardType.Number)
+                Field(dateText, { dateText = it }, stringResource(R.string.past_workout_date), KeyboardType.Number, Modifier.fillMaxWidth().testTag(PastWorkoutTags.DATE))
                 Field(startText, { startText = it }, stringResource(R.string.past_workout_start_time), KeyboardType.Number)
                 Field(durationText, { durationText = it }, stringResource(R.string.past_workout_duration), KeyboardType.Number)
+                DayStatusControl(status, onChange = { picked = it }, tag = PastWorkoutTags.STATUS)
                 if (badFormat) Text(stringResource(R.string.past_workout_error_format), color = MaterialTheme.colorScheme.error)
                 error?.let {
                     Text(
@@ -101,7 +116,7 @@ fun PastWorkoutDialog(
                     error = when {
                         badFormat -> null
                         duration == null -> PastWorkoutError.DURATION
-                        else -> onStart(date!!, start!!, duration)
+                        else -> onStart(date!!, start!!, duration, status)
                     }
                 },
             ) { Text(stringResource(R.string.past_workout_start)) }

@@ -213,7 +213,7 @@ object ScreenGallery {
         },
         GalleryScreen("31-past-workout-dialog") {
             RouteFrame(stringResource(R.string.past_workout_title)) { }
-            PastWorkoutDialog(initialDate = Samples.YESTERDAY, onStart = { _, _, _ -> null }, onDismiss = {})
+            PastWorkoutDialog(initialDate = Samples.YESTERDAY, onStart = { _, _, _, _ -> null }, onDismiss = {})
         },
         GalleryScreen("32-past-workout-editor") {
             RouteFrame(stringResource(R.string.past_workout_title)) { modifier ->

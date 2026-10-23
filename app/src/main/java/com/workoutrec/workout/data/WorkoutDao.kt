@@ -264,10 +264,14 @@ abstract class WorkoutDao {
     open suspend fun insertDefaultStatus(date: String, free: Boolean, updatedAt: Long) =
         insertStatusesIfMissing(listOf(DayStatusEntity(date, free, pending = true, updatedAt = updatedAt, lastSeenFree = null)))
 
-    /** New sets and their days' default statuses in one transaction (feature 006 research R2). */
+    /**
+     * New sets and their days' default statuses in one transaction (feature 006 research R2); a
+     * past workout's [chosen] status replaces its day's default (spec FR-014).
+     */
     @Transaction
-    open suspend fun insertSetsWithDefaults(changes: List<PendingChangeEntity>, defaults: List<DayStatusEntity>) {
+    open suspend fun insertSetsWithDefaults(changes: List<PendingChangeEntity>, defaults: List<DayStatusEntity>, chosen: DayStatusEntity? = null) {
         upsertPendingAll(changes)
+        chosen?.let { chooseStatus(it.date, it.free, it.updatedAt) }
         insertStatusesIfMissing(defaults)
     }
 

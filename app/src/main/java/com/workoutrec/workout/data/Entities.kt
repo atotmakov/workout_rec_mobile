@@ -49,8 +49,6 @@ data class PastWorkoutDraftEntity(
     val date: String,
     val start: String,
     val durationMinutes: Int,
-    /** Feature 006: the dialog's Paid/Free choice; null in drafts saved before schema 3. */
-    val free: Boolean? = null,
 )
 
 /** A message about a sync result; `kind` is CONFLICT_DROPPED or WORKOUT_ROW_NOT_UPDATED. */

@@ -120,4 +120,23 @@ class DisplayModelTest {
         assertEquals(1, RowLocator.locate(rows, a1, hint = 2)?.rowIndex)
         assertNull(RowLocator.locate(rows, b1, hint = 1))
     }
+
+    // Feature 006 spec US3, FR-007: each past day's status; the default when none is known
+    @Test
+    fun `past days carry their shown status and whether it waits`() {
+        val sets = DisplayModel.sets(listOf(row(1, key("2026-01-08T10:00:00", "squat")), row(2, old), row(3, a1)), emptyList())
+        val days = DisplayModel.pastDays(
+            sets, today, zone,
+            statuses = listOf(KnownStatus(LocalDate.of(2026, 1, 8), DayStatus.PAID, pending = false), KnownStatus(LocalDate.of(2026, 1, 10), DayStatus.FREE, pending = true)),
+        )
+        assertEquals(listOf(DayStatus.FREE to true, DayStatus.PAID to false), days.map { it.status to it.statusPending })
+    }
+
+    @Test
+    fun `a past day without a known status shows the default`() {
+        val sets = DisplayModel.sets(listOf(row(1, old), row(2, a1)), emptyList())
+        val days = DisplayModel.pastDays(sets, today, zone, statuses = listOf(KnownStatus(LocalDate.of(2026, 1, 8), DayStatus.PAID, pending = false)))
+        assertEquals(DayStatus.PAID, days.first { it.date == LocalDate.of(2026, 1, 10) }.status)
+        assertEquals(false, days.first { it.date == LocalDate.of(2026, 1, 10) }.statusPending)
+    }
 }

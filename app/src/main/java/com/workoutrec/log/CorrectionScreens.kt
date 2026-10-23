@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -15,6 +16,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -30,14 +32,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.workoutrec.R
 import com.workoutrec.sync.NoticeKind
 import com.workoutrec.sync.SyncNotice
+import com.workoutrec.workout.DayStatus
 import com.workoutrec.workout.DaySummary
 import com.workoutrec.workout.DisplaySet
 import com.workoutrec.workout.Exercise
@@ -62,6 +67,9 @@ object CorrectionTags {
     fun pastDay(date: LocalDate) = "past_day_$date"
     fun daySet(group: Int, set: Int) = "day_set_${group}_$set"
     fun notice(id: Long) = "sync_notice_$id"
+    const val DAY_STATUS = "day_status"
+    fun dayStatusLabel(date: LocalDate) = "day_status_label_$date"
+    fun dayStatusWaiting(date: LocalDate) = "day_status_waiting_$date"
     fun noticeDismiss(id: Long) = "sync_notice_dismiss_$id"
 }
 
@@ -82,20 +90,50 @@ fun PastDaysScreen(days: List<DaySummary>, onOpenDay: (LocalDate) -> Unit, modif
                     .semantics(mergeDescendants = true) {}
                     .clickable { onOpenDay(day.date) },
             ) {
-                Column(Modifier.padding(12.dp)) {
-                    Text(day.date.format(format), style = MaterialTheme.typography.titleMedium)
-                    Text(pluralStringResource(R.plurals.past_day_summary, day.exerciseCount, day.exerciseCount, day.setCount))
+                Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(day.date.format(format), style = MaterialTheme.typography.titleMedium)
+                        Text(pluralStringResource(R.plurals.past_day_summary, day.exerciseCount, day.exerciseCount, day.setCount))
+                    }
+                    // Feature 006 FR-007: Paid or Free, with the waiting mark until synced.
+                    Text(
+                        stringResource(day.status.label),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.testTag(CorrectionTags.dayStatusLabel(day.date)),
+                    )
+                    if (day.statusPending) {
+                        val waiting = stringResource(R.string.exercise_waiting)
+                        Icon(
+                            painterResource(R.drawable.ic_sync_waiting),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(start = 4.dp).size(18.dp)
+                                .semantics { contentDescription = waiting }
+                                .testTag(CorrectionTags.dayStatusWaiting(day.date)),
+                        )
+                    }
                 }
             }
         }
     }
 }
 
-/** One day's exercises and sets; tap a set to edit it (FR-013). */
+/**
+ * One day's exercises and sets; tap a set to edit it (FR-013). Feature 006: the day's Paid/Free at
+ * the top when [status] is given; [onStatus] null shows it without changing it.
+ */
 @Composable
-fun DayDetailScreen(groups: List<ExerciseGroup>, onEditSet: (DisplaySet) -> Unit, modifier: Modifier = Modifier) {
+fun DayDetailScreen(
+    groups: List<ExerciseGroup>,
+    onEditSet: (DisplaySet) -> Unit,
+    modifier: Modifier = Modifier,
+    status: DayStatus? = null,
+    onStatus: (DayStatus) -> Unit = {},
+) {
     val locale = LocalConfiguration.current.locales[0]
     LazyColumn(modifier.fillMaxSize().padding(16.dp).testTag(CorrectionTags.DAY_DETAIL), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        status?.let { item { DayStatusControl(it, onStatus, CorrectionTags.DAY_STATUS) } }
         itemsIndexed(groups) { g, group ->
             Text(group.exercise, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 8.dp))
             group.sets.forEachIndexed { s, set ->

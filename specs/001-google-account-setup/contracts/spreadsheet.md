@@ -24,7 +24,7 @@ tables; spreadsheets created with version 1 do not match and get the rewrite que
 | rec | A2 | `=FILTER(log!A:Z, log!B:B=A1)` | formula |
 | rec | D1 | `FILTER(log!A:Z, log!B:B=A1)` | text |
 | money | A1:C1 | `date`, `workouts`, `sum` | Column A format `dd.MM.yyyy` |
-| workout | A1:C1 | `date`, `duration, min`, `work alone` | Column A format `dd.MM.yyyy` |
+| workout | A1:C1 | `date`, `duration, min`, `work alone` | Column A format `dd.MM.yyyy`; "work alone" `1` = free workout, anything else = paid (feature 006; written by the app and the script) |
 | balance | A1 | `0` | number, no header |
 
 ## Conditional formatting (tab `rec`)
@@ -58,6 +58,7 @@ Header colours approximate the reference spreadsheet and are not part of the mat
 | `workout_rec.enable_url` | app, after deployment | "Enable automation" web app URL |
 | `workout_rec.automation_enabled_at` | script `doGet` | ISO-8601 UTC timestamp |
 | `workout_rec.last_daily_run` | script `dailyJob` | ISO-8601 UTC timestamp |
+| `workout_rec.script_version` | app, after every script upload (feature 006) | the attached script's version, e.g. `2` |
 
 Each key appears at most once; writers replace the existing entry. The markers are not visible in
 the Sheets UI; to inspect them, run the script function `logMetadata` from the script editor

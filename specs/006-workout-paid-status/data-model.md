@@ -48,11 +48,12 @@ Writes:
 | Spreadsheet rewritten (002 R13, `keepOnlyNewSets`) | delete `pending = 0` rows |
 | Sign out / switch account (`clearAll`) | delete all |
 
-### `past_workout_draft`: new column
+### Past workout entry
 
-| Column | Type | Rule |
-|--------|------|------|
-| `free` | INTEGER, nullable | the dialog's choice; null in drafts saved before schema 3 (then the default is used at save) |
+A past workout's draft lives in `PastWorkoutViewModel` until Save (the `past_workout_draft` table
+is not used by the app), so the dialog's choice travels with the save:
+`PastWorkoutStore.confirmSets(keys, status)` stores it for the day like a user choice, in the same
+transaction as the sets; `status = null` leaves the day's default.
 
 ## Waiting count (spec FR-009)
 

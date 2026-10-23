@@ -42,11 +42,16 @@ object DisplayModel {
             .groupBy { it.key.exercise }
             .map { (exercise, groupSets) -> ExerciseGroup(exercise, groupSets) }
 
-    fun pastDays(sets: List<DisplaySet>, today: LocalDate, zone: ZoneId): List<DaySummary> =
-        sets.groupBy { SheetTime.workoutDay(it.key.time, zone) }
+    fun pastDays(sets: List<DisplaySet>, today: LocalDate, zone: ZoneId, statuses: List<KnownStatus> = emptyList()): List<DaySummary> {
+        val known = statuses.associate { it.date to it.status }
+        val pending = statuses.filter { it.pending }.mapTo(mutableSetOf()) { it.date }
+        return sets.groupBy { SheetTime.workoutDay(it.key.time, zone) }
             .filterKeys { it < today }
-            .map { (date, daySets) -> DaySummary(date, daySets.map { it.key.exercise }.distinct().size, daySets.size) }
+            .map { (date, daySets) ->
+                DaySummary(date, daySets.map { it.key.exercise }.distinct().size, daySets.size, DayStatusRules.shown(date, known), date in pending)
+            }
             .sortedByDescending { it.date }
+    }
 
     fun recentExercises(sets: List<DisplaySet>, limit: Int = 5): List<String> =
         sets.groupBy { it.key.exercise }

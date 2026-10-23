@@ -22,7 +22,7 @@ import androidx.room.RoomDatabase
     ],
     version = 3,
     exportSchema = true,
-    // Feature 004 research R9: version 2 only adds tables; feature 006 R9: version 3 adds a table and a nullable column.
+    // Feature 004 research R9: version 2 only adds tables; feature 006 R9: version 3 adds day_status.
     autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3)],
 )
 abstract class WorkoutDatabase : RoomDatabase() {

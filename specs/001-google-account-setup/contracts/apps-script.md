@@ -19,7 +19,7 @@ Source of truth: `apps-script/` in this repository; uploaded by the app (contrac
 | Function | Input | Output |
 |----------|-------|--------|
 | `autoFillPlan(columnB, editedRow)` | column B values (1-based rows), edited row | rows above `editedRow` to fill: consecutive empty rows going up, stopping at the first non-empty row or the header row |
-| `dailyWorkoutRows(logRows, existingDayKeys, toDayKey)` | log `[dateTime, drill, w, r]` rows, set of `yyyy-MM-dd` keys already in workout, a function from date to day key | new rows `[date, durationMinutes, 0]`, one per new day, `durationMinutes = round((max - min) / 60000)`, ordered by date |
+| `workoutRowsPlan(logRows, workoutRows, toDayKey)` (script version 2, feature 006; replaced `dailyWorkoutRows`) | log rows, the `workout` tab's data rows, a function from date to day key | `{appends, durations}`: new rows `[date, durationMinutes, flag]` per new day in date order, flag = previous day's "work alone" (1 when none); empty durations of existing rows filled. See [006 apps-script.md](../../006-workout-paid-status/contracts/apps-script.md) |
 | `balance(moneyWorkouts, workoutAloneFlags)` | `workouts` column values, `work alone` column values | sum of numeric `workouts` minus count of non-empty workout rows whose flag is not `1` |
 | `formatMetadata(entries)` | list of `{key, value}` | text with one `key = value` line per `workout_rec.*` entry, sorted by key; `(no workout_rec metadata)` when there are none |
 
@@ -31,7 +31,7 @@ Source of truth: `apps-script/` in this repository; uploaded by the app (contrac
 | `onSelectionChange(e)` | simple trigger | log tab, column B: set `rec!A1` to the selected value, via `e.source` |
 | `doGet(e)` | web app | install `dailyJob` time trigger (`everyDays(1).atHour(3)`) if none exists; write `workout_rec.automation_enabled_at`; render `Enable.html` in `e.parameter.lang` (`ru` or `en`, default `en`) |
 | `logMetadata()` | run manually from the script editor | reads the spreadsheet's developer metadata and prints `formatMetadata(...)` with `console.log`, so the status markers are visible in the editor's Execution log; read-only |
-| `dailyJob()` | time trigger | append `dailyWorkoutRows` to `workout` (three values per row), then write `balance` to `balance!A1`, then write `workout_rec.last_daily_run` |
+| `dailyJob()` | time trigger | apply `workoutRowsPlan` to `workout` (fill durations, append new days), then write `balance` to `balance!A1`, then write `workout_rec.last_daily_run` |
 
 ## Spreadsheet access
 

@@ -27,8 +27,7 @@ dialog get a Paid | Free segmented button; the History list shows each day's sta
 OkHttp, kotlinx.serialization; Sheets API v4 and Apps Script API via the existing clients. No new
 dependency.
 
-**Storage**: Room schema 2 → 3 (new table `day_status`, nullable column on `past_workout_draft`,
-auto-migration); spreadsheet: `workout` tab values only, new metadata key
+**Storage**: Room schema 2 → 3 (new table `day_status`, auto-migration); spreadsheet: `workout` tab values only, new metadata key
 `workout_rec.script_version`
 
 **Testing**: JUnit 4 + coroutines-test + MockWebServer with the existing fakes (JVM); Room
@@ -91,7 +90,7 @@ apps-script/
 └── tests/{logic,code}.test.mjs
 app/src/main/java/com/workoutrec/
 ├── workout/DayStatus.kt              # NEW: DayStatus, KnownStatus, DayStatusRules
-├── workout/data/Entities.kt          # DayStatusEntity; PastWorkoutDraftEntity.free
+├── workout/data/Entities.kt          # DayStatusEntity
 ├── workout/data/WorkoutDao.kt        # day_status queries, commit/clear changes
 ├── workout/data/WorkoutDatabase.kt   # version 3, AutoMigration(2, 3)
 ├── workout/data/WorkoutRepository.kt # statuses flow, setStatus, default on first set, waiting count

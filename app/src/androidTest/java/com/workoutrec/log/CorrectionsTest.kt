@@ -1,5 +1,6 @@
 package com.workoutrec.log
 
+import com.workoutrec.workout.DayStatus
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -97,5 +98,14 @@ class CorrectionsTest {
         compose.onNodeWithTag(CorrectionTags.notice(8)).assertIsDisplayed()
         compose.onNodeWithTag(CorrectionTags.noticeDismiss(8)).performClick()
         assertEquals(8L, dismissed)
+    }
+
+    // Feature 006 spec US4 scenario 1: a past day's status changes from its details
+    @Test
+    fun dayDetailsChangeTheDaysStatus() {
+        var changed: DayStatus? = null
+        compose.setContent { DayDetailScreen(groups = emptyList(), onEditSet = {}, status = DayStatus.PAID, onStatus = { changed = it }) }
+        compose.onNodeWithTag("${CorrectionTags.DAY_STATUS}_free").performClick()
+        assertEquals(DayStatus.FREE, changed)
     }
 }

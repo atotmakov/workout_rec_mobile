@@ -150,8 +150,9 @@ still applies; "002-R5" points there.
 
 ## R9. Phone database
 
-- **Decision**: Room schema 3: new table `day_status`; column `free INTEGER` (nullable) on
-  `past_workout_draft`. `AutoMigration(2, 3)`. Sign out and account switch clear it with
+- **Decision**: Room schema 3: new table `day_status`. `AutoMigration(2, 3)`. (A `free` column
+  on `past_workout_draft` was planned and dropped during implementation: that table is not used;
+  the past-workout draft lives in its ViewModel.) Sign out and account switch clear it with
   `clearAll`; a rewritten spreadsheet (002 R13) keeps pending statuses like new sets and drops the
   cached ones.
 - **Rationale**: Added table and nullable column only, as 004 R9.

@@ -56,7 +56,7 @@ needs them.
 ### Implementation
 
 - [X] T006 [P] Create `main/workout/DayStatus.kt`: `enum DayStatus { PAID, FREE }`, `KnownStatus(date, status, pending)`, `object DayStatusRules` with `fromSheet(cell: Any?)`, `toSheet`, `defaultFor(date, known: Map<LocalDate, DayStatus>)`, `shown(date, known)` so T002 passes
-- [X] T007 Add `DayStatusEntity` (`@Entity(tableName = "day_status")`: `date` TEXT primary key "ISO yyyy-MM-dd", `free` Boolean, `pending` Boolean, `updatedAt` Long, `lastSeenFree` Boolean? "null = no row then") and `PastWorkoutDraftEntity.free: Boolean?` (nullable, "null in drafts saved before schema 3") in `main/workout/data/Entities.kt`; register the entity, `version = 3`, `AutoMigration(from = 2, to = 3)` in `main/workout/data/WorkoutDatabase.kt`; build to export `app/schemas/com.workoutrec.workout.data.WorkoutDatabase/3.json` so T003 passes
+- [X] T007 Add `DayStatusEntity` (`@Entity(tableName = "day_status")`: `date` TEXT primary key "ISO yyyy-MM-dd", `free` Boolean, `pending` Boolean, `updatedAt` Long, `lastSeenFree` Boolean? "null = no row then") and `PastWorkoutDraftEntity.free: Boolean?` (nullable, "null in drafts saved before schema 3") in `main/workout/data/Entities.kt`; register the entity, `version = 3`, `AutoMigration(from = 2, to = 3)` in `main/workout/data/WorkoutDatabase.kt`; build to export `app/schemas/com.workoutrec.workout.data.WorkoutDatabase/3.json` so T003 passes — *the `PastWorkoutDraftEntity.free` part was removed in T039 (unused table)*
 - [X] T008 Add to `main/workout/data/WorkoutDao.kt`: `statuses(): Flow<List<DayStatusEntity>>`, `statusesNow()`, `statusFor(date)`, `upsertStatus`, `replaceCachedStatuses(rows)` and `markStatusesSynced(dates)`, `dropPendingStatuses(dates)` (all `@Transaction`), and the `day_status` lines in `clearAll` / `keepOnlyNewSets` so T004 passes
 - [X] T009 Extend `main/google/SheetsLogClient.kt`: `LogSheetInfo.workoutSheetId`, `SheetWorkoutRow(rowIndex, date, status)`, `LogAndDrills.workout`, `readLogAndDrills(id, withMoney, withWorkout)` with range-index tracking, `WorkoutWrite(workoutSheetId, updates: List<WorkoutUpdate(rowIndex, status)>, appends: List<WorkoutAppend(serial, status)>)` and the `workout` parameter of `writeLog` (interface `SheetsLogApi` and `test/fakes/FakeSheetsLogApi.kt` too) so T005 passes — *dates via PaymentValues.dateOf/serial; WorkoutAppend carries the date serial*
 - [X] T010a [P] Write a failing test in `test/sync/SheetInfoRefreshTest.kt`: a version-1 cache (no `version` stored) reads call 20 once and stores the workout ID; a version-2 cache does not
@@ -130,14 +130,14 @@ status.
 
 ### Tests for User Story 3 (write first, see them fail)
 
-- [ ] T030 [P] [US3] Write failing tests in `test/workout/DisplayModelTest.kt`: `pastDays(sets, today, zone, statuses)` gives each `DaySummary` its shown status and `statusPending`; a day without a known status gets the default
-- [ ] T031 [P] [US3] Write failing Compose tests in `uitest/log/HistoryTabTest.kt`: each day line shows `day_status_label` with "Paid"/"Free"; a pending status also shows the waiting mark; the day details show `day_status` with the day's status
+- [X] T030 [P] [US3] Write failing tests in `test/workout/DisplayModelTest.kt`: `pastDays(sets, today, zone, statuses)` gives each `DaySummary` its shown status and `statusPending`; a day without a known status gets the default
+- [X] T031 [P] [US3] Write failing Compose tests in `uitest/log/HistoryTabTest.kt`: each day line shows `day_status_label` with "Paid"/"Free"; a pending status also shows the waiting mark; the day details show `day_status` with the day's status
 
 ### Implementation for User Story 3
 
-- [ ] T032 [US3] Add `status: DayStatus` and `statusPending: Boolean` to `DaySummary` in `main/workout/Model.kt` and compute them in `DisplayModel.pastDays` in `main/workout/DisplayModel.kt`, so T030 passes
-- [ ] T033 [US3] Show the label and waiting mark in `PastDaysScreen` in `main/log/CorrectionScreens.kt`; wire statuses in `WorkoutsRoute` in `main/log/LogRoutes.kt`, so the list part of T031 passes
-- [ ] T034 [US3] Show `DayStatusControl` (tag `day_status`) at the top of `DayDetailScreen` in `main/log/CorrectionScreens.kt` with the day's shown status, read-only wiring in `DayRoute` for now (changes come in US4; same stored status as Today's control, spec US4 scenario 5), so the details part of T031 passes
+- [X] T032 [US3] Add `status: DayStatus` and `statusPending: Boolean` to `DaySummary` in `main/workout/Model.kt` and compute them in `DisplayModel.pastDays` in `main/workout/DisplayModel.kt`, so T030 passes
+- [X] T033 [US3] Show the label and waiting mark in `PastDaysScreen` in `main/log/CorrectionScreens.kt`; wire statuses in `WorkoutsRoute` in `main/log/LogRoutes.kt`, so the list part of T031 passes
+- [X] T034 [US3] Show `DayStatusControl` (tag `day_status`) at the top of `DayDetailScreen` in `main/log/CorrectionScreens.kt` with the day's shown status, read-only wiring in `DayRoute` for now (changes come in US4; same stored status as Today's control, spec US4 scenario 5), so the details part of T031 passes
 
 **Checkpoint**: statuses visible in History.
 
@@ -152,15 +152,15 @@ row C = `0`.
 
 ### Tests for User Story 4 (write first, see them fail)
 
-- [ ] T035 [P] [US4] Write failing Compose tests in `uitest/log/CorrectionsTest.kt`: in day details, tapping Free saves FREE for that date (fake repository) and the list then shows Free with the waiting mark
-- [ ] T036 [P] [US4] Write failing tests in `test/log/PastWorkoutViewModelTest.kt`: `setup(date, start, duration, status)` keeps the status; `save()` stores it for the date with the sets (`confirmSets(keys, status)`), overriding the default; without a chosen status the default applies
-- [ ] T037 [P] [US4] Write failing Compose tests in `uitest/log/PastWorkoutTest.kt`: the dialog shows `past_workout_status` with the default for its date (the latest earlier known status, Free if none) or the date's own status; editing the date to another valid date updates it unless the user picked an option; the chosen status is passed to `onStart`
+- [X] T035 [P] [US4] Write failing Compose tests in `uitest/log/CorrectionsTest.kt`: in day details, tapping Free saves FREE for that date (fake repository) and the list then shows Free with the waiting mark — *passes as soon as it compiles: DayDetailScreen.onStatus came with T034; the route wiring (T038) is covered by the device check*
+- [X] T036 [P] [US4] Write failing tests in `test/log/PastWorkoutViewModelTest.kt`: `setup(date, start, duration, status)` keeps the status; `save()` stores it for the date with the sets (`confirmSets(keys, status)`), overriding the default; without a chosen status the default applies
+- [X] T037 [P] [US4] Write failing Compose tests in `uitest/log/PastWorkoutTest.kt`: the dialog shows `past_workout_status` with the default for its date (the latest earlier known status, Free if none) or the date's own status; editing the date to another valid date updates it unless the user picked an option; the chosen status is passed to `onStart`
 
 ### Implementation for User Story 4
 
-- [ ] T038 [US4] Wire `DayRoute` in `main/log/LogRoutes.kt`: change → `setStatus(date, status)` + `requestSync()`, so T035 passes
-- [ ] T039 [US4] Add the status to `PastWorkoutStore.confirmSets(keys, status)`, `PastWorkoutViewModel.setup/save` and the draft's `free` column (`main/log/PastWorkoutViewModel.kt`, `main/workout/data/WorkoutRepository.kt`), the chosen status replacing the default in the same transaction, so T036 passes
-- [ ] T040 [US4] Add the control to `PastWorkoutDialog` in `main/log/PastWorkoutScreens.kt` with `defaultFor`/`shown` from the known statuses and the date-follow rule, `onStart(date, start, duration, status)`, wired in the past-workout route, so T037 passes
+- [X] T038 [US4] Wire `DayRoute` in `main/log/LogRoutes.kt`: change → `setStatus(date, status)` + `requestSync()`, so T035 passes
+- [X] T039 [US4] Add the status to `PastWorkoutStore.confirmSets(keys, status)`, `PastWorkoutViewModel.setup/save` and the draft's `free` column (`main/log/PastWorkoutViewModel.kt`, `main/workout/data/WorkoutRepository.kt`), the chosen status replacing the default in the same transaction, so T036 passes — *the draft column was dropped: drafts live in PastWorkoutViewModel; the choice goes through confirmSets(keys, status)*
+- [X] T040 [US4] Add the control to `PastWorkoutDialog` in `main/log/PastWorkoutScreens.kt` with `defaultFor`/`shown` from the known statuses and the date-follow rule, `onStart(date, start, duration, status)`, wired in the past-workout route, so T037 passes
 
 **Checkpoint**: all four stories done.
 
@@ -168,9 +168,9 @@ row C = `0`.
 
 ## Phase 7: Polish & Cross-Cutting Concerns
 
-- [ ] T041 [P] Add the status column to the `workout` row of `specs/001-google-account-setup/contracts/spreadsheet.md` notes ("work alone: `1` = Free, else Paid; written by the app and the script"), the metadata key `workout_rec.script_version`, and the v2 note in `specs/001-google-account-setup/contracts/apps-script.md`
-- [ ] T042 [P] README: one paragraph on Paid/Free and where it is stored
-- [ ] T043 Run the full suite locally: `./gradlew :app:testDebugUnitTest :app:lintDebug` and the Node tests; the catch-site guard passes with the new catch in T028
+- [X] T041 [P] Add the status column to the `workout` row of `specs/001-google-account-setup/contracts/spreadsheet.md` notes ("work alone: `1` = Free, else Paid; written by the app and the script"), the metadata key `workout_rec.script_version`, and the v2 note in `specs/001-google-account-setup/contracts/apps-script.md`
+- [X] T042 [P] README: one paragraph on Paid/Free and where it is stored
+- [X] T043 Run the full suite locally: `./gradlew :app:testDebugUnitTest :app:lintDebug` and the Node tests; the catch-site guard passes with the new catch in T028 — *2026-10-24: unit tests, lint, script tests 30/30, UI tests 150/150 on the local emulator (cold-booted), all green*
 - [ ] T044 Open the PR(s) (US1–US2 first if large), CI green (unit, UI, script), merge per the standing rule; note the release build number here
 - [ ] T045 Device validation (user, quickstart #6–#15) on a test copy of the spreadsheet; record results in `specs/006-workout-paid-status/quickstart-results.md`
 

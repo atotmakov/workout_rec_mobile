@@ -108,11 +108,16 @@ class WorkoutRepository(
         return id
     }
 
-    override suspend fun confirmSets(keys: List<SetKey>) {
+    override suspend fun confirmSets(keys: List<SetKey>, status: DayStatus?) {
         val created = clock()
+        val zone = zone.first()
         dao.insertSetsWithDefaults(
             keys.mapIndexed { i, key -> PendingChange(newId(), ChangeKind.NEW, key, createdAt = created + i).toEntity() },
             defaultsFor(keys, created),
+            // Feature 006 FR-014: a past workout is one day; the dialog's choice is that day's status.
+            chosen = status?.let { s ->
+                keys.firstOrNull()?.let { DayStatusEntity(SheetTime.workoutDay(it.time, zone).toString(), s == DayStatus.FREE, pending = true, updatedAt = created, lastSeenFree = null) }
+            },
         )
     }
 

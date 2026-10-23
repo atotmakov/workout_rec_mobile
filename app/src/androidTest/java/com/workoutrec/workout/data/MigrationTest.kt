@@ -40,16 +40,16 @@ class MigrationTest {
         }
     }
 
-    // Feature 006 research R9: schema 3 adds day_status and the draft's status
+    // Feature 006 research R9: schema 3 adds day_status
     @Test
-    fun version2DataSurvivesAndDraftsGetNoStatus() {
+    fun version2DataSurvivesAndDayStatusIsEmpty() {
         helper.createDatabase(db, 2).use { v2 ->
             v2.execSQL("INSERT INTO past_workout_draft (id, date, start, durationMinutes) VALUES ('d', '2026-10-20', '18:00', 60)")
             v2.execSQL("INSERT INTO pending_payment (id, date, workouts, sumHundredths, createdAt) VALUES ('p', '2026-10-20', 8, 800000, 1)")
         }
 
         helper.runMigrationsAndValidate(db, 3, true).use { v3 ->
-            assertEquals(1, v3.count("past_workout_draft WHERE id = 'd' AND date = '2026-10-20' AND durationMinutes = 60 AND free IS NULL"))
+            assertEquals(1, v3.count("past_workout_draft WHERE id = 'd' AND date = '2026-10-20' AND durationMinutes = 60"))
             assertEquals(1, v3.count("pending_payment"))
             assertEquals(0, v3.count("day_status"))
         }

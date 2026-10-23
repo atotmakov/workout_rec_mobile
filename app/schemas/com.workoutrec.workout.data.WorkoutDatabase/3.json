@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 3,
-    "identityHash": "3689e9be11a76fdf58b250a7985648ad",
+    "identityHash": "808e58e82a5a2aa970aaec588a4d0580",
     "entities": [
       {
         "tableName": "exercise",
@@ -184,7 +184,7 @@
       },
       {
         "tableName": "past_workout_draft",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `date` TEXT NOT NULL, `start` TEXT NOT NULL, `durationMinutes` INTEGER NOT NULL, `free` INTEGER, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `date` TEXT NOT NULL, `start` TEXT NOT NULL, `durationMinutes` INTEGER NOT NULL, PRIMARY KEY(`id`))",
         "fields": [
           {
             "fieldPath": "id",
@@ -209,12 +209,6 @@
             "columnName": "durationMinutes",
             "affinity": "INTEGER",
             "notNull": true
-          },
-          {
-            "fieldPath": "free",
-            "columnName": "free",
-            "affinity": "INTEGER",
-            "notNull": false
           }
         ],
         "primaryKey": {
@@ -518,7 +512,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '3689e9be11a76fdf58b250a7985648ad')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '808e58e82a5a2aa970aaec588a4d0580')"
     ]
   }
 }
