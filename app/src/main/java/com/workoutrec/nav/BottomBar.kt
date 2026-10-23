@@ -103,3 +103,13 @@ fun NavController.selectTab(tab: Tab, reselect: Boolean) {
         restoreState = true
     }
 }
+
+/**
+ * Leaves the tabs for [route] (setup), and the next account starts on fresh tabs (research R1).
+ * The tabs' saved stacks are cleared first: from [route], outside [TabRoutes.MAIN], the nested
+ * tab graphs can't be found and `clearBackStack` throws (issue #35).
+ */
+fun NavController.leaveTabs(route: String) {
+    Tab.entries.forEach { clearBackStack(it.route) }
+    navigate(route) { popUpTo(TabRoutes.MAIN) { inclusive = true } }
+}
