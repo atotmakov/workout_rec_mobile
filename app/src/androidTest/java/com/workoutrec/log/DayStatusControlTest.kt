@@ -2,6 +2,7 @@ package com.workoutrec.log
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotSelected
@@ -37,7 +38,7 @@ class DayStatusControlTest {
     fun tappingTheOtherOptionChangesItOnce() {
         val changes = mutableListOf<DayStatus>()
         compose.setContent {
-            var status by mutableStateOf(DayStatus.PAID)
+            var status by remember { mutableStateOf(DayStatus.PAID) }
             DayStatusControl(status, onChange = { changes += it; status = it }, tag = tag)
         }
         compose.onNodeWithTag("${tag}_free").performClick()

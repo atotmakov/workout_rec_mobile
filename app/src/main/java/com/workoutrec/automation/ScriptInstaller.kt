@@ -30,6 +30,9 @@ interface ScriptInstall {
         existingMetadata: Map<String, String>,
         existingIds: Map<String, Int>,
     ): InstalledScript
+
+    /** Feature 006 research R7: replaces an attached script's files with the app's current ones. */
+    suspend fun upgrade(spreadsheetId: String, scriptId: String, timeZone: String, existingIds: Map<String, Int>)
 }
 
 class ScriptInstaller(
@@ -59,10 +62,23 @@ class ScriptInstaller(
         val url = script.deployWebApp(scriptId, version, description = "enable")
         sheets.upsertMetadata(
             spreadsheetId,
-            linkedMapOf(AutomationStatusEvaluator.SCRIPT_ID to scriptId, AutomationStatusEvaluator.ENABLE_URL to url),
+            linkedMapOf(
+                AutomationStatusEvaluator.SCRIPT_ID to scriptId,
+                AutomationStatusEvaluator.ENABLE_URL to url,
+                AutomationStatusEvaluator.SCRIPT_VERSION to "$SCRIPT_VERSION",
+            ),
             existingIds,
         )
         return InstalledScript(scriptId, url)
+    }
+
+    /**
+     * The nightly trigger runs the project's current code, so uploading is enough; the "Enable
+     * automation" page keeps its deployed version (its `doGet` is unchanged).
+     */
+    override suspend fun upgrade(spreadsheetId: String, scriptId: String, timeZone: String, existingIds: Map<String, Int>) {
+        script.updateContent(scriptId, files(spreadsheetId, timeZone))
+        sheets.upsertMetadata(spreadsheetId, linkedMapOf(AutomationStatusEvaluator.SCRIPT_VERSION to "$SCRIPT_VERSION"), existingIds)
     }
 
     private fun files(spreadsheetId: String, timeZone: String): List<ScriptFile> = listOf(
@@ -86,6 +102,7 @@ class ScriptInstaller(
 
     companion object {
         const val PROJECT_TITLE = "workout_rec_automation"
-        const val SCRIPT_VERSION = 1
+        /** Feature 006: 2 = `workoutRowsPlan` (contracts/apps-script.md). */
+        const val SCRIPT_VERSION = 2
     }
 }

@@ -20,11 +20,15 @@ function autoFillPlan(columnB, editedRow) {
 }
 
 /**
- * New workout rows from log rows [dateTime, drill, w, r]: one [date, durationMinutes, 0] per
- * day not in `existingDayKeys`, where duration = last minus first logged time that day.
- * `toDayKey(date)` returns 'yyyy-MM-dd' in the spreadsheet's time zone. Ordered by date.
+ * Feature 006 (contracts/apps-script.md): what the nightly job writes to the workout tab.
+ * `workoutRows` are its data rows ([date, duration, flag], sheet row 2 first). Returns
+ * `appends`: one [first set, minutes, flag] per log day without a row, in date order, where flag
+ * copies the latest earlier day's "work alone" (1 stays 1, anything else 0; 1 when there is none);
+ * `durations`: {row, minutes} for rows with an empty duration whose day is in the log (rows the
+ * app added). Duration = last minus first logged time that day. `toDayKey(date)` returns
+ * 'yyyy-MM-dd' in the spreadsheet's time zone.
  */
-function dailyWorkoutRows(logRows, existingDayKeys, toDayKey) {
+function workoutRowsPlan(logRows, workoutRows, toDayKey) {
   const days = {};
   logRows.forEach(function (row) {
     const when = row[0];
@@ -42,13 +46,26 @@ function dailyWorkoutRows(logRows, existingDayKeys, toDayKey) {
       if (time > day.max) day.max = time;
     }
   });
-  return Object.keys(days)
-    .filter(function (key) { return !existingDayKeys.has(key); })
+  const minutes = function (key) { return Math.round((days[key].max - days[key].min) / 60000); };
+
+  const flags = {}; // day key -> 0 or 1, from existing rows and planned appends
+  const durations = [];
+  workoutRows.forEach(function (row, i) {
+    if (!(row[0] instanceof Date)) return;
+    const key = toDayKey(row[0]);
+    if (!(key in flags)) flags[key] = String(row[2]) === '1' ? 1 : 0;
+    if (row[1] === '' && days[key]) durations.push({ row: i + 2, minutes: minutes(key) });
+  });
+  const appends = Object.keys(days)
+    .filter(function (key) { return !(key in flags); })
     .sort()
     .map(function (key) {
-      const day = days[key];
-      return [day.first, Math.round((day.max - day.min) / 60000), 0];
+      const earlier = Object.keys(flags).filter(function (k) { return k < key; }).sort();
+      const flag = earlier.length ? flags[earlier[earlier.length - 1]] : 1;
+      flags[key] = flag;
+      return [days[key].first, minutes(key), flag];
     });
+  return { appends: appends, durations: durations };
 }
 
 /**

@@ -74,7 +74,7 @@ function doGet(e) {
   return template.evaluate().setTitle(ENABLE_TEXTS[lang].title);
 }
 
-/** Nightly: daily workouts first, then balance (so it includes the new rows), then a marker. */
+/** Nightly: workout rows first, then balance (so it includes the new rows), then a marker. */
 function dailyJob() {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const timeZone = ss.getSpreadsheetTimeZone();
@@ -82,12 +82,12 @@ function dailyJob() {
 
   const logRows = dataRows_(ss.getSheetByName(LOG_SHEET));
   const workoutSheet = ss.getSheetByName('workout');
-  const existingDays = new Set(
-    dataRows_(workoutSheet)
-      .filter(function (r) { return r[0] instanceof Date; })
-      .map(function (r) { return toDayKey(r[0]); })
-  );
-  dailyWorkoutRows(logRows, existingDays, toDayKey).forEach(function (row) {
+  // Feature 006: fill the durations of rows the app added, then add the missing days.
+  const plan = workoutRowsPlan(logRows, dataRows_(workoutSheet), toDayKey);
+  plan.durations.forEach(function (d) {
+    workoutSheet.getRange(d.row, 2).setValue(d.minutes);
+  });
+  plan.appends.forEach(function (row) {
     workoutSheet.appendRow(row);
   });
 

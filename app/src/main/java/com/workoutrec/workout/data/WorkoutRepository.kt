@@ -17,6 +17,7 @@ import com.workoutrec.sync.SyncNotice
 import com.workoutrec.workout.ChangeKind
 import com.workoutrec.workout.Coalescer
 import com.workoutrec.workout.DayStatus
+import com.workoutrec.workout.DayStatusRules
 import com.workoutrec.workout.DisplayModel
 import com.workoutrec.workout.DisplaySet
 import com.workoutrec.workout.Exercise
@@ -35,6 +36,7 @@ import com.workoutrec.workout.Reps
 import com.workoutrec.workout.SetKey
 import com.workoutrec.workout.SetRef
 import com.workoutrec.workout.SetValues
+import com.workoutrec.workout.SheetTime
 import com.workoutrec.workout.ShownExercise
 import com.workoutrec.workout.ShownPayment
 import com.workoutrec.workout.Weight
@@ -95,16 +97,32 @@ class WorkoutRepository(
 
     override suspend fun statusesNow(): List<PendingStatus> = dao.statusesNow().filter { it.pending }.map { it.toPending() }
 
-    /** Saves a confirmed set before any network activity (FR-005). Returns its pending ID. */
+    /**
+     * Saves a confirmed set before any network activity (FR-005). Returns its pending ID. Feature
+     * 006: a day's first set also fixes the day's status to the default (research R2).
+     */
     override suspend fun confirmSet(key: SetKey): String {
         val id = newId()
-        dao.upsertPending(PendingChange(id, ChangeKind.NEW, key, createdAt = clock()).toEntity())
+        val created = clock()
+        dao.insertSetsWithDefaults(listOf(PendingChange(id, ChangeKind.NEW, key, createdAt = created).toEntity()), defaultsFor(listOf(key), created))
         return id
     }
 
     override suspend fun confirmSets(keys: List<SetKey>) {
         val created = clock()
-        dao.insertSets(keys.mapIndexed { i, key -> PendingChange(newId(), ChangeKind.NEW, key, createdAt = created + i).toEntity() })
+        dao.insertSetsWithDefaults(
+            keys.mapIndexed { i, key -> PendingChange(newId(), ChangeKind.NEW, key, createdAt = created + i).toEntity() },
+            defaultsFor(keys, created),
+        )
+    }
+
+    /** One default status per day of [keys]; the DAO skips days that already have one. */
+    private suspend fun defaultsFor(keys: List<SetKey>, created: Long): List<DayStatusEntity> {
+        val zone = zone.first()
+        val known = dao.statusesNow().associate { LocalDate.parse(it.date) to if (it.free) DayStatus.FREE else DayStatus.PAID }
+        return keys.map { SheetTime.workoutDay(it.time, zone) }.distinct().map { date ->
+            DayStatusEntity(date.toString(), DayStatusRules.defaultFor(date, known) == DayStatus.FREE, pending = true, updatedAt = created, lastSeenFree = null)
+        }
     }
 
     suspend fun replaceCaches(exercises: List<Exercise>, rows: List<LogRow>) =

@@ -264,6 +264,13 @@ abstract class WorkoutDao {
     open suspend fun insertDefaultStatus(date: String, free: Boolean, updatedAt: Long) =
         insertStatusesIfMissing(listOf(DayStatusEntity(date, free, pending = true, updatedAt = updatedAt, lastSeenFree = null)))
 
+    /** New sets and their days' default statuses in one transaction (feature 006 research R2). */
+    @Transaction
+    open suspend fun insertSetsWithDefaults(changes: List<PendingChangeEntity>, defaults: List<DayStatusEntity>) {
+        upsertPendingAll(changes)
+        insertStatusesIfMissing(defaults)
+    }
+
     /** A fresh read of the workout tab; pending dates keep the phone's choice. */
     @Transaction
     open suspend fun replaceCachedStatuses(statuses: List<DayStatusEntity>) {

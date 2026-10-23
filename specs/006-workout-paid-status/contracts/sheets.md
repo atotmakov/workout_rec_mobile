@@ -51,7 +51,7 @@ Checked top to bottom; the first matching row applies.
 
 | Pending status for date D | Fresh read | Action |
 |---------------------------|-----------|--------|
-| the first `workout` row for D (or its absence) differs from the status's `lastSeenFree` | – | none; pending dropped; notice `DAY_STATUS_DROPPED` |
+| the status has a `lastSeenFree` and the first `workout` row for D now holds a different value | – | none; pending dropped; notice `DAY_STATUS_DROPPED` |
 | D has no set in the log and none is appended in this run | – | none; stays pending |
 | first `workout` row for D has the same status | – | done, no write |
 | first `workout` row for D differs | – | update C of that row |

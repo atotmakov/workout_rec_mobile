@@ -40,6 +40,7 @@ class ScriptInstallerTest {
             mapOf(
                 "workout_rec.script_id" to "script-1",
                 "workout_rec.enable_url" to "https://script.google.com/macros/s/dep/exec",
+                "workout_rec.script_version" to "2",
             ),
             sheets.upserts.single(),
         )
@@ -59,7 +60,7 @@ class ScriptInstallerTest {
         assertEquals("V8", manifest["runtimeVersion"]!!.jsonPrimitive.content)
         val config = files.getValue("Config").source
         assertTrue(config.contains("const SPREADSHEET_ID = 'sheet-1';"))
-        assertTrue(config.contains("const SCRIPT_VERSION = 1;"))
+        assertTrue(config.contains("const SCRIPT_VERSION = 2;"))
     }
 
     @Test

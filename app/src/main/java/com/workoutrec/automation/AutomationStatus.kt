@@ -14,6 +14,9 @@ object AutomationStatusEvaluator {
     const val ENABLED_AT = "workout_rec.automation_enabled_at"
     const val LAST_DAILY_RUN = "workout_rec.last_daily_run"
 
+    /** Feature 006 research R7: the attached script's version, written by the app after every upload. */
+    const val SCRIPT_VERSION = "workout_rec.script_version"
+
     /** One missed daily run is tolerated. */
     val STALE_AFTER: Duration = Duration.ofHours(48)
 

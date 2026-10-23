@@ -57,8 +57,10 @@ still applies; "002-R5" points there.
   (spec FR-009 counts only what sync can send).
 - **Conflict rule (constitution III)**: like set edits (002 FR-015), each phone change records
   the spreadsheet value it replaced (`lastSeenFree`; null = no row then). At sync, if the date's
-  first row still has that value (or there is still no row), the phone's choice is written. If the
-  spreadsheet value changed since, the spreadsheet wins: the pending change is dropped and a
+  first row still has that value (or there is still no row), the phone's choice is written. A row
+  that appeared since a change made without one is not a conflict: it is normally the nightly
+  script's row for the day. If the spreadsheet value changed since, the spreadsheet wins: the
+  pending change is dropped and a
   `DAY_STATUS_DROPPED` notice ("Changed in the spreadsheet: <date> kept as <status>") is shown with
   the existing sync notices. The default written with a day's first set records the cached value
   at that moment the same way. Without a pending change the spreadsheet wins (spec FR-008).
