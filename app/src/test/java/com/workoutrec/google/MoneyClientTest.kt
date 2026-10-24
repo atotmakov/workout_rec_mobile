@@ -88,4 +88,18 @@ class MoneyClientTest {
             // expected
         }
     }
+
+    // Feature 007 analysis C1
+    @Test
+    fun `a formula error in the balance cell is flagged, not read as a number`() = runTest {
+        server.enqueue(
+            MockResponse().setBody(
+                """{"sheets":[{"properties":{"title":"money"},"data":[{}]},
+                     {"properties":{"title":"balance"},"data":[{"rowData":[{"values":[{"effectiveValue":{"errorValue":{"type":"REF","message":"x"}}}]}]}]}]}""",
+            ),
+        )
+        val read = client.readMoney("id1", hasMoney = true, hasBalance = true)
+        assertEquals(null, read.balance)
+        assertEquals(true, read.balanceError)
+    }
 }

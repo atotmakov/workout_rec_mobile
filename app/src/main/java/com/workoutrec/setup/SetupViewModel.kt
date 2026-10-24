@@ -11,6 +11,7 @@ import com.workoutrec.auth.AuthOutcome
 import com.workoutrec.auth.AuthorizationFailed
 import com.workoutrec.auth.PickFailed
 import com.workoutrec.auth.PickResult
+import com.workoutrec.automation.AutomationStatus
 import com.workoutrec.data.SelectedAccount
 import com.workoutrec.monitoring.Monitoring
 import com.workoutrec.monitoring.NoMonitoring
@@ -74,10 +75,10 @@ class SetupViewModel(
         }
     }
 
-    private val _reminder = MutableStateFlow<Reminder?>(null)
+    private val _automation = MutableStateFlow<AutomationStatus?>(null)
 
-    /** Automation reminder for the main screen (FR-015). */
-    val reminder: StateFlow<Reminder?> = _reminder
+    /** Feature 007: the automation status for the automation entry; null until the first check. */
+    val automation: StateFlow<AutomationStatus?> = _automation
 
     fun onAction(action: SetupAction) {
         viewModelScope.launch {
@@ -87,10 +88,13 @@ class SetupViewModel(
             val next = postAuth.onAction(account, current, action)
             // "No" to the rewrite question returns to the chooser without changing the sheet.
             if (next is SetupState.SignedOut) accounts.forgetAccount()
-            if (next == SetupState.Ready) _reminder.value = null
             _state.value = next
+            // Feature 007: back from the automation steps, the entry shows the new status.
+            if (next == SetupState.Ready && (action == SetupAction.StartAutomation || current.isAutomationStep)) refreshStatus()
         }
     }
+
+    private val SetupState.isAutomationStep get() = this == SetupState.NeedsApiSetting || this is SetupState.NeedsEnable
 
     /** Background check on launch: spreadsheet still there? automation on? (data-model.md Ready) */
     fun refreshStatus() {
@@ -106,9 +110,9 @@ class SetupViewModel(
             }
             when (result) {
                 RefreshResult.NoChange -> Unit
-                is RefreshResult.Status -> _reminder.value = result.reminder
+                is RefreshResult.Status -> _automation.value = result.automation
                 RefreshResult.SpreadsheetGone -> {
-                    _reminder.value = null
+                    _automation.value = null
                     _state.value = SetupState.Working
                     _state.value = postAuth.run(account)
                 }
@@ -123,7 +127,7 @@ class SetupViewModel(
             _state.value = SetupState.Authorizing
             when (val picked = accounts.switchAccount(picker)) {
                 is PickResult.Picked -> {
-                    _reminder.value = null
+                    _automation.value = null
                     handleAuthorization(picked.account, accounts.authorize(picked.account))
                 }
                 PickResult.Cancelled -> _state.value = previous
@@ -139,7 +143,7 @@ class SetupViewModel(
     fun signOut() {
         viewModelScope.launch {
             accounts.signOut()
-            _reminder.value = null
+            _automation.value = null
             _state.value = SetupState.SignedOut(message = null)
         }
     }

@@ -32,6 +32,9 @@ class NonFatalIssueCatalogTest {
             // Feature 006
             NonFatalIssue.WORKOUT_TAB_MISSING to ("workout-tab-missing" to WARNING),
             NonFatalIssue.SCRIPT_UPGRADE_FAILED to ("script-upgrade-failed" to WARNING),
+            // Feature 007 research R10
+            NonFatalIssue.CALCULATION_RESTORED to ("calculation-restored" to WARNING),
+            NonFatalIssue.CALCULATION_CHECK_FAILED to ("calculation-check-failed" to WARNING),
         )
         assertEquals(expected, NonFatalIssue.entries.associateWith { it.key to it.severity })
     }

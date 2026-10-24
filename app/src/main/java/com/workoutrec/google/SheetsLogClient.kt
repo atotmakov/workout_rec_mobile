@@ -1,6 +1,7 @@
 package com.workoutrec.google
 
 import com.workoutrec.money.PaymentValues
+import com.workoutrec.spreadsheet.ReferenceStructure
 import com.workoutrec.workout.DayStatus
 import com.workoutrec.workout.DayStatusRules
 import java.time.LocalDate
@@ -83,12 +84,45 @@ data class MoneyWrite(val moneySheetId: Int, val appends: List<MoneyAppend>)
 /** Feature 006: a day's status into column C of an existing `workout` row. */
 data class WorkoutUpdate(val rowIndex: Int, val status: DayStatus)
 
-/** Feature 006: a new `workout` row: date serial, empty duration (the script fills it), status. */
+/** Feature 006: a new `workout` row: date serial, the duration formula (feature 007), status. */
 data class WorkoutAppend(val serial: Double, val status: DayStatus)
 
-/** Feature 006: the `workout` part of call 22. */
-data class WorkoutWrite(val workoutSheetId: Int, val updates: List<WorkoutUpdate>, val appends: List<WorkoutAppend>) {
-    val isEmpty: Boolean get() = updates.isEmpty() && appends.isEmpty()
+/** Feature 006: the `workout` part of call 22; feature 007 adds [deletes] (0-based rows of days without sets). */
+data class WorkoutWrite(
+    val workoutSheetId: Int,
+    val updates: List<WorkoutUpdate>,
+    val appends: List<WorkoutAppend>,
+    val deletes: List<Int> = emptyList(),
+) {
+    val isEmpty: Boolean get() = updates.isEmpty() && appends.isEmpty() && deletes.isEmpty()
+}
+
+/** Feature 007 call 24: a cell's content; [formula] is null for a value or an empty cell. */
+data class CellContent(val formula: String?, val empty: Boolean)
+
+/** A `workout` data row's date and duration cells; [rowIndex] is 0-based (row 2 → 1). */
+data class CalculatedRow(val rowIndex: Int, val hasDate: Boolean, val duration: CellContent)
+
+/** Call 24 result: the cells that should hold formulas, and the spreadsheet's metadata. */
+data class CalculatedCells(
+    val rows: List<CalculatedRow>,
+    val balance: CellContent,
+    val metadata: Map<String, String>,
+    val metadataIds: Map<String, Int>,
+)
+
+/**
+ * Call 25: [durationRuns] are 0-based row ranges whose B gets the duration formula; a non-null
+ * [balanceSheetId] gets the balance formula in A1; [metadata] is upserted with [metadataIds].
+ */
+data class CalculatedRepair(
+    val workoutSheetId: Int,
+    val durationRuns: List<IntRange>,
+    val balanceSheetId: Int?,
+    val metadata: Map<String, String>,
+    val metadataIds: Map<String, Int>,
+) {
+    val isEmpty: Boolean get() = durationRuns.isEmpty() && balanceSheetId == null && metadata.isEmpty()
 }
 
 /** The spreadsheet has no `log` or `drills` tab (contracts/sheets-log.md, failure `Structure`). */
@@ -108,6 +142,12 @@ interface SheetsLogApi {
         money: MoneyWrite? = null,
         workout: WorkoutWrite? = null,
     )
+
+    /** Feature 007 call 24. */
+    suspend fun readCalculatedCells(spreadsheetId: String): CalculatedCells
+
+    /** Feature 007 call 25; nothing is sent when [repair] is empty. */
+    suspend fun repairCalculatedCells(spreadsheetId: String, repair: CalculatedRepair)
 }
 
 class SheetsLogClient(
@@ -216,7 +256,101 @@ class SheetsLogClient(
             moneyPart?.let { add(appendMoney(it)) }
             // Feature 006: a separate tab, so its row indexes are not moved by log deletes.
             workoutPart?.updates?.forEach { add(updateStatus(workoutPart.workoutSheetId, it)) }
+            // Feature 007: after the updates, so their row indexes are still right; bottom-up.
+            workoutPart?.deletes?.sortedDescending()?.forEach { add(deleteRow(workoutPart.workoutSheetId, it)) }
             workoutPart?.appends?.takeIf { it.isNotEmpty() }?.let { add(appendWorkouts(workoutPart.workoutSheetId, it)) }
+        }
+        val url = spreadsheets().addPathSegment("$spreadsheetId:batchUpdate").build()
+        val body = buildJsonObject { put("requests", requests) }.toString().toJsonBody()
+        http.execute(Request.Builder().url(url).post(body).build())
+    }
+
+    @Serializable
+    private data class CellJson(val userEnteredValue: JsonObject? = null)
+
+    @Serializable
+    private data class RowJson(val values: List<CellJson> = emptyList())
+
+    @Serializable
+    private data class GridJson(val startRow: Int = 0, val rowData: List<RowJson> = emptyList())
+
+    @Serializable
+    private data class GridSheet(val properties: Properties = Properties(), val data: List<GridJson> = emptyList())
+
+    @Serializable
+    private data class MetadataJson(val metadataId: Int = 0, val metadataKey: String = "", val metadataValue: String = "")
+
+    @Serializable
+    private data class CellsResponse(val developerMetadata: List<MetadataJson> = emptyList(), val sheets: List<GridSheet> = emptyList())
+
+    /** Call 24 (feature 007 contracts/sheets.md): what the calculated cells hold, with the metadata. */
+    override suspend fun readCalculatedCells(spreadsheetId: String): CalculatedCells {
+        val url = spreadsheets().addPathSegment(spreadsheetId)
+            .addQueryParameter("ranges", "$WORKOUT!A2:B")
+            .addQueryParameter("ranges", "$BALANCE!A1")
+            .addQueryParameter(
+                "fields",
+                "developerMetadata(metadataId,metadataKey,metadataValue),sheets(properties(title),data(startRow,rowData(values(userEnteredValue))))",
+            )
+            .build()
+        val response = GoogleJson.decodeFromString<CellsResponse>(http.execute(Request.Builder().url(url).build()))
+        val grids = response.sheets.associate { it.properties.title to it.data.firstOrNull() }
+        val workout = grids[WORKOUT]
+        val rows = workout?.rowData.orEmpty().mapIndexed { i, row ->
+            val date = row.values.getOrNull(0)?.userEnteredValue?.get("numberValue")
+            CalculatedRow(workout!!.startRow + i, hasDate = date != null, duration = content(row.values.getOrNull(1)))
+        }
+        val balance = content(grids[BALANCE]?.rowData?.firstOrNull()?.values?.firstOrNull())
+        return CalculatedCells(
+            rows = rows,
+            balance = balance,
+            metadata = response.developerMetadata.associate { it.metadataKey to it.metadataValue },
+            metadataIds = response.developerMetadata.associate { it.metadataKey to it.metadataId },
+        )
+    }
+
+    private fun content(cell: CellJson?): CellContent {
+        val value = cell?.userEnteredValue ?: return CellContent(formula = null, empty = true)
+        return CellContent(formula = (value["formulaValue"] as? JsonPrimitive)?.content, empty = false)
+    }
+
+    /** Call 25: formulas back into the calculated cells, and the conversion marker, in one write. */
+    override suspend fun repairCalculatedCells(spreadsheetId: String, repair: CalculatedRepair) {
+        if (repair.isEmpty) return
+        val requests = buildJsonArray {
+            repair.durationRuns.forEach { run ->
+                add(
+                    buildJsonObject {
+                        putJsonObject("repeatCell") {
+                            putJsonObject("range") {
+                                put("sheetId", repair.workoutSheetId)
+                                put("startRowIndex", run.first)
+                                put("endRowIndex", run.last + 1)
+                                put("startColumnIndex", 1)
+                                put("endColumnIndex", 2)
+                            }
+                            putJsonObject("cell") { put("userEnteredValue", formula(ReferenceStructure.DURATION_FORMULA)) }
+                            put("fields", "userEnteredValue")
+                        }
+                    },
+                )
+            }
+            repair.balanceSheetId?.let { sheetId ->
+                add(
+                    buildJsonObject {
+                        putJsonObject("updateCells") {
+                            putJsonObject("start") {
+                                put("sheetId", sheetId)
+                                put("rowIndex", 0)
+                                put("columnIndex", 0)
+                            }
+                            putJsonArray("rows") { add(rowData(listOf(formula(ReferenceStructure.BALANCE_FORMULA)))) }
+                            put("fields", "userEnteredValue")
+                        }
+                    },
+                )
+            }
+            SheetsClient.metadataRequests(repair.metadata, repair.metadataIds).forEach { add(it) }
         }
         val url = spreadsheets().addPathSegment("$spreadsheetId:batchUpdate").build()
         val body = buildJsonObject { put("requests", requests) }.toString().toJsonBody()
@@ -297,7 +431,7 @@ class SheetsLogClient(
         }
     }
 
-    /** Column B is sent without a value: the script fills the duration at night (research R5). */
+    /** Column B holds the duration formula (feature 007 research R1). */
     private fun appendWorkouts(sheetId: Int, appends: List<WorkoutAppend>) = buildJsonObject {
         putJsonObject("appendCells") {
             put("sheetId", sheetId)
@@ -307,7 +441,7 @@ class SheetsLogClient(
                         buildJsonObject {
                             putJsonArray("values") {
                                 add(buildJsonObject { put("userEnteredValue", number(append.serial)) })
-                                add(JsonObject(emptyMap()))
+                                add(buildJsonObject { put("userEnteredValue", formula(ReferenceStructure.DURATION_FORMULA)) })
                                 add(buildJsonObject { put("userEnteredValue", number(DayStatusRules.toSheet(append.status))) })
                             }
                         },
@@ -351,6 +485,7 @@ class SheetsLogClient(
     }
 
     private fun text(value: String) = buildJsonObject { put("stringValue", value) }
+    private fun formula(value: String) = buildJsonObject { put("formulaValue", value) }
     private fun number(value: Number) = buildJsonObject { put("numberValue", value) }
 
     private fun spreadsheets(): HttpUrl.Builder = baseUrl.newBuilder().addPathSegments("v4/spreadsheets")

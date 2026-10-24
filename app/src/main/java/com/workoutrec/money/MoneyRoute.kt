@@ -19,12 +19,18 @@ import java.time.LocalDate
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 
-/** The Money tab's first screen (feature 004 US4); [onEnableAutomation] is feature 001's fix. */
+/** The Money tab's first screen (feature 004 US4); [onEnableAutomation] starts the optional automation steps (feature 007). */
 @Composable
-fun MoneyRoute(container: AppContainer, onEnableAutomation: () -> Unit, modifier: Modifier = Modifier, actions: @Composable () -> Unit = {}) {
+fun MoneyRoute(
+    container: AppContainer,
+    onEnableAutomation: () -> Unit,
+    modifier: Modifier = Modifier,
+    actions: @Composable () -> Unit = {},
+    automation: AutomationStatus? = null,
+) {
     val payments by container.workoutRepository.payments.collectAsState(initial = emptyList())
     val summary by container.workoutRepository.moneySummary.collectAsState(initial = null)
-    val hasPending by container.workoutRepository.hasPendingPayment.collectAsState(initial = false)
+    val waiting by container.workoutRepository.waitingCount.collectAsState(initial = 0)
     val status by container.syncStatusStore.status.collectAsState(initial = SyncStatus())
     val zone = status.zone()
     val scope = rememberCoroutineScope()
@@ -34,11 +40,10 @@ fun MoneyRoute(container: AppContainer, onEnableAutomation: () -> Unit, modifier
     LaunchedEffect(Unit) { container.moneyRefresher.onOpen() }
 
     val note = BalanceNotes.of(
+        calculated = summary?.calculated ?: false,
         automation = summary?.automation ?: AutomationStatus.ScriptMissing,
         lastDailyRun = summary?.lastDailyRun,
-        pendingPayment = hasPending,
-        latestPayment = payments.filterNot { it.pending }.maxOfOrNull { it.date },
-        zone = zone,
+        waiting = waiting > 0,
     )
     MoneyScreen(
         state = MoneyState(
@@ -65,6 +70,7 @@ fun MoneyRoute(container: AppContainer, onEnableAutomation: () -> Unit, modifier
         modifier = modifier,
         refreshing = refreshing,
         actions = actions,
+        automation = automation,
     )
     if (adding) {
         // The last payment is the usual one: start from its values (contracts/screens.md "Payment dialog").

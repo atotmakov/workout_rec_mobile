@@ -3,6 +3,7 @@ package com.workoutrec.home
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -30,6 +31,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.workoutrec.R
+import com.workoutrec.automation.AutomationStatus
+import com.workoutrec.automation.automationStatusText
 import com.workoutrec.data.SelectedAccount
 
 const val MainScreenTag = "main_screen"
@@ -51,6 +54,8 @@ fun MainScreen(
     diagnostics: DiagnosticsMenuState = DiagnosticsMenuState(),
     /** The sync status icon, shown left of the avatar (redesign brief 1a). */
     syncStatus: @Composable () -> Unit = {},
+    /** Feature 007: the optional automation item; null = not shown. */
+    automation: AutomationMenuState? = null,
     content: @Composable (Modifier) -> Unit = {},
 ) {
     Scaffold(
@@ -68,6 +73,7 @@ fun MainScreen(
                         onShareLog = onShareLog,
                         diagnostics = diagnostics,
                         syncStatus = syncStatus,
+                        automation = automation,
                     )
                 },
             )
@@ -92,6 +98,7 @@ fun AccountActions(
     diagnostics: DiagnosticsMenuState = DiagnosticsMenuState(),
     /** The sync status icon, shown left of the avatar (redesign brief 1a). */
     syncStatus: @Composable () -> Unit = {},
+    automation: AutomationMenuState? = null,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
     var confirmSignOut by remember { mutableStateOf(false) }
@@ -110,6 +117,7 @@ fun AccountActions(
             onSignOut = { menuOpen = false; confirmSignOut = true },
             onShareLog = { menuOpen = false; onShareLog() },
             diagnostics = diagnostics.copy(onTestAction = { menuOpen = false; diagnostics.onTestAction(it) }),
+            automation = automation?.copy(onClick = { menuOpen = false; automation.onClick() }),
         )
     }
     if (confirmSignOut) {
@@ -159,7 +167,12 @@ fun AccountAvatar(account: SelectedAccount, onClick: () -> Unit) {
     }
 }
 
-/** Name, email, switch account, sign out (FR-005). */
+/** Feature 007 FR-012: the account menu's spreadsheet automation item. */
+data class AutomationMenuState(val status: AutomationStatus?, val onClick: () -> Unit)
+
+const val AccountAutomationTag = "account_automation"
+
+/** Name, email, switch account, sign out (FR-005); feature 007 adds spreadsheet automation. */
 @Composable
 fun AccountMenu(
     account: SelectedAccount,
@@ -169,6 +182,7 @@ fun AccountMenu(
     onSignOut: () -> Unit,
     onShareLog: () -> Unit = {},
     diagnostics: DiagnosticsMenuState = DiagnosticsMenuState(),
+    automation: AutomationMenuState? = null,
 ) {
     DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
         account.displayName?.let { name ->
@@ -181,6 +195,18 @@ fun AccountMenu(
         )
         DropdownMenuItem(text = { Text(stringResource(R.string.account_switch)) }, onClick = onSwitchAccount)
         DropdownMenuItem(text = { Text(stringResource(R.string.account_sign_out)) }, onClick = onSignOut)
+        automation?.let { item ->
+            DropdownMenuItem(
+                text = {
+                    Column {
+                        Text(stringResource(R.string.automation_entry_title))
+                        Text(stringResource(automationStatusText(item.status)), style = MaterialTheme.typography.bodySmall)
+                    }
+                },
+                onClick = item.onClick,
+                modifier = Modifier.testTag(AccountAutomationTag),
+            )
+        }
         DropdownMenuItem(text = { Text(stringResource(R.string.account_share_log)) }, onClick = onShareLog)
         SendDiagnosticsItem(diagnostics, diagnostics.onTestAction)
     }

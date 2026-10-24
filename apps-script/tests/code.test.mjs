@@ -5,6 +5,8 @@ import { loadGs, plain } from './load-gs.mjs';
 import { createFakes } from './fakes.mjs';
 
 const SPREADSHEET_ID = 'sheet-123';
+// Config.gs gets the app's formula text; any formula works for these tests.
+const DURATION_FORMULA = '=DURATION()';
 
 function setup({ log = [['Date', 'Drill', 'W', 'R']], workout = [['date', 'duration, min', 'work alone']], money = [['date', 'workouts', 'sum']] } = {}) {
   const fakes = createFakes();
@@ -20,7 +22,8 @@ function setup({ log = [['Date', 'Drill', 'W', 'R']], workout = [['date', 'durat
   const ctx = loadGs(['Logic.gs', 'Code.gs'], {
     ...fakes.globals,
     SPREADSHEET_ID,
-    SCRIPT_VERSION: 1,
+    SCRIPT_VERSION: 3,
+    DURATION_FORMULA,
   });
   return { fakes, ss, ctx };
 }
@@ -140,13 +143,13 @@ test('dailyJob appends three-value workout rows, then balance, then last run (in
   const appended = fakes.calls[0][2];
   assert.equal(appended.length, 3);
   assert.equal(appended[0].toISOString().slice(0, 10), '2026-01-14');
-  assert.deepEqual(appended.slice(1), [0, 0]);
+  assert.deepEqual(appended.slice(1), [DURATION_FORMULA, 0]);
   assert.equal(ss.getSheetByName('balance').cell(1, 1), 22, '24 paid - 2 workouts');
   assert.ok(ss.metadataValue('workout_rec.last_daily_run'));
 });
 
-// Feature 006 contracts/apps-script.md: durations of rows the app added, and the default flag.
-test('dailyJob fills empty durations, appends new days with the previous flag, then the balance', () => {
+// Feature 007 contracts/apps-script.md: formulas in empty durations, new days with the previous flag.
+test('dailyJob puts the formula in empty durations, appends new days with the previous flag, then the balance', () => {
   const { ss, ctx, fakes } = setup({
     log: [
       ['Date', 'Drill', 'W', 'R'],
@@ -162,12 +165,51 @@ test('dailyJob fills empty durations, appends new days with the previous flag, t
   });
   ctx.dailyJob();
   const kinds = fakes.calls.map((c) => c[0] === 'setValue' ? `setValue ${c[1]}` : c[0]);
-  assert.deepEqual(kinds, ['setValue workout!B2', 'appendRow', 'setValue balance!A1', 'addMetadata']);
-  assert.equal(fakes.calls[0][2], 60);
+  assert.deepEqual(kinds, ['setFormula', 'appendRow', 'setValue balance!A1', 'addMetadata']);
+  assert.deepEqual(plain(fakes.calls[0]), ['setFormula', 'workout!B2', DURATION_FORMULA]);
   const appended = fakes.calls[1][2];
   assert.equal(appended[0].toISOString().slice(0, 10), '2026-01-14');
-  assert.deepEqual(appended.slice(1), [0, 1], 'one set: 0 minutes; copies the free day before');
+  assert.deepEqual(appended.slice(1), [DURATION_FORMULA, 1], 'copies the free day before');
   assert.equal(ss.getSheetByName('balance').cell(1, 1), 24, '24 paid - 0 counted (both days free)');
+});
+
+test('dailyJob removes rows of days without sets bottom-up and never writes a duration value', () => {
+  const { ss, ctx, fakes } = setup({
+    log: [['Date', 'Drill', 'W', 'R'], [new Date('2026-01-12T10:00:00Z'), 'жим', 20, 10]],
+    workout: [
+      ['date', 'duration, min', 'work alone'],
+      [new Date('2026-01-10T00:00:00Z'), 30, 0],
+      [new Date('2026-01-12T00:00:00Z'), DURATION_FORMULA, 0],
+      [new Date('2026-01-11T00:00:00Z'), 20, 1],
+    ],
+  });
+  ctx.dailyJob();
+  assert.deepEqual(plain(fakes.calls.filter((c) => c[0] === 'deleteRow')), [['deleteRow', 'workout', 4], ['deleteRow', 'workout', 2]]);
+  assert.equal(ss.getSheetByName('workout').rows.length, 2);
+  assert.ok(fakes.calls.every((c) => !(c[0] === 'setValue' && c[1].startsWith('workout!'))));
+});
+
+test('dailyJob leaves a calculated balance alone', () => {
+  const { ss, ctx, fakes } = setup({ log: [['Date', 'Drill', 'W', 'R'], [new Date('2026-01-12T10:00:00Z'), 'жим', 20, 10]] });
+  ss.getSheetByName('balance').setCell(1, 1, '=SUM(1)');
+  ctx.dailyJob();
+  assert.equal(ss.getSheetByName('balance').cell(1, 1), '=SUM(1)');
+  assert.ok(fakes.calls.every((c) => c[1] !== 'balance!A1'));
+  assert.ok(ss.metadataValue('workout_rec.last_daily_run'));
+});
+
+test('dailyJob with an empty log removes nothing', () => {
+  const { ss, ctx } = setup({ workout: [['date', 'duration, min', 'work alone'], [new Date('2026-01-10T00:00:00Z'), 30, 0]] });
+  ctx.dailyJob();
+  assert.equal(ss.getSheetByName('workout').rows.length, 2);
+});
+
+test('the Enable page no longer promises a nightly balance', () => {
+  const { ctx } = setup();
+  for (const lang of ['en', 'ru']) {
+    const texts = plain(ctx.doGet({ parameter: { lang } }).template.texts);
+    assert.doesNotMatch(texts.body, /balance|баланс/i, lang);
+  }
 });
 
 test('dailyJob updates last run instead of adding a second entry', () => {

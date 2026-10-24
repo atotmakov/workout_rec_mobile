@@ -38,6 +38,7 @@ import com.workoutrec.monitoring.TracerMonitoring
 import com.workoutrec.setup.SpreadsheetSetupFlow
 import com.workoutrec.spreadsheet.SpreadsheetSetupService
 import com.workoutrec.sync.DataStoreSyncStatusStore
+import com.workoutrec.sync.FormCheck
 import com.workoutrec.sync.LogSync
 import com.workoutrec.sync.SyncScheduler
 import com.workoutrec.sync.SyncStatusStore
@@ -165,6 +166,7 @@ class AppContainer(context: Context, val monitoringSettings: MonitoringSettings)
             monitoring = monitoring,
             // Feature 004 research R6: the Money tab shows the new payments' rows.
             onPaymentsWritten = { moneyRefresher.refresh() },
+            formCheck = FormCheck(sheetsLogClient, monitoring, log = diagnosticLog::write),
         ),
         appScope,
         enqueueBackground = {

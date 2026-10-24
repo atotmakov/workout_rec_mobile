@@ -206,7 +206,7 @@ class WorkoutRepository(
     override suspend fun replaceMoney(rows: List<PaymentRow>, summary: MoneySummary) =
         dao.replacePayments(
             rows.map { PaymentRowEntity(it.rowIndex, it.date.toString(), it.workouts, it.sumHundredths) },
-            MoneySummaryEntity(1, summary.balance, summary.lastDailyRun, summary.automation.name, summary.downloadedAt, summary.error.name),
+            MoneySummaryEntity(1, summary.balance, summary.lastDailyRun, summary.automation.name, summary.downloadedAt, summary.error.name, summary.calculated),
         )
 
     override suspend fun moneyFailed(error: MoneyError) = dao.moneyFailed(error.name)
@@ -269,6 +269,7 @@ internal fun MoneySummaryEntity.toDomain(onBadValue: (String) -> Unit = {}) = Mo
         onBadValue("money-error")
         MoneyError.OTHER
     },
+    calculated,
 )
 
 internal fun PendingExerciseChangeEntity.toDomain() =

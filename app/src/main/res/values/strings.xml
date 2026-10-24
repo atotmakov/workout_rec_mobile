@@ -35,10 +35,6 @@
     <string name="guide_link_copied">Link copied</string>
     <string name="guide_open">Open</string>
     <string name="guide_continue">Continue for now</string>
-    <string name="reminder_script_missing">Automation is not set up yet: allow scripts (step 1).</string>
-    <string name="reminder_not_enabled">Automation is not enabled yet: finish step 2.</string>
-    <string name="reminder_stopped">Automation has stopped: enable it again.</string>
-    <string name="reminder_fix">Fix</string>
     <string name="automation_on">Automation is on.</string>
 
     <!-- US3: sign out -->
@@ -187,9 +183,8 @@
     <string name="money_note_daily">The balance is calculated once a day; last at %1$s.</string>
     <string name="money_note_daily_unknown">The balance is calculated once a day.</string>
     <string name="money_note_stopped">The daily calculation seems stopped; the balance is from %1$s.</string>
-    <string name="money_note_off">The balance is not updated: the spreadsheet’s daily automation is off.</string>
-    <string name="money_note_new_payments">New payments are counted at the next daily calculation.</string>
-    <string name="money_enable_automation">Enable automation</string>
+    <string name="money_note_calculated">The balance is calculated by your spreadsheet.</string>
+    <string name="money_note_waiting">Updates after your changes sync.</string>
     <string name="money_downloaded">Updated %1$s</string>
     <string name="money_totals">Paid in total: %1$s workouts, %2$s</string>
     <string name="money_payment">%1$s workouts · %2$s</string>
@@ -205,4 +200,12 @@
     <string name="payment_sum">Sum</string>
     <string name="payment_workouts_error">A whole number from 1 to 999</string>
     <string name="payment_sum_error">A number from 0, up to 2 decimals</string>
+    <!-- Feature 007: optional spreadsheet automation (Money tab and account menu) -->
+    <string name="automation_entry_title">Spreadsheet automation</string>
+    <string name="automation_entry_off">Off. Turn it on to add new days while the app is closed, fill in the time when you type a set in the spreadsheet, and make the rec tab follow the selected exercise.</string>
+    <string name="automation_entry_on">On. Runs every night.</string>
+    <string name="automation_entry_stopped">Stopped: the nightly run hasn’t happened lately. Tap to turn it on again.</string>
+    <string name="automation_status_off">Off</string>
+    <string name="automation_status_on">On</string>
+    <string name="automation_status_stopped">Stopped</string>
 </resources>

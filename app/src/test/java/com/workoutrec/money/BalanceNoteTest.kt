@@ -1,46 +1,40 @@
 package com.workoutrec.money
 
 import com.workoutrec.automation.AutomationStatus
-import java.time.LocalDate
-import java.time.ZoneOffset
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-// Feature 004 FR-009a, research R7
+// Feature 007 research R9, contracts/screens.md "Balance card"; spec FR-002, FR-005a
 class BalanceNoteTest {
 
-    private val zone = ZoneOffset.UTC
     /** 2026-10-21T03:00Z */
     private val lastRun = 1_792_551_600_000L
 
-    private fun note(automation: AutomationStatus, pendingPayment: Boolean = false, latestPayment: LocalDate? = null, run: Long? = lastRun) =
-        BalanceNotes.of(automation, run, pendingPayment, latestPayment, zone)
+    private fun note(calculated: Boolean, automation: AutomationStatus, waiting: Boolean = false) =
+        BalanceNotes.of(calculated, automation, lastRun, waiting)
 
     @Test
-    fun dailyCalculationWithItsTime() =
-        assertEquals(BalanceNoteState(BalanceNote.Calculated(lastRun), newPaymentsWaiting = false), note(AutomationStatus.On))
-
-    @Test
-    fun stoppedAutomationKeepsTheLastTime() =
-        assertEquals(BalanceNote.Stopped(lastRun), note(AutomationStatus.Stopped).note)
-
-    @Test
-    fun automationOffOrScriptMissingMeansNotUpdated() {
-        assertEquals(BalanceNote.Off, note(AutomationStatus.NotEnabled).note)
-        assertEquals(BalanceNote.Off, note(AutomationStatus.ScriptMissing, run = null).note)
+    fun aCalculatedSpreadsheetSaysSoWhateverTheAutomation() {
+        AutomationStatus.entries.forEach { assertEquals(BalanceNote.Calculated, note(calculated = true, it).note) }
     }
 
     @Test
-    fun aWaitingPaymentIsCountedAtTheNextCalculation() =
-        assertEquals(true, note(AutomationStatus.On, pendingPayment = true).newPaymentsWaiting)
-
-    @Test
-    fun aPaymentDatedAfterTheLastCalculationIsToo() {
-        assertEquals(true, note(AutomationStatus.On, latestPayment = LocalDate.of(2026, 10, 22)).newPaymentsWaiting)
-        assertEquals(false, note(AutomationStatus.On, latestPayment = LocalDate.of(2026, 10, 21)).newPaymentsWaiting)
+    fun anOldScriptStillCalculatingKeepsItsDailyNote() {
+        assertEquals(BalanceNote.Daily(lastRun), note(calculated = false, AutomationStatus.On).note)
+        assertEquals(BalanceNote.Stopped(lastRun), note(calculated = false, AutomationStatus.Stopped).note)
     }
 
     @Test
-    fun noLineAboutNewPaymentsWhenTheBalanceIsNotUpdatedAnyway() =
-        assertEquals(false, note(AutomationStatus.NotEnabled, pendingPayment = true).newPaymentsWaiting)
+    fun neverANotUpdatedNote() {
+        // FR-002: without automation the first sync converts the spreadsheet.
+        assertEquals(BalanceNote.Calculated, note(calculated = false, AutomationStatus.NotEnabled).note)
+        assertEquals(BalanceNote.Calculated, note(calculated = false, AutomationStatus.ScriptMissing).note)
+    }
+
+    @Test
+    fun waitingChangesAddTheUpdatesAfterSyncLine() {
+        assertEquals(BalanceNoteState(BalanceNote.Calculated, waiting = true), note(calculated = true, AutomationStatus.NotEnabled, waiting = true))
+        assertEquals(false, note(calculated = true, AutomationStatus.On).waiting)
+        assertEquals(true, note(calculated = false, AutomationStatus.On, waiting = true).waiting)
+    }
 }

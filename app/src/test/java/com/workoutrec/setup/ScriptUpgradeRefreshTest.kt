@@ -1,5 +1,6 @@
 package com.workoutrec.setup
 
+import com.workoutrec.automation.AutomationStatus
 import com.workoutrec.automation.AutomationStatusEvaluator
 import com.workoutrec.data.SelectedAccount
 import com.workoutrec.data.SpreadsheetBinding
@@ -37,7 +38,7 @@ class ScriptUpgradeRefreshTest {
     fun `a script without a recorded version is upgraded`() = runTest {
         val result = flowWith(enabled).refresh(account)
         assertEquals(listOf("upgrade:s1:script-1"), installer.log)
-        assertEquals(RefreshResult.Status(null), result)
+        assertEquals(RefreshResult.Status(AutomationStatus.On), result)
     }
 
     @Test
@@ -48,8 +49,22 @@ class ScriptUpgradeRefreshTest {
 
     @Test
     fun `a current script is left alone`() = runTest {
-        flowWith(enabled + (AutomationStatusEvaluator.SCRIPT_VERSION to "2")).refresh(account)
+        flowWith(enabled + (AutomationStatusEvaluator.SCRIPT_VERSION to "3")).refresh(account)
         assertEquals(emptyList<String>(), installer.log)
+    }
+
+    // Feature 007 FR-015, T042: a 006 script is replaced; automation stays on, nothing is attached again.
+    @Test
+    fun `a version 2 script is upgraded and automation stays on`() = runTest {
+        val result = flowWith(enabled + (AutomationStatusEvaluator.SCRIPT_VERSION to "2")).refresh(account)
+        assertEquals(listOf("upgrade:s1:script-1"), installer.log)
+        assertEquals(RefreshResult.Status(AutomationStatus.On), result)
+    }
+
+    @Test
+    fun `a script attached but never enabled is upgraded too`() = runTest {
+        flowWith(mapOf(AutomationStatusEvaluator.SCRIPT_ID to "script-1", AutomationStatusEvaluator.SCRIPT_VERSION to "2")).refresh(account)
+        assertEquals(listOf("upgrade:s1:script-1"), installer.log)
     }
 
     @Test
@@ -62,7 +77,7 @@ class ScriptUpgradeRefreshTest {
     fun `a failed upgrade changes nothing for the user, is reported, and is tried again`() = runTest {
         val flow = flowWith(enabled)
         installer.failNext = ApiError.Unexpected(500, "boom")
-        assertEquals(RefreshResult.Status(null), flow.refresh(account))
+        assertEquals(RefreshResult.Status(AutomationStatus.On), flow.refresh(account))
         val report = monitoring.nonFatals.single()
         assertEquals(NonFatalIssue.SCRIPT_UPGRADE_FAILED, report.issue)
         assertEquals("operation=script-upgrade", report.details)

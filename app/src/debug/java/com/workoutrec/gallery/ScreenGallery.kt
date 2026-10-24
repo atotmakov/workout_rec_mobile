@@ -45,9 +45,9 @@ import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import com.workoutrec.R
 import com.workoutrec.automation.AutomationStatus
+import com.workoutrec.home.AutomationMenuState
 import com.workoutrec.data.SelectedAccount
 import com.workoutrec.google.ApiError
-import com.workoutrec.home.AutomationReminder
 import com.workoutrec.home.MainScreen
 import com.workoutrec.home.SignOutDialog
 import com.workoutrec.home.SwitchAccountDialog
@@ -79,6 +79,7 @@ import com.workoutrec.sync.NoticeKind
 import com.workoutrec.sync.SyncNotice
 import com.workoutrec.sync.SyncPhase
 import com.workoutrec.ui.theme.WorkoutRecTheme
+import com.workoutrec.workout.DayStatus
 import com.workoutrec.workout.DaySummary
 import com.workoutrec.workout.DisplaySet
 import com.workoutrec.workout.Exercise
@@ -153,7 +154,6 @@ object ScreenGallery {
         GalleryScreen("15a-sync-details-sign-in", open = GalleryOpen.SYNC_DETAILS) {
             TodayFrame(groups = Samples.todayGroups(), pendingCount = 1, phase = SyncPhase.NeedsSignIn)
         },
-        GalleryScreen("16-today-automation-reminder") { TodayFrame(groups = Samples.todayGroups(), automation = AutomationStatus.NotEnabled) },
         GalleryScreen("17-today-sync-notices") { TodayFrame(groups = Samples.todayGroups(), notices = Samples.notices()) },
         GalleryScreen("18-account-menu", open = GalleryOpen.ACCOUNT_MENU) { TodayFrame(groups = Samples.todayGroups(), pendingCount = 1) },
         GalleryScreen("19-diagnostics-test-dialog", open = GalleryOpen.DIAGNOSTICS_TEST_DIALOG) { TodayFrame(groups = Samples.todayGroups()) },
@@ -199,14 +199,14 @@ object ScreenGallery {
         GalleryScreen("29-day-detail") {
             BarFrame(Tab.HISTORY) { barModifier ->
                 Box(barModifier) {
-                    RouteFrame(Samples.DAY_TITLE, pendingCount = 1) { modifier -> DayDetailScreen(Samples.dayGroups(), onEditSet = {}, modifier = modifier) }
+                    RouteFrame(Samples.DAY_TITLE, pendingCount = 1) { modifier -> DayDetailScreen(Samples.dayGroups(), onEditSet = {}, modifier = modifier, status = DayStatus.PAID) }
                 }
             }
         },
         GalleryScreen("30-edit-set-dialog") {
             BarFrame(Tab.HISTORY) { barModifier ->
                 Box(barModifier) {
-                    RouteFrame(Samples.DAY_TITLE, pendingCount = 1) { modifier -> DayDetailScreen(Samples.dayGroups(), onEditSet = {}, modifier = modifier) }
+                    RouteFrame(Samples.DAY_TITLE, pendingCount = 1) { modifier -> DayDetailScreen(Samples.dayGroups(), onEditSet = {}, modifier = modifier, status = DayStatus.PAID) }
                 }
             }
             EditSetDialog(set = Samples.dayGroups().first().sets.first(), exercises = Samples.exercises(), onSave = { _, _, _ -> }, onDelete = {}, onDismiss = {}, zone = Samples.ZONE)
@@ -286,12 +286,15 @@ object ScreenGallery {
         // Feature 004 US4: Money tab
         GalleryScreen("60-money") { MoneyFrame(Samples.moneyState(balance = 11.0, newPayment = true)) },
         GalleryScreen("61-money-owed") { MoneyFrame(Samples.moneyState(balance = -2.0)) },
-        GalleryScreen("62-money-automation-off") { MoneyFrame(Samples.moneyState(balance = 11.0, note = BalanceNote.Off)) },
+        // Feature 007: a spreadsheet the old nightly script still calculates (not converted yet).
+        GalleryScreen("62-money-daily-script") { MoneyFrame(Samples.moneyState(balance = 11.0, note = BalanceNote.Daily(Samples.at(3, 0) * 1000))) },
         GalleryScreen("63-payment-dialog") {
             MoneyFrame(Samples.moneyState(balance = 11.0))
             PaymentDialog(today = Samples.TODAY, defaultWorkouts = 8, defaultSum = 800_000, onSave = { _, _, _ -> }, onDismiss = {})
         },
         GalleryScreen("64-money-empty") { MoneyFrame(Samples.moneyState(balance = null, payments = false, error = MoneyError.MISSING_TAB)) },
+        // Feature 007: the optional automation entry once it is on.
+        GalleryScreen("65-money-automation-on") { MoneyFrame(Samples.moneyState(balance = 11.0), automation = AutomationStatus.On) },
     )
 }
 
@@ -301,7 +304,6 @@ private fun TodayFrame(
     groups: List<ExerciseGroup>,
     pendingCount: Int = 0,
     phase: SyncPhase = SyncPhase.Idle,
-    automation: AutomationStatus? = null,
     notices: List<Pair<Long, SyncNotice>> = emptyList(),
 ) {
     BarFrame(Tab.TODAY) { barModifier ->
@@ -312,11 +314,11 @@ private fun TodayFrame(
                 onSignOut = {},
                 unsyncedCount = pendingCount,
                 syncStatus = { SampleSyncStatus(pendingCount, phase) },
+                automation = Samples.AUTOMATION_MENU,
             ) { modifier ->
                 TodayScreen(
                     groups, onAddExercise = {}, onOpenExercise = {}, modifier = modifier,
                     header = {
-                        automation?.let { AutomationReminder(status = it, onFix = {}) }
                         SyncNoticeList(notices, onDismiss = {})
                     },
                     // Feature 006: the Paid/Free control with no earlier day (Free).
@@ -337,16 +339,23 @@ private fun BarFrame(tab: Tab, content: @Composable (Modifier) -> Unit) {
 }
 
 @Composable
-private fun MoneyFrame(state: MoneyState) {
+private fun MoneyFrame(state: MoneyState, automation: AutomationStatus = AutomationStatus.NotEnabled) {
     BarFrame(Tab.MONEY) { modifier ->
-        MoneyScreen(state, Samples.ZONE, onAdd = {}, onRefresh = {}, onEnableAutomation = {}, modifier = modifier, actions = { SampleAccountActions(pendingCount = if (state.payments.any { it.pending }) 1 else 0) })
+        MoneyScreen(
+            state, Samples.ZONE, onAdd = {}, onRefresh = {}, onEnableAutomation = {}, modifier = modifier,
+            actions = { SampleAccountActions(pendingCount = if (state.payments.any { it.pending }) 1 else 0) },
+            automation = automation,
+        )
     }
 }
 
 /** The sync icon and the avatar, as on every tab's first screen. */
 @Composable
 private fun SampleAccountActions(pendingCount: Int = 0) {
-    AccountActions(account = Samples.ACCOUNT, onSwitchAccount = {}, onSignOut = {}, syncStatus = { SampleSyncStatus(pendingCount, SyncPhase.Idle) })
+    AccountActions(
+        account = Samples.ACCOUNT, onSwitchAccount = {}, onSignOut = {}, syncStatus = { SampleSyncStatus(pendingCount, SyncPhase.Idle) },
+        automation = Samples.AUTOMATION_MENU,
+    )
 }
 
 @Composable
@@ -480,10 +489,13 @@ private object Samples {
             ShownExercise(name("Face pull", "Тяга к лицу"), name("Shoulders", "Плечи"), pending = true, deletable = true)
     }
 
+    /** Feature 007: the account menu's automation item, off. */
+    val AUTOMATION_MENU = AutomationMenuState(AutomationStatus.NotEnabled, onClick = {})
+
     fun moneyState(
         balance: Double?,
         newPayment: Boolean = false,
-        note: BalanceNote = BalanceNote.Calculated(at(3, 0) * 1000),
+        note: BalanceNote = BalanceNote.Calculated,
         payments: Boolean = true,
         error: MoneyError = MoneyError.NONE,
     ): MoneyState {
@@ -495,7 +507,7 @@ private object Samples {
         )
         return MoneyState(
             balance = balance,
-            note = BalanceNoteState(note, newPaymentsWaiting = newPayment && note !is BalanceNote.Off),
+            note = BalanceNoteState(note, waiting = newPayment),
             downloadedAt = at(9, 40) * 1000,
             error = error,
             payments = shown,
@@ -537,10 +549,11 @@ private object Samples {
     )
 
     fun pastDays(): List<DaySummary> = listOf(
-        DaySummary(TODAY.minusDays(2), exerciseCount = 4, setCount = 14),
-        DaySummary(TODAY.minusDays(4), exerciseCount = 3, setCount = 11),
-        DaySummary(TODAY.minusDays(7), exerciseCount = 5, setCount = 17),
-        DaySummary(TODAY.minusDays(9), exerciseCount = 3, setCount = 9),
+        // Feature 006: mixed statuses, the newest change still waiting for sync.
+        DaySummary(TODAY.minusDays(2), exerciseCount = 4, setCount = 14, status = DayStatus.PAID, statusPending = true),
+        DaySummary(TODAY.minusDays(4), exerciseCount = 3, setCount = 11, status = DayStatus.PAID),
+        DaySummary(TODAY.minusDays(7), exerciseCount = 5, setCount = 17, status = DayStatus.FREE),
+        DaySummary(TODAY.minusDays(9), exerciseCount = 3, setCount = 9, status = DayStatus.PAID),
     )
 
     @Composable

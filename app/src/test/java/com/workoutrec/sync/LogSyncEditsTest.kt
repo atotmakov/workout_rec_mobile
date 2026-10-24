@@ -131,11 +131,12 @@ class LogSyncEditsTest {
     }
 
     @Test
-    fun `deleting the first or last set of a past day says its workout row is not updated`() = runTest {
+    fun `deleting the first or last set of a past day raises no notice`() = runTest {
+        // Feature 007: the spreadsheet recalculates the day's duration (research R10).
         sheetHas(first, middle, last, today)
         store.pending += delete("d", first, hint = 1)
         sync.run()
-        assertEquals(listOf(SyncNotice(NoticeKind.WORKOUT_ROW_NOT_UPDATED, first)), store.notices)
+        assertTrue(store.notices.isEmpty())
     }
 
     @Test

@@ -29,23 +29,23 @@ class ScriptUpgradeTest {
         installer.upgrade("sheet-1", "script-9", "Europe/Moscow", existingIds = mapOf("workout_rec.script_version" to 4))
         // No new version or deployment: the Enable page keeps its deployed version.
         assertEquals(listOf("content:script-9", "upsert:sheet-1"), log)
-        assertEquals(mapOf("workout_rec.script_version" to "2"), sheets.upserts.single())
+        assertEquals(mapOf("workout_rec.script_version" to "3"), sheets.upserts.single())
         val files = script.uploaded.single().associateBy { it.name }
         assertEquals(setOf("appsscript", "Config", "Code", "Logic", "Enable"), files.keys)
         val config = files.getValue("Config").source
         assertTrue(config.contains("const SPREADSHEET_ID = 'sheet-1';"))
-        assertTrue(config.contains("const SCRIPT_VERSION = 2;"))
+        assertTrue(config.contains("const SCRIPT_VERSION = 3;"))
     }
 
     @Test
     fun `the version key and number`() {
         assertEquals("workout_rec.script_version", AutomationStatusEvaluator.SCRIPT_VERSION)
-        assertEquals(2, ScriptInstaller.SCRIPT_VERSION)
+        assertEquals(3, ScriptInstaller.SCRIPT_VERSION)
     }
 
     @Test
     fun `an install records the version too`() = runTest {
         installer.install("sheet-1", "Europe/Moscow", existingMetadata = emptyMap(), existingIds = emptyMap())
-        assertEquals("2", sheets.upserts.single()["workout_rec.script_version"])
+        assertEquals("3", sheets.upserts.single()["workout_rec.script_version"])
     }
 }

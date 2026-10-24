@@ -24,6 +24,8 @@ import com.workoutrec.monitoring.failure
 import com.workoutrec.monitoring.Profile
 import com.workoutrec.monitoring.ProfileTarget
 import com.workoutrec.workout.ChangeKind
+import com.workoutrec.workout.DayRow
+import com.workoutrec.workout.DayRowsPlan
 import com.workoutrec.workout.DayStatus
 import com.workoutrec.workout.Exercise
 import com.workoutrec.workout.ExerciseChange
@@ -125,6 +127,8 @@ class LogSync(
     private val monitoring: Monitoring = NoMonitoring,
     /** Feature 004 research R6: payments reached the money tab; the Money tab downloads again. */
     private val onPaymentsWritten: suspend () -> Unit = {},
+    /** Feature 007 research R5: checks and repairs the calculated cells after each successful run. */
+    private val formCheck: FormCheck? = null,
 ) {
 
     /** Never throws for Google or network errors; they become [SyncOutcome.Failed] (contracts "Errors"). */
@@ -207,7 +211,6 @@ class LogSync(
                     targeted += row.rowIndex
                     deletes += row.rowIndex
                     written += change.id
-                    if (changesWorkoutRow(row, rows, zone)) notices += SyncNotice(NoticeKind.WORKOUT_ROW_NOT_UPDATED, row.key)
                 }
                 row.key == change.key -> done += change.id
                 else -> {
@@ -234,7 +237,7 @@ class LogSync(
                 paymentAppends += payment
             }
         }
-        val statusPlan = planStatuses(sheet, read, rows, appends, zone)
+        val statusPlan = planDayRows(sheet, read, rows, deletes, appends, zone)
         notices += statusPlan.notices
         val wrote = appends.isNotEmpty() || deletes.isNotEmpty() || edits.isNotEmpty() || exercisePlan.writes || paymentAppends.isNotEmpty() ||
             statusPlan.write != null
@@ -273,6 +276,8 @@ class LogSync(
             store.commit(read.drills.map { Exercise(it.name, it.muscleGroup) }, rows, done, notices, exercisesDone, exercisePlan.renamesBack, paymentsDone, statuses)
             status.markSuccess(now())
         }
+        // Feature 007: its failures are reported inside and never change this run's outcome.
+        formCheck?.let { check -> profile.section("form").use { check.run(id, sheet) } }
         if (paymentAppends.isNotEmpty()) onPaymentsWritten()
         log("sync: done, wrote ${appends.size} new, ${edits.size} edited, ${deletes.size} deleted, ${exercisePlan.written.size} exercise changes")
         return SyncOutcome.Synced(wrote)
@@ -290,63 +295,47 @@ class LogSync(
     )
 
     /**
-     * Contracts/sheets.md "What gets written". A status changed in the sheet since the phone change
-     * wins (it is newer); a row that appeared since a change made without one (the nightly script)
-     * is not a conflict. A day without sets waits: the sheet gets no row without a workout.
+     * Feature 007 research R3: the `workout` tab follows the log after this run's writes: one row
+     * per date with sets (waiting statuses as in 006, else the default), none for other dates. A
+     * status changed in the sheet since the phone change wins (it is newer); a day without sets
+     * keeps its status waiting.
      */
-    private suspend fun planStatuses(sheet: SheetInfoCache, read: LogAndDrills, rows: List<LogRow>, appends: List<PendingChange>, zone: ZoneId): StatusPlan {
-        val waiting = store.statusesNow().sortedBy { it.date }
+    private suspend fun planDayRows(
+        sheet: SheetInfoCache,
+        read: LogAndDrills,
+        rows: List<LogRow>,
+        deletes: List<Int>,
+        appends: List<PendingChange>,
+        zone: ZoneId,
+    ): StatusPlan {
+        val waiting = store.statusesNow()
         val workoutSheetId = sheet.workoutSheetId
         if (workoutSheetId == null) {
             if (waiting.isNotEmpty()) monitoring.nonFatal(NonFatalIssue.WORKOUT_TAB_MISSING, MissingTabException("workout"), "operation=sync")
             return StatusPlan(null, emptyList(), emptyList(), emptyList(), emptyList())
         }
-        val byDate = firstRows(read).associateBy { it.date }
-        val days = (rows.map { it.key.time } + appends.map { it.key.time }).mapTo(mutableSetOf()) { SheetTime.workoutDay(it, zone) }
-        val synced = mutableListOf<LocalDate>()
-        val written = mutableListOf<LocalDate>()
-        val dropped = mutableListOf<LocalDate>()
-        val notices = mutableListOf<SyncNotice>()
-        val updates = mutableListOf<WorkoutUpdate>()
-        val newRows = mutableListOf<WorkoutAppend>()
-        waiting.forEach { status ->
-            val row = byDate[status.date]
-            when {
-                row != null && status.lastSeen != null && row.status != status.lastSeen -> {
-                    dropped += status.date
-                    notices += SyncNotice.dayStatus(status.date, row.status)
-                }
-                status.date !in days -> Unit
-                row == null -> {
-                    newRows += WorkoutAppend(PaymentValues.serial(status.date), status.status)
-                    written += status.date
-                }
-                row.status == status.status -> synced += status.date
-                else -> {
-                    updates += WorkoutUpdate(row.rowIndex, status.status)
-                    written += status.date
-                }
-            }
-        }
-        val write = WorkoutWrite(workoutSheetId, updates, newRows).takeUnless { it.isEmpty }
-        return StatusPlan(write, synced, written, dropped, notices)
+        val deleted = deletes.toSet()
+        val times = rows.filter { it.rowIndex !in deleted }.map { it.key.time } + appends.map { it.key.time }
+        val days = times.mapTo(mutableSetOf()) { SheetTime.workoutDay(it, zone) }
+        val plan = DayRowsPlan.plan(
+            rows = read.workout.map { DayRow(it.rowIndex, it.date, it.status) },
+            daysWithSets = days,
+            // Analysis U1: the read before this run's writes, so deleting every set in the app still removes the rows.
+            logEmpty = rows.isEmpty(),
+            waiting = waiting,
+        )
+        val write = WorkoutWrite(
+            workoutSheetId,
+            updates = plan.updates.map { WorkoutUpdate(it.rowIndex, it.status) },
+            appends = plan.appends.map { WorkoutAppend(PaymentValues.serial(it.date), it.status) },
+            deletes = plan.deletes,
+        ).takeUnless { it.isEmpty }
+        val notices = plan.kept.map { (date, status) -> SyncNotice.dayStatus(date, status) }
+        return StatusPlan(write, plan.synced, plan.written, plan.dropped, notices)
     }
 
     /** Several rows for one date: only the first counts (spec edge case). */
     private fun firstRows(read: LogAndDrills): List<SheetWorkoutRow> = read.workout.distinctBy { it.date }
-
-    /**
-     * The daily script added a workout row for a past day once, from its first and last set; deleting
-     * one of those (or the day's only set) makes that row wrong (spec edge case). Edits never change
-     * times, so they never affect it.
-     */
-    private fun changesWorkoutRow(row: LogRow, rows: List<LogRow>, zone: ZoneId): Boolean {
-        val day = SheetTime.workoutDay(row.key.time, zone)
-        val today = SheetTime.workoutDay(Math.floorDiv(now(), 1000L), zone)
-        if (day >= today) return false
-        val daySets = rows.filter { SheetTime.workoutDay(it.key.time, zone) == day }.sortedBy { it.key.time }
-        return row == daySets.first() || row == daySets.last()
-    }
 
     companion object {
         /** quickstart-results.md issue 1. */

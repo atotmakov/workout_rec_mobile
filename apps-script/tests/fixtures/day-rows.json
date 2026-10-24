@@ -1,0 +1,65 @@
+[
+  {
+    "name": "the first day ever is Free",
+    "logDays": ["2026-10-01"],
+    "workoutRows": [],
+    "expected": { "appends": [{ "date": "2026-10-01", "free": true }], "removals": [] }
+  },
+  {
+    "name": "a new day copies the latest earlier row",
+    "logDays": ["2026-10-01", "2026-10-02", "2026-10-05"],
+    "workoutRows": [{ "date": "2026-10-01", "free": true }, { "date": "2026-10-02", "free": false }],
+    "expected": { "appends": [{ "date": "2026-10-05", "free": false }], "removals": [] }
+  },
+  {
+    "name": "a later row does not decide the default",
+    "logDays": ["2026-10-01", "2026-10-03", "2026-10-05"],
+    "workoutRows": [{ "date": "2026-10-01", "free": false }, { "date": "2026-10-05", "free": true }],
+    "expected": { "appends": [{ "date": "2026-10-03", "free": false }], "removals": [] }
+  },
+  {
+    "name": "a planned append feeds the next one",
+    "logDays": ["2026-10-01", "2026-10-02", "2026-10-03"],
+    "workoutRows": [],
+    "expected": {
+      "appends": [{ "date": "2026-10-01", "free": true }, { "date": "2026-10-02", "free": true }, { "date": "2026-10-03", "free": true }],
+      "removals": []
+    }
+  },
+  {
+    "name": "a row whose day has no sets is removed",
+    "logDays": ["2026-10-01"],
+    "workoutRows": [{ "date": "2026-10-01", "free": false }, { "date": "2026-10-02", "free": false }],
+    "expected": { "appends": [], "removals": ["2026-10-02"] }
+  },
+  {
+    "name": "a removed row does not decide the default",
+    "logDays": ["2026-10-01", "2026-10-03"],
+    "workoutRows": [{ "date": "2026-10-01", "free": true }, { "date": "2026-10-02", "free": false }],
+    "expected": { "appends": [{ "date": "2026-10-03", "free": true }], "removals": ["2026-10-02"] }
+  },
+  {
+    "name": "an empty log removes nothing",
+    "logDays": [],
+    "workoutRows": [{ "date": "2026-10-01", "free": false }],
+    "expected": { "appends": [], "removals": [] }
+  },
+  {
+    "name": "a duplicate row for a day with sets is kept and nothing is added",
+    "logDays": ["2026-10-01"],
+    "workoutRows": [{ "date": "2026-10-01", "free": false }, { "date": "2026-10-01", "free": true }],
+    "expected": { "appends": [], "removals": [] }
+  },
+  {
+    "name": "duplicate rows for a day without sets are all removed",
+    "logDays": ["2026-10-01"],
+    "workoutRows": [{ "date": "2026-10-01", "free": false }, { "date": "2026-10-04", "free": false }, { "date": "2026-10-04", "free": true }],
+    "expected": { "appends": [], "removals": ["2026-10-04", "2026-10-04"] }
+  },
+  {
+    "name": "a date-time from an old script append counts as its day",
+    "logDays": ["2026-10-01", "2026-10-02"],
+    "workoutRows": [{ "date": "2026-10-01T18:30:00", "free": true }],
+    "expected": { "appends": [{ "date": "2026-10-02", "free": true }], "removals": [] }
+  }
+]

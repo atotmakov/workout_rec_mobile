@@ -68,12 +68,13 @@ class SetupViewModelSpreadsheetTest {
         "workout_rec.automation_enabled_at" to "2026-10-05T10:00:00Z",
     )
 
+    // Feature 007 FR-001: setup ends at Today; the script steps are an optional action.
     @Test
-    fun `no spreadsheet - creates it, attaches the script, shows step 2`() = runTest {
+    fun `no spreadsheet - creates it and opens Today, no script attached`() = runTest {
         val vm = pickedAccount()
-        assertEquals(listOf("find", "create", "tables:created", "install:created"), log)
-        assertEquals(SetupState.NeedsEnable("https://enable"), vm.state.value)
-        assertEquals(SpreadsheetBinding(account.email, "created", "script-1", "https://enable"), store.binding.first())
+        assertEquals(listOf("find", "create", "tables:created"), log)
+        assertEquals(SetupState.Ready, vm.state.value)
+        assertEquals(SpreadsheetBinding(account.email, "created", null, null), store.binding.first())
     }
 
     @Test
@@ -84,8 +85,8 @@ class SetupViewModelSpreadsheetTest {
         assertEquals("created", store.binding.first()?.spreadsheetId)
         log.clear()
         vm.onAction(SetupAction.Retry)
-        assertEquals(listOf("tables:created", "check:created", "install:created"), log)
-        assertEquals(SetupState.NeedsEnable("https://enable"), vm.state.value)
+        assertEquals(listOf("tables:created"), log)
+        assertEquals(SetupState.Ready, vm.state.value)
     }
 
     @Test
@@ -99,19 +100,19 @@ class SetupViewModelSpreadsheetTest {
     }
 
     @Test
-    fun `matching spreadsheet without script - attaches it`() = runTest {
+    fun `matching spreadsheet without script - Ready, nothing attached`() = runTest {
         setup.found = DriveFile("existing")
         val vm = pickedAccount()
-        assertEquals(listOf("find", "check:existing", "install:existing"), log)
-        assertEquals(SetupState.NeedsEnable("https://enable"), vm.state.value)
+        assertEquals(listOf("find", "check:existing"), log)
+        assertEquals(SetupState.Ready, vm.state.value)
     }
 
     @Test
-    fun `matching spreadsheet with script but not enabled - step 2`() = runTest {
+    fun `matching spreadsheet with script but not enabled - Ready`() = runTest {
         setup.found = DriveFile("existing")
         setup.metadata = mapOf("workout_rec.script_id" to "s1", "workout_rec.enable_url" to "https://e2")
         val vm = pickedAccount()
-        assertEquals(SetupState.NeedsEnable("https://e2"), vm.state.value)
+        assertEquals(SetupState.Ready, vm.state.value)
         assertTrue(log.none { it.startsWith("install") })
     }
 
@@ -173,21 +174,23 @@ class SetupViewModelSpreadsheetTest {
     }
 
     @Test
-    fun `rewrite Yes renames, creates, attaches`() = runTest {
+    fun `rewrite Yes renames and creates, then Ready`() = runTest {
         setup.found = DriveFile("existing")
         setup.matches = false
         val vm = pickedAccount()
         log.clear()
         vm.onAction(SetupAction.AnswerRewrite(yes = true))
-        assertEquals(listOf("rename:existing", "create", "tables:rewritten", "install:rewritten"), log)
-        assertEquals(SetupState.NeedsEnable("https://enable"), vm.state.value)
+        assertEquals(listOf("rename:existing", "create", "tables:rewritten"), log)
+        assertEquals(SetupState.Ready, vm.state.value)
         assertEquals("rewritten", store.binding.first()?.spreadsheetId)
     }
 
+    // Feature 007 FR-012, FR-013: the automation entry starts the same two steps.
     @Test
-    fun `Apps Script API off - step 1, then recheck attaches`() = runTest {
-        installer.apiDisabled = true
+    fun `start automation with the Apps Script API off - step 1, then recheck attaches`() = runTest {
         val vm = pickedAccount()
+        installer.apiDisabled = true
+        vm.onAction(SetupAction.StartAutomation)
         assertEquals(SetupState.NeedsApiSetting, vm.state.value)
         installer.apiDisabled = false
         vm.onAction(SetupAction.Recheck)
@@ -195,30 +198,53 @@ class SetupViewModelSpreadsheetTest {
     }
 
     @Test
-    fun `step 2 recheck with automation on - Ready`() = runTest {
+    fun `start automation for a missing script attaches it and shows step 2`() = runTest {
+        setup.existing = setOf("stored")
+        val vm = pickedAccount(binding = SpreadsheetBinding(account.email, "stored", null, null))
+        vm.onAction(SetupAction.StartAutomation)
+        assertTrue("install:stored" in log)
+        assertEquals(SetupState.NeedsEnable("https://enable"), vm.state.value)
+    }
+
+    @Test
+    fun `step 2 recheck with automation on - Ready and the status is On`() = runTest {
         val vm = pickedAccount()
+        vm.onAction(SetupAction.StartAutomation)
+        setup.existing = setOf("created")
         setup.metadata = enabledNow
         vm.onAction(SetupAction.Recheck)
         assertEquals(SetupState.Ready, vm.state.value)
+        assertEquals(AutomationStatus.On, vm.automation.value)
     }
 
     @Test
     fun `step 2 recheck while still not enabled stays on step 2`() = runTest {
         val vm = pickedAccount()
+        vm.onAction(SetupAction.StartAutomation)
         setup.metadata = mapOf("workout_rec.script_id" to "s1", "workout_rec.enable_url" to "https://enable")
         vm.onAction(SetupAction.Recheck)
         assertEquals(SetupState.NeedsEnable("https://enable"), vm.state.value)
     }
 
     @Test
-    fun `continue for now - Ready with a reminder`() = runTest {
+    fun `not now - back to Ready, automation still off`() = runTest {
         val vm = pickedAccount()
-        vm.onAction(SetupAction.ContinueForNow)
-        assertEquals(SetupState.Ready, vm.state.value)
+        vm.onAction(SetupAction.StartAutomation)
         setup.existing = setOf("created")
         setup.metadata = mapOf("workout_rec.script_id" to "script-1", "workout_rec.enable_url" to "https://enable")
-        vm.refreshStatus()
-        assertEquals(Reminder(AutomationStatus.NotEnabled, "https://enable"), vm.reminder.value)
+        vm.onAction(SetupAction.ContinueForNow)
+        assertEquals(SetupState.Ready, vm.state.value)
+        assertEquals(AutomationStatus.NotEnabled, vm.automation.value)
+    }
+
+    @Test
+    fun `start automation when it is already on - Ready`() = runTest {
+        setup.existing = setOf("stored")
+        setup.metadata = enabledNow
+        val vm = pickedAccount(binding = SpreadsheetBinding(account.email, "stored", "s1", "https://enable"))
+        vm.onAction(SetupAction.StartAutomation)
+        assertEquals(SetupState.Ready, vm.state.value)
+        assertTrue(log.none { it.startsWith("install") })
     }
 
     @Test
@@ -227,8 +253,8 @@ class SetupViewModelSpreadsheetTest {
         val vm = pickedAccount()
         assertEquals(SetupState.Error(SetupStep.Finding, ApiError.Offline), vm.state.value)
         vm.onAction(SetupAction.Retry)
-        assertEquals(listOf("find", "find", "create", "tables:created", "install:created"), log)
-        assertEquals(SetupState.NeedsEnable("https://enable"), vm.state.value)
+        assertEquals(listOf("find", "find", "create", "tables:created"), log)
+        assertEquals(SetupState.Ready, vm.state.value)
     }
 
     @Test
@@ -242,29 +268,28 @@ class SetupViewModelSpreadsheetTest {
     fun `refresh - trashed or missing spreadsheet runs setup again`() = runTest {
         val vm = pickedAccount(binding = SpreadsheetBinding(account.email, "stored", "s1", "https://enable"))
         vm.refreshStatus()
-        assertEquals(listOf("exists:stored", "find", "create", "tables:created", "install:created"), log)
+        assertEquals(listOf("exists:stored", "find", "create", "tables:created"), log)
         assertEquals("created", store.binding.first()?.spreadsheetId)
-        assertEquals(SetupState.NeedsEnable("https://enable"), vm.state.value)
+        assertEquals(SetupState.Ready, vm.state.value)
     }
 
+    // Feature 007 FR-002: the status feeds the automation entry; nothing reminds the user.
     @Test
-    fun `refresh - existing spreadsheet updates the reminder`() = runTest {
+    fun `refresh - existing spreadsheet updates the automation status`() = runTest {
         setup.existing = setOf("stored")
         setup.metadata = mapOf("workout_rec.script_id" to "s1", "workout_rec.enable_url" to "https://e3")
         val vm = pickedAccount(binding = SpreadsheetBinding(account.email, "stored", "s1", "https://e3"))
         vm.refreshStatus()
-        assertEquals(Reminder(AutomationStatus.NotEnabled, "https://e3"), vm.reminder.value)
+        assertEquals(AutomationStatus.NotEnabled, vm.automation.value)
         assertEquals(SetupState.Ready, vm.state.value)
     }
 
     @Test
-    fun `reminder action for a missing script retries attaching`() = runTest {
+    fun `refresh - no script is ScriptMissing, nothing attached`() = runTest {
         setup.existing = setOf("stored")
         val vm = pickedAccount(binding = SpreadsheetBinding(account.email, "stored", null, null))
         vm.refreshStatus()
-        assertEquals(AutomationStatus.ScriptMissing, vm.reminder.value?.status)
-        vm.onAction(SetupAction.FixAutomation)
-        assertTrue("install:stored" in log)
-        assertEquals(SetupState.NeedsEnable("https://enable"), vm.state.value)
+        assertEquals(AutomationStatus.ScriptMissing, vm.automation.value)
+        assertTrue(log.none { it.startsWith("install") })
     }
 }

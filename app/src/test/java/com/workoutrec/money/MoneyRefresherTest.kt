@@ -171,4 +171,24 @@ class MoneyRefresherTest {
         runCatching { refresher.refresh() }
         assertEquals(emptyList<Any>(), reports())
     }
+
+    // Feature 007 research R9: a converted spreadsheet calculates the balance itself.
+    @Test
+    fun `structure version 3 or later marks the balance as calculated`() = runTest {
+        listOf("3" to true, "4" to true, "2" to false, null to false).forEach { (version, calculated) ->
+            api.next = { MoneyRead(emptyList(), 3.0, listOfNotNull(version?.let { "workout_rec.structure_version" to it }).toMap()) }
+            refresher.refresh()
+            assertEquals("version $version", calculated, store.summary?.calculated)
+        }
+    }
+
+    // Analysis C1: a renamed tab breaks the formula; the balance is unknown and reported without values.
+    @Test
+    fun `a formula error in the balance is shown as unknown and reported`() = runTest {
+        api.next = { MoneyRead(emptyList(), balance = null, metadata = emptyMap(), balanceError = true) }
+        refresher.refresh()
+        assertEquals(null, store.summary?.balance)
+        assertEquals(MoneyError.NONE, store.summary?.error)
+        assertEquals(listOf(NonFatalIssue.BAD_SHEET_DATA to "value=balance-formula"), reports())
+    }
 }

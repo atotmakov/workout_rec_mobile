@@ -69,9 +69,12 @@ object StructureValidator {
         return if (reasons.isEmpty()) StructureCheckResult.Match else StructureCheckResult.Mismatch(reasons)
     }
 
-    private fun sameFormula(actual: String?, expected: String): Boolean =
-        actual != null && normalize(actual) == normalize(expected)
-
-    /** Whitespace dropped; `;` read as `,` since Google may return the locale's separator (ru_RU uses `;`). */
-    private fun normalize(formula: String) = formula.filterNot { it.isWhitespace() }.replace(';', ',')
+    private fun sameFormula(actual: String?, expected: String): Boolean = sameFormulaText(actual, expected)
 }
+
+/** Feature 007: shared with [CalculatedForm]; null (no formula) never matches. */
+internal fun sameFormulaText(actual: String?, expected: String): Boolean =
+    actual != null && normalizeFormula(actual) == normalizeFormula(expected)
+
+/** Whitespace dropped; `;` read as `,` since Google may return the locale's separator (ru_RU uses `;`). */
+internal fun normalizeFormula(formula: String) = formula.filterNot { it.isWhitespace() }.replace(';', ',')

@@ -9,7 +9,13 @@ import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.Request
 
 /** Call 23 result: money rows with a date, the balance, and the spreadsheet's metadata. */
-data class MoneyRead(val payments: List<SheetMoneyRow>, val balance: Double?, val metadata: Map<String, String>)
+data class MoneyRead(
+    val payments: List<SheetMoneyRow>,
+    val balance: Double?,
+    val metadata: Map<String, String>,
+    /** Feature 007 analysis C1: `balance!A1` shows a formula error (a tab it needs was renamed). */
+    val balanceError: Boolean = false,
+)
 
 /** Feature 004 contracts/sheets.md call 23. */
 interface MoneyApi {
@@ -63,6 +69,7 @@ class MoneyClient(
             payments = payments,
             balance = rows(BALANCE).firstOrNull()?.values?.number(0),
             metadata = response.developerMetadata.associate { it.metadataKey to it.metadataValue },
+            balanceError = rows(BALANCE).firstOrNull()?.values?.firstOrNull()?.effectiveValue?.containsKey("errorValue") == true,
         )
     }
 

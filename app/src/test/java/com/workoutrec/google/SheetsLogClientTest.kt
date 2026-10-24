@@ -1,5 +1,6 @@
 package com.workoutrec.google
 
+import com.workoutrec.spreadsheet.ReferenceStructure
 import com.workoutrec.workout.DayStatus
 import java.time.LocalDate
 import kotlinx.coroutines.test.runTest
@@ -340,7 +341,8 @@ class SheetsLogClientTest {
         assertEquals("userEnteredValue", append["fields"]!!.jsonPrimitive.content)
         val rows = append["rows"]!!.jsonArray.map { it.jsonObject["values"]!!.jsonArray.map { v -> v.jsonObject } }
         assertEquals(46033.0, rows[0][0]["userEnteredValue"]!!.jsonObject["numberValue"]!!.jsonPrimitive.double, 0.0)
-        assertEquals(JsonObject(emptyMap()), rows[0][1])
+        // Feature 007 research R1: the duration is the spreadsheet's formula.
+        assertEquals(ReferenceStructure.DURATION_FORMULA, rows[0][1]["userEnteredValue"]!!.jsonObject["formulaValue"]!!.jsonPrimitive.content)
         assertEquals(0.0, rows[0][2]["userEnteredValue"]!!.jsonObject["numberValue"]!!.jsonPrimitive.double, 0.0)
         assertEquals(1.0, rows[1][2]["userEnteredValue"]!!.jsonObject["numberValue"]!!.jsonPrimitive.double, 0.0)
     }
@@ -353,5 +355,118 @@ class SheetsLogClientTest {
         assertEquals(listOf("updateCells"), requests.map { (it as JsonObject).keys.single() })
         client.writeLog("id1", 0, emptyList(), emptyList(), emptyList(), workout = WorkoutWrite(9, emptyList(), emptyList()))
         assertEquals(1, server.requestCount)
+    }
+
+    // Feature 007 contracts/sheets.md
+
+    @Test
+    fun `call 22 updates workout statuses, then deletes rows bottom-up, then appends`() = runTest {
+        server.enqueue(MockResponse().setBody("""{"replies":[]}"""))
+        client.writeLog(
+            "id1", 0, emptyList(), emptyList(), emptyList(),
+            workout = WorkoutWrite(
+                workoutSheetId = 9,
+                updates = listOf(WorkoutUpdate(2, DayStatus.FREE)),
+                appends = listOf(WorkoutAppend(46035.0, DayStatus.PAID)),
+                deletes = listOf(3, 7),
+            ),
+        )
+        val requests = GoogleJson.parseToJsonElement(server.takeRequest().body.readUtf8()).jsonObject["requests"]!!.jsonArray.map { it.jsonObject }
+        assertEquals(listOf("updateCells", "deleteDimension", "deleteDimension", "appendCells"), requests.map { it.keys.single() })
+        val ranges = requests.subList(1, 3).map { it["deleteDimension"]!!.jsonObject["range"]!!.jsonObject }
+        assertEquals(listOf(7, 3), ranges.map { it["startIndex"]!!.jsonPrimitive.int })
+        assertEquals(listOf(8, 4), ranges.map { it["endIndex"]!!.jsonPrimitive.int })
+        assertEquals(listOf("ROWS", "ROWS"), ranges.map { it["dimension"]!!.jsonPrimitive.content })
+        assertEquals(listOf(9, 9), ranges.map { it["sheetId"]!!.jsonPrimitive.int })
+    }
+
+    @Test
+    fun `call 22 is sent for workout deletes alone`() = runTest {
+        server.enqueue(MockResponse().setBody("""{"replies":[]}"""))
+        client.writeLog("id1", 0, emptyList(), emptyList(), emptyList(), workout = WorkoutWrite(9, emptyList(), emptyList(), deletes = listOf(1)))
+        assertEquals(1, server.requestCount)
+    }
+
+    @Test
+    fun `call 24 reads the duration and balance cells with the metadata`() = runTest {
+        server.enqueue(
+            MockResponse().setBody(
+                """{"developerMetadata":[{"metadataId":11,"metadataKey":"workout_rec.structure_version","metadataValue":"2"},
+                     {"metadataId":12,"metadataKey":"workout_rec.script_version","metadataValue":"3"}],
+                   "sheets":[
+                     {"properties":{"title":"workout"},"data":[{"startRow":1,"rowData":[
+                        {"values":[{"userEnteredValue":{"numberValue":46000}},{"userEnteredValue":{"formulaValue":"=LET(x, 1, x)"}}]},
+                        {},
+                        {"values":[{"userEnteredValue":{"numberValue":46001}},{"userEnteredValue":{"numberValue":25}}]},
+                        {"values":[{"userEnteredValue":{"stringValue":"note"}}]},
+                        {"values":[{"userEnteredValue":{"numberValue":46002}}]}]}]},
+                     {"properties":{"title":"balance"},"data":[{"rowData":[{"values":[{"userEnteredValue":{"numberValue":4}}]}]}]}]}""",
+            ),
+        )
+        val cells = client.readCalculatedCells("id1")
+        val url = server.takeRequest().requestUrl!!
+        assertEquals(listOf("workout!A2:B", "balance!A1"), url.queryParameterValues("ranges"))
+        assertEquals(
+            "developerMetadata(metadataId,metadataKey,metadataValue),sheets(properties(title),data(startRow,rowData(values(userEnteredValue))))",
+            url.queryParameter("fields"),
+        )
+        assertEquals(
+            listOf(
+                CalculatedRow(1, hasDate = true, duration = CellContent(formula = "=LET(x, 1, x)", empty = false)),
+                CalculatedRow(2, hasDate = false, duration = CellContent(formula = null, empty = true)),
+                CalculatedRow(3, hasDate = true, duration = CellContent(formula = null, empty = false)),
+                CalculatedRow(4, hasDate = false, duration = CellContent(formula = null, empty = true)),
+                CalculatedRow(5, hasDate = true, duration = CellContent(formula = null, empty = true)),
+            ),
+            cells.rows,
+        )
+        assertEquals(CellContent(formula = null, empty = false), cells.balance)
+        assertEquals("2", cells.metadata["workout_rec.structure_version"])
+        assertEquals(12, cells.metadataIds["workout_rec.script_version"])
+    }
+
+    @Test
+    fun `call 24 reads an empty workout tab and an empty balance`() = runTest {
+        server.enqueue(MockResponse().setBody("""{"sheets":[{"properties":{"title":"workout"},"data":[{"startRow":1}]},{"properties":{"title":"balance"},"data":[{}]}]}"""))
+        val cells = client.readCalculatedCells("id1")
+        assertEquals(emptyList<CalculatedRow>(), cells.rows)
+        assertEquals(CellContent(formula = null, empty = true), cells.balance)
+        assertEquals(emptyMap<String, String>(), cells.metadata)
+    }
+
+    @Test
+    fun `call 25 writes formula runs, the balance formula and the version marker in one request`() = runTest {
+        server.enqueue(MockResponse().setBody("""{"replies":[]}"""))
+        client.repairCalculatedCells(
+            "id1",
+            CalculatedRepair(
+                workoutSheetId = 9,
+                durationRuns = listOf(1..2, 5..5),
+                balanceSheetId = 5,
+                metadata = mapOf("workout_rec.structure_version" to "3"),
+                metadataIds = mapOf("workout_rec.structure_version" to 11),
+            ),
+        )
+        val requests = GoogleJson.parseToJsonElement(server.takeRequest().body.readUtf8()).jsonObject["requests"]!!.jsonArray.map { it.jsonObject }
+        assertEquals(listOf("repeatCell", "repeatCell", "updateCells", "updateDeveloperMetadata"), requests.map { it.keys.single() })
+        val first = requests[0]["repeatCell"]!!.jsonObject
+        assertEquals(
+            listOf(9, 1, 3, 1, 2),
+            listOf("sheetId", "startRowIndex", "endRowIndex", "startColumnIndex", "endColumnIndex").map { first["range"]!!.jsonObject[it]!!.jsonPrimitive.int },
+        )
+        assertEquals(ReferenceStructure.DURATION_FORMULA, first["cell"]!!.jsonObject["userEnteredValue"]!!.jsonObject["formulaValue"]!!.jsonPrimitive.content)
+        assertEquals("userEnteredValue", first["fields"]!!.jsonPrimitive.content)
+        assertEquals(5, requests[1]["repeatCell"]!!.jsonObject["range"]!!.jsonObject["startRowIndex"]!!.jsonPrimitive.int)
+        val balance = requests[2]["updateCells"]!!.jsonObject
+        assertEquals(listOf(5, 0, 0), listOf("sheetId", "rowIndex", "columnIndex").map { balance["start"]!!.jsonObject[it]!!.jsonPrimitive.int })
+        val cell = balance["rows"]!!.jsonArray.single().jsonObject["values"]!!.jsonArray.single().jsonObject["userEnteredValue"]!!.jsonObject
+        assertEquals(ReferenceStructure.BALANCE_FORMULA, cell["formulaValue"]!!.jsonPrimitive.content)
+        assertEquals("3", requests[3]["updateDeveloperMetadata"]!!.jsonObject["developerMetadata"]!!.jsonObject["metadataValue"]!!.jsonPrimitive.content)
+    }
+
+    @Test
+    fun `call 25 sends nothing when there is nothing to repair`() = runTest {
+        client.repairCalculatedCells("id1", CalculatedRepair(9, emptyList(), null, emptyMap(), emptyMap()))
+        assertEquals(0, server.requestCount)
     }
 }

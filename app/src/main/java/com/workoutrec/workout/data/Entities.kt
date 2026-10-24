@@ -1,5 +1,6 @@
 package com.workoutrec.workout.data
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
@@ -123,4 +124,6 @@ data class MoneySummaryEntity(
     val downloadedAt: Long,
     /** NONE, MISSING_TAB, NETWORK or OTHER: the last download's result. */
     val error: String,
+    /** Feature 007: the spreadsheet calculates the balance itself (schema 4). */
+    @ColumnInfo(defaultValue = "0") val calculated: Boolean = false,
 )

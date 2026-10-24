@@ -35,10 +35,6 @@
     <string name="guide_link_copied">Ссылка скопирована</string>
     <string name="guide_open">Открыть</string>
     <string name="guide_continue">Продолжить пока без этого</string>
-    <string name="reminder_script_missing">Автоматизация ещё не настроена: разрешите скрипты (шаг 1).</string>
-    <string name="reminder_not_enabled">Автоматизация ещё не включена: завершите шаг 2.</string>
-    <string name="reminder_stopped">Автоматизация остановилась: включите её снова.</string>
-    <string name="reminder_fix">Исправить</string>
     <string name="automation_on">Автоматизация включена.</string>
 
     <!-- US3: sign out -->
@@ -199,9 +195,8 @@
     <string name="money_note_daily">Баланс считается раз в день; последний раз — %1$s.</string>
     <string name="money_note_daily_unknown">Баланс считается раз в день.</string>
     <string name="money_note_stopped">Ежедневный расчёт, похоже, остановился; баланс на %1$s.</string>
-    <string name="money_note_off">Баланс не обновляется: ежедневная автоматизация таблицы выключена.</string>
-    <string name="money_note_new_payments">Новые оплаты учтутся при следующем ежедневном расчёте.</string>
-    <string name="money_enable_automation">Включить автоматизацию</string>
+    <string name="money_note_calculated">Баланс считает ваша таблица.</string>
+    <string name="money_note_waiting">Обновится, когда изменения синхронизируются.</string>
     <string name="money_downloaded">Обновлено %1$s</string>
     <string name="money_totals">Всего оплачено: тренировок %1$s, %2$s</string>
     <string name="money_payment">тренировок: %1$s · %2$s</string>
@@ -217,4 +212,12 @@
     <string name="payment_sum">Сумма</string>
     <string name="payment_workouts_error">Целое число от 1 до 999</string>
     <string name="payment_sum_error">Число от 0, не больше 2 знаков после запятой</string>
+    <!-- Feature 007: optional spreadsheet automation (Money tab and account menu) -->
+    <string name="automation_entry_title">Автоматизация таблицы</string>
+    <string name="automation_entry_off">Выключена. Включите, чтобы новые дни добавлялись, пока приложение закрыто, время заполнялось, когда вы вводите подход в таблице, а вкладка rec показывала выбранное упражнение.</string>
+    <string name="automation_entry_on">Включена. Работает каждую ночь.</string>
+    <string name="automation_entry_stopped">Остановилась: ночной запуск давно не выполнялся. Нажмите, чтобы включить снова.</string>
+    <string name="automation_status_off">Выключена</string>
+    <string name="automation_status_on">Включена</string>
+    <string name="automation_status_stopped">Остановилась</string>
 </resources>

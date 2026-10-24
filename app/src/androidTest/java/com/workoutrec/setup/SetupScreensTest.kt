@@ -7,14 +7,12 @@ import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.workoutrec.R
-import com.workoutrec.automation.AutomationStatus
-import com.workoutrec.home.AutomationReminder
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
-// US2 #4-#9, FR-008 rewrite question, FR-013 two steps, FR-015 reminder
+// US2 #4-#9, FR-008 rewrite question, FR-013 two steps (feature 007: the reminder is gone)
 @RunWith(AndroidJUnit4::class)
 class SetupScreensTest {
 
@@ -94,26 +92,5 @@ class SetupScreensTest {
         compose.onNodeWithText(s(R.string.guide_copy_link)).performClick()
         assertEquals(1, copied)
         compose.onNodeWithText(s(R.string.guide_continue)).assertIsDisplayed()
-    }
-
-    @Test
-    fun reminderNamesTheMissingStep() {
-        var opened = 0
-        compose.setContent { AutomationReminder(status = AutomationStatus.NotEnabled, onFix = { opened++ }) }
-        compose.onNodeWithText(s(R.string.reminder_not_enabled)).assertIsDisplayed()
-        compose.onNodeWithText(s(R.string.reminder_fix)).performClick()
-        assertEquals(1, opened)
-    }
-
-    @Test
-    fun reminderForMissingScriptAndStoppedAutomation() {
-        compose.setContent { AutomationReminder(status = AutomationStatus.ScriptMissing, onFix = {}) }
-        compose.onNodeWithText(s(R.string.reminder_script_missing)).assertIsDisplayed()
-    }
-
-    @Test
-    fun reminderForStoppedAutomation() {
-        compose.setContent { AutomationReminder(status = AutomationStatus.Stopped, onFix = {}) }
-        compose.onNodeWithText(s(R.string.reminder_stopped)).assertIsDisplayed()
     }
 }

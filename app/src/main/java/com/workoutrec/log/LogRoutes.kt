@@ -104,7 +104,6 @@ fun TodayRoute(
     onAddExercise: () -> Unit,
     onOpenExercise: (String) -> Unit,
     modifier: Modifier = Modifier,
-    header: @Composable () -> Unit = {},
 ) {
     // Feature 003 FR-011: opening Today until its first frame; leaving earlier drops the profile.
     val openProfile = remember { ScreenProfile { container.monitoring.beginProfile(ProfileTarget.TODAY_OPEN) }.also { it.entered() } }
@@ -147,7 +146,6 @@ fun TodayRoute(
     TodayScreen(
         groups, onAddExercise, onOpenExercise, modifier, refreshing = refreshing, onRefresh = refresh,
         header = {
-            header()
             SyncNoticeList(notices, onDismiss = { id -> scope.launch { container.workoutRepository.dismissNotice(id) } })
         },
         today = LocalDate.now(zone),

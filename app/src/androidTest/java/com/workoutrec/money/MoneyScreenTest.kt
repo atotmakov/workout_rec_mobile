@@ -43,7 +43,7 @@ class MoneyScreenTest {
 
     private fun state(
         balance: Double? = 11.0,
-        note: BalanceNoteState = BalanceNoteState(BalanceNote.Calculated(lastRun), newPaymentsWaiting = false),
+        note: BalanceNoteState = BalanceNoteState(BalanceNote.Calculated, waiting = false),
         error: MoneyError = MoneyError.NONE,
         shown: List<ShownPayment> = payments,
     ) = MoneyState(balance, note, downloadedAt = lastRun, error = error, payments = shown, totals = MoneyTotals(12.0, 1_200_000))
@@ -70,21 +70,24 @@ class MoneyScreenTest {
         compose.onNodeWithTag(MoneyTags.BALANCE).assertTextContains(res.getQuantityString(R.plurals.money_owed, 2), substring = true)
     }
 
+    // Feature 007 research R9, FR-005a
     @Test
-    fun noteSaysTheBalanceIsCalculatedOnceADay() {
-        show(state(note = BalanceNoteState(BalanceNote.Calculated(lastRun), newPaymentsWaiting = true)))
-        compose.onNodeWithTag(MoneyTags.NOTE).assertTextContains(s(R.string.money_note_daily).substringBefore("%").trim(), substring = true)
-        compose.onNodeWithTag(MoneyTags.NOTE).assertTextContains(s(R.string.money_note_new_payments), substring = true)
-        compose.onNodeWithTag(MoneyTags.ENABLE_AUTOMATION).assertDoesNotExist()
+    fun noteSaysTheSpreadsheetCalculatesAndWhenChangesAreWaiting() {
+        show(state(note = BalanceNoteState(BalanceNote.Calculated, waiting = true)))
+        compose.onNodeWithTag(MoneyTags.NOTE).assertTextContains(s(R.string.money_note_calculated), substring = true)
+        compose.onNodeWithTag(MoneyTags.NOTE).assertTextContains(s(R.string.money_note_waiting), substring = true)
     }
 
     @Test
-    fun automationOffOffersToEnableIt() {
-        var enabled = 0
-        show(state(note = BalanceNoteState(BalanceNote.Off, newPaymentsWaiting = false)), onEnable = { enabled++ })
-        compose.onNodeWithTag(MoneyTags.NOTE).assertTextContains(s(R.string.money_note_off), substring = true)
-        compose.onNodeWithTag(MoneyTags.ENABLE_AUTOMATION).performClick()
-        assertEquals(1, enabled)
+    fun noWaitingLineWhenNothingWaits() {
+        show(state())
+        compose.onNodeWithTag(MoneyTags.NOTE).assertTextContains(s(R.string.money_note_calculated))
+    }
+
+    @Test
+    fun anOldScriptKeepsTheDailyNote() {
+        show(state(note = BalanceNoteState(BalanceNote.Daily(lastRun), waiting = false)))
+        compose.onNodeWithTag(MoneyTags.NOTE).assertTextContains(s(R.string.money_note_daily).substringBefore("%").trim(), substring = true)
     }
 
     @Test

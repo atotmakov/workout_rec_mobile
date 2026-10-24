@@ -41,16 +41,14 @@ sealed interface SetupAction {
     data object Recheck : SetupAction
     data object ContinueForNow : SetupAction
 
-    /** Tapped the reminder: attach the script or open the Enable page, as needed. */
-    data object FixAutomation : SetupAction
+    /** Feature 007: the automation entry was tapped; attach the script or open the Enable page, as needed. */
+    data object StartAutomation : SetupAction
 }
-
-/** Shown on the main screen while automation is not on (FR-015). */
-data class Reminder(val status: AutomationStatus, val enableUrl: String?)
 
 sealed interface RefreshResult {
     data object NoChange : RefreshResult
-    data class Status(val reminder: Reminder?) : RefreshResult
+    /** Feature 007: the automation status, shown by the automation entry. */
+    data class Status(val automation: AutomationStatus) : RefreshResult
     data object SpreadsheetGone : RefreshResult
 }
 

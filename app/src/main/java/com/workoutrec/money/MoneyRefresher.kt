@@ -10,6 +10,7 @@ import com.workoutrec.monitoring.NoMonitoring
 import com.workoutrec.monitoring.NonFatalIssue
 import com.workoutrec.monitoring.badValue
 import com.workoutrec.monitoring.failure
+import com.workoutrec.spreadsheet.ReferenceStructure
 import com.workoutrec.sync.SheetInfoCache
 import com.workoutrec.workout.PaymentRow
 import java.time.Instant
@@ -28,6 +29,8 @@ data class MoneySummary(
     /** When the last download succeeded. */
     val downloadedAt: Long,
     val error: MoneyError,
+    /** Feature 007: the spreadsheet calculates the balance itself (structure version 3 or later). */
+    val calculated: Boolean = false,
 )
 
 /** Where downloaded money data lives (implemented by `WorkoutRepository`). */
@@ -83,8 +86,10 @@ class MoneyRefresher(
             val bad = mutableSetOf<String>()
             val lastRun = AutomationStatusEvaluator.parse(read.metadata[AutomationStatusEvaluator.LAST_DAILY_RUN], bad::add)?.toEpochMilli()
             val automation = AutomationStatusEvaluator.evaluate(read.metadata, Instant.ofEpochMilli(at), bad::add)
+            if (read.balanceError) bad += "balance-formula"
             bad.forEach { monitoring.badValue(NonFatalIssue.BAD_SHEET_DATA, it) }
-            store.replaceMoney(rows, MoneySummary(read.balance, lastRun, automation, at, MoneyError.NONE))
+            val calculated = (read.metadata[ReferenceStructure.STRUCTURE_VERSION_KEY]?.toIntOrNull() ?: 0) >= 3
+            store.replaceMoney(rows, MoneySummary(read.balance, lastRun, automation, at, MoneyError.NONE, calculated))
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {

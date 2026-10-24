@@ -65,8 +65,19 @@ class ReferenceStructureTest {
     }
 
     @Test
-    fun `balance A1 is 0`() {
-        assertEquals("0", rows("balance")[0][0].userValue("numberValue")?.removeSuffix(".0"))
+    fun `balance A1 is the balance formula`() {
+        // Feature 007 FR-010, research R2.
+        assertEquals(ReferenceStructure.BALANCE_FORMULA, rows("balance")[0][0].userValue("formulaValue"))
+        assertEquals(null, rows("balance")[0][0].userValue("numberValue"))
+    }
+
+    @Test
+    fun `fallback writes the balance formula too`() {
+        val balance = ReferenceStructure.completionRequests().map { it.jsonObject }
+            .mapNotNull { it["updateCells"]?.jsonObject }
+            .single { it["start"]!!.jsonObject["sheetId"]!!.jsonPrimitive.content == "5" }
+        val cell = balance["rows"]!!.jsonArray.single().jsonObject["values"]!!.jsonArray.single().jsonObject
+        assertEquals(ReferenceStructure.BALANCE_FORMULA, cell["userEnteredValue"]!!.jsonObject["formulaValue"]!!.jsonPrimitive.content)
     }
 
     @Test
@@ -108,7 +119,8 @@ class ReferenceStructureTest {
     fun `structure version metadata`() {
         val meta = request["developerMetadata"]!!.jsonArray.single().jsonObject
         assertEquals("workout_rec.structure_version", meta["metadataKey"]!!.jsonPrimitive.content)
-        assertEquals("2", meta["metadataValue"]!!.jsonPrimitive.content)
+        // Feature 007: new spreadsheets start in the calculated form.
+        assertEquals("3", meta["metadataValue"]!!.jsonPrimitive.content)
         assertEquals("DOCUMENT", meta["visibility"]!!.jsonPrimitive.content)
     }
 
