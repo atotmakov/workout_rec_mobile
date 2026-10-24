@@ -47,7 +47,6 @@ import com.workoutrec.R
 import com.workoutrec.automation.AutomationStatus
 import com.workoutrec.data.SelectedAccount
 import com.workoutrec.google.ApiError
-import com.workoutrec.home.AutomationReminder
 import com.workoutrec.home.MainScreen
 import com.workoutrec.home.SignOutDialog
 import com.workoutrec.home.SwitchAccountDialog
@@ -154,7 +153,6 @@ object ScreenGallery {
         GalleryScreen("15a-sync-details-sign-in", open = GalleryOpen.SYNC_DETAILS) {
             TodayFrame(groups = Samples.todayGroups(), pendingCount = 1, phase = SyncPhase.NeedsSignIn)
         },
-        GalleryScreen("16-today-automation-reminder") { TodayFrame(groups = Samples.todayGroups(), automation = AutomationStatus.NotEnabled) },
         GalleryScreen("17-today-sync-notices") { TodayFrame(groups = Samples.todayGroups(), notices = Samples.notices()) },
         GalleryScreen("18-account-menu", open = GalleryOpen.ACCOUNT_MENU) { TodayFrame(groups = Samples.todayGroups(), pendingCount = 1) },
         GalleryScreen("19-diagnostics-test-dialog", open = GalleryOpen.DIAGNOSTICS_TEST_DIALOG) { TodayFrame(groups = Samples.todayGroups()) },
@@ -302,7 +300,6 @@ private fun TodayFrame(
     groups: List<ExerciseGroup>,
     pendingCount: Int = 0,
     phase: SyncPhase = SyncPhase.Idle,
-    automation: AutomationStatus? = null,
     notices: List<Pair<Long, SyncNotice>> = emptyList(),
 ) {
     BarFrame(Tab.TODAY) { barModifier ->
@@ -317,7 +314,6 @@ private fun TodayFrame(
                 TodayScreen(
                     groups, onAddExercise = {}, onOpenExercise = {}, modifier = modifier,
                     header = {
-                        automation?.let { AutomationReminder(status = it, onFix = {}) }
                         SyncNoticeList(notices, onDismiss = {})
                     },
                     // Feature 006: the Paid/Free control with no earlier day (Free).

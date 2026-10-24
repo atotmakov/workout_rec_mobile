@@ -88,8 +88,10 @@ class SetupStepReportsTest {
 
     @Test
     fun `attaching the script fails`() = runTest {
+        val vm = pickedAccount()
         installer.failNext = boom
-        assertReported(SetupStep.AttachingScript, pickedAccount())
+        vm.onAction(SetupAction.StartAutomation)
+        assertReported(SetupStep.AttachingScript, vm)
     }
 
     @Test
@@ -101,8 +103,10 @@ class SetupStepReportsTest {
 
     @Test
     fun `the Apps Script API being off is not reported`() = runTest {
+        val vm = pickedAccount()
         installer.apiDisabled = true
-        assertEquals(SetupState.NeedsApiSetting, pickedAccount().state.value)
+        vm.onAction(SetupAction.StartAutomation)
+        assertEquals(SetupState.NeedsApiSetting, vm.state.value)
         assertEquals(0, monitoring.nonFatals.size)
     }
 }

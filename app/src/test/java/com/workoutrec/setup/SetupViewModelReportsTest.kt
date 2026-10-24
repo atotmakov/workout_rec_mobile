@@ -54,7 +54,7 @@ class SetupViewModelReportsTest {
         val vm = readyWith(ThrowingRefresh(ApiError.Unexpected(500, "boom")))
         vm.refreshStatus()
         assertEquals(SetupState.Ready, vm.state.value)
-        assertNull(vm.reminder.value)
+        assertNull(vm.automation.value)
         assertEquals(listOf(NonFatalIssue.SETUP_CHECK_FAILED to "operation=setup-check"), reports())
     }
 

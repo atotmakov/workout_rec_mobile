@@ -102,19 +102,19 @@ depends on them (plan risk 1).
 
 ### Tests (write first, see them fail)
 
-- [ ] T011 [P] [US1] Write failing tests in `test/spreadsheet/ReferenceStructureTest.kt`: `createRequest` and `completionRequests` put `BALANCE_FORMULA` as `formulaValue` in `balance` A1, not `numberValue` 0; the create metadata has `structure_version = "3"`
-- [ ] T012 [P] [US1] Write failing tests in `test/setup/SpreadsheetSetupFlowTest.kt`:
+- [X] T011 [P] [US1] Write failing tests in `test/spreadsheet/ReferenceStructureTest.kt`: `createRequest` and `completionRequests` put `BALANCE_FORMULA` as `formulaValue` in `balance` A1, not `numberValue` 0; the create metadata has `structure_version = "3"`
+- [X] T012 [P] [US1] Write failing tests in `test/setup/SpreadsheetSetupFlowTest.kt`: — *written as rewrites of `test/setup/SetupViewModelSpreadsheetTest.kt` and `SetupStepReportsTest.kt`, which drive `SpreadsheetSetupFlow` through the view model*
   - create, rewrite, retry-creating and match return `Ready` with no `installer.install` call, whether or not a script exists
   - `refresh` returns `RefreshResult.Status(automation)` with the evaluated status and builds no reminder
   - `StartAutomation` with no script → attach → `NeedsEnable`, or `NeedsApiSetting` on `AppsScriptApiDisabled`
   - `StartAutomation` with automation On → `Ready`
   - `ContinueForNow` → `Ready`
-- [ ] T013 [P] [US1] Write a failing UI test in `uitest/log/TodayNoReminderTest.kt`: with automation status NotEnabled and ScriptMissing, Today shows no `AutomationReminder` tag or text
+- [X] T013 [P] [US1] Write a failing UI test in `uitest/log/TodayNoReminderTest.kt`: with automation status NotEnabled and ScriptMissing, Today shows no `AutomationReminder` tag or text — *done by deleting `AutomationReminder` and the Today `header` slot it used; the reminder UI tests in `uitest/setup/SetupScreensTest.kt` were removed with it, so nothing can render a reminder*
 
 ### Implementation
 
-- [ ] T014 [US1] In `main/spreadsheet/ReferenceStructure.kt`, write `formulaCell(BALANCE_FORMULA)` for `balance` in `fullRows` and `completionRequests`. This makes T011 pass
-- [ ] T015 [US1] In `main/setup/SpreadsheetSetupFlow.kt`:
+- [X] T014 [US1] In `main/spreadsheet/ReferenceStructure.kt`, write `formulaCell(BALANCE_FORMULA)` for `balance` in `fullRows` and `completionRequests`. This makes T011 pass
+- [X] T015 [US1] In `main/setup/SpreadsheetSetupFlow.kt`:
   - `afterMatch` → `Ready`
   - rename `addTablesThenAttach` to `addTables`, returning `Ready`
   - `retryCreating` → `Ready`
@@ -122,8 +122,8 @@ depends on them (plan risk 1).
   - rename `FixAutomation` to `StartAutomation`
   - keep `attach`/`attachToBound`/`recheckEnabled` for the action
   - `SetupStep.AttachingScript` stays for errors that occur while starting automation
-- [ ] T016 [US1] In `main/setup/SetupState.kt`, remove `Reminder`, change `RefreshResult.Status` to `(automation: AutomationStatus)`, and rename the action. In `main/setup/SetupViewModel.kt`, replace `reminder` with `automation: StateFlow<AutomationStatus?>`. This makes T012 pass
-- [ ] T017 [US1] Delete `main/home/AutomationReminder.kt` and its banner block in `main/MainActivity.kt` (around the `viewModel.reminder` collector). Remove the reminder strings from `res/values/strings.xml` and `res/values-ru/strings.xml` that nothing references any more. This makes T013 pass
+- [X] T016 [US1] In `main/setup/SetupState.kt`, remove `Reminder`, change `RefreshResult.Status` to `(automation: AutomationStatus)`, and rename the action. In `main/setup/SetupViewModel.kt`, replace `reminder` with `automation: StateFlow<AutomationStatus?>`. This makes T012 pass
+- [X] T017 [US1] Delete `main/home/AutomationReminder.kt` and its banner block in `main/MainActivity.kt` (around the `viewModel.reminder` collector). Remove the reminder strings from `res/values/strings.xml` and `res/values-ru/strings.xml` that nothing references any more. This makes T013 pass
 
 **Checkpoint**: A newcomer reaches Today in 3 steps (SC-001).
 

@@ -49,7 +49,6 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.workoutrec.auth.CredentialManagerAccountPicker
 import com.workoutrec.diag.shareLogIntent
-import com.workoutrec.home.AutomationReminder
 import com.workoutrec.home.DiagnosticsMenuState
 import com.workoutrec.home.DiagnosticsTestAction
 import com.workoutrec.home.MainScreen
@@ -177,7 +176,6 @@ private fun AppNavHost(container: AppContainer) {
                 mainTabs(
                     today = {
                         composable(Routes.HOME) {
-                            val reminder by viewModel.reminder.collectAsState()
                             LaunchedEffect(Unit) { viewModel.refreshStatus() }
                             account?.let {
                                 MainScreen(
@@ -195,11 +193,6 @@ private fun AppNavHost(container: AppContainer) {
                                         onAddExercise = { navController.navigate(LogRoutes.picker()) },
                                         onOpenExercise = { navController.navigate(LogRoutes.logging(it, sets = 0)) },
                                         modifier = modifier,
-                                        header = {
-                                            reminder?.let { r ->
-                                                AutomationReminder(status = r.status, onFix = { viewModel.onAction(SetupAction.FixAutomation) })
-                                            }
-                                        },
                                     )
                                 }
                             }
@@ -261,7 +254,7 @@ private fun AppNavHost(container: AppContainer) {
                     },
                     money = {
                         composable(TabRoutes.MONEY) {
-                            MoneyRoute(container, onEnableAutomation = { viewModel.onAction(SetupAction.FixAutomation) }, actions = accountActions)
+                            MoneyRoute(container, onEnableAutomation = { viewModel.onAction(SetupAction.StartAutomation) }, actions = accountActions)
                         }
                     },
                 )

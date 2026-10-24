@@ -21,8 +21,9 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 
 /**
- * US2: find or create the spreadsheet, attach the script, guide the two automation steps
- * (data-model.md "Setup flow"). The spreadsheet is the source of truth; the binding is a cache.
+ * US2: find or create the spreadsheet (data-model.md "Setup flow"). Feature 007: setup ends at Ready;
+ * attaching the script and the two automation steps run only on [SetupAction.StartAutomation].
+ * The spreadsheet is the source of truth; the binding is a cache.
  */
 class SpreadsheetSetupFlow(
     private val setup: SpreadsheetSetup,
@@ -58,7 +59,7 @@ class SpreadsheetSetupFlow(
                 else -> current
             }
             SetupAction.ContinueForNow -> SetupState.Ready
-            SetupAction.FixAutomation -> fixAutomation(account)
+            SetupAction.StartAutomation -> startAutomation(account)
         }
 
     /** data-model.md Ready: stored spreadsheet still there (call 11)? then automation status. */
@@ -71,7 +72,7 @@ class SpreadsheetSetupFlow(
         val snapshot = setup.check(binding.spreadsheetId).snapshot
         bind(account, binding.spreadsheetId, snapshot.metadata)
         upgradeScript(binding.spreadsheetId, snapshot)
-        return RefreshResult.Status(reminder(snapshot))
+        return RefreshResult.Status(AutomationStatusEvaluator.evaluate(snapshot.metadata, now(), ::badSheetValue))
     }
 
     /**
@@ -111,30 +112,21 @@ class SpreadsheetSetupFlow(
                 StructureCheckResult.Match -> {
                     log("setup: spreadsheet $spreadsheetId matches")
                     bind(account, spreadsheetId, check.snapshot.metadata)
-                    afterMatch(account, spreadsheetId, check.snapshot)
+                    SetupState.Ready
                 }
             }
-        }
-
-    private suspend fun afterMatch(account: SelectedAccount, spreadsheetId: String, snapshot: SpreadsheetSnapshot): SetupState =
-        when (AutomationStatusEvaluator.evaluate(snapshot.metadata, now(), ::badSheetValue)) {
-            AutomationStatus.ScriptMissing -> attach(account, spreadsheetId, snapshot.metadata, snapshot.metadataIds)
-            AutomationStatus.NotEnabled -> snapshot.metadata[AutomationStatusEvaluator.ENABLE_URL]
-                ?.let { SetupState.NeedsEnable(it) }
-                ?: attach(account, spreadsheetId, snapshot.metadata, snapshot.metadataIds)
-            AutomationStatus.On, AutomationStatus.Stopped -> SetupState.Ready
         }
 
     private suspend fun createNew(account: SelectedAccount): SetupState = guarded(SetupStep.Creating) {
         val id = setup.create(timeZone())
         bind(account, id, emptyMap())
-        addTablesThenAttach(account, id)
+        addTables(id)
     }
 
     private suspend fun rewrite(account: SelectedAccount, oldId: String): SetupState = guarded(SetupStep.Renaming, oldId) {
         val id = setup.rewrite(oldId, timeZone())
         bind(account, id, emptyMap())
-        addTablesThenAttach(account, id)
+        addTables(id)
     }
 
     /**
@@ -142,18 +134,15 @@ class SpreadsheetSetupFlow(
      * spreadsheet is already bound, so a failure here is a Creating error whose Retry repairs this
      * spreadsheet instead of creating another one.
      */
-    private suspend fun addTablesThenAttach(account: SelectedAccount, spreadsheetId: String): SetupState =
+    private suspend fun addTables(spreadsheetId: String): SetupState =
         guarded(SetupStep.Creating) {
             setup.ensureTables(spreadsheetId)
-            attach(account, spreadsheetId, emptyMap(), emptyMap())
+            SetupState.Ready
         }
 
     private suspend fun retryCreating(account: SelectedAccount): SetupState {
         val binding = store.binding.first() ?: return createNew(account)
-        return guarded(SetupStep.Creating) {
-            setup.ensureTables(binding.spreadsheetId)
-            attachToBound(account)
-        }
+        return addTables(binding.spreadsheetId)
     }
 
     private suspend fun attach(
@@ -192,7 +181,7 @@ class SpreadsheetSetupFlow(
         }
     }
 
-    private suspend fun fixAutomation(account: SelectedAccount): SetupState {
+    private suspend fun startAutomation(account: SelectedAccount): SetupState {
         val binding = store.binding.first() ?: return findSpreadsheet(account)
         return guarded(SetupStep.Checking) {
             val snapshot = setup.check(binding.spreadsheetId).snapshot
@@ -214,12 +203,6 @@ class SpreadsheetSetupFlow(
         SetupStep.Renaming -> failedRewriteId?.let { rewrite(account, it) } ?: findSpreadsheet(account)
         SetupStep.AttachingScript -> attachToBound(account)
     }
-
-    private fun reminder(snapshot: SpreadsheetSnapshot): Reminder? =
-        when (val status = AutomationStatusEvaluator.evaluate(snapshot.metadata, now(), ::badSheetValue)) {
-            AutomationStatus.On -> null
-            else -> Reminder(status, snapshot.metadata[AutomationStatusEvaluator.ENABLE_URL])
-        }
 
     private suspend fun bind(account: SelectedAccount, spreadsheetId: String, metadata: Map<String, String>) {
         store.saveBinding(

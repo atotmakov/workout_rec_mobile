@@ -1,5 +1,6 @@
 package com.workoutrec.setup
 
+import com.workoutrec.automation.AutomationStatus
 import com.workoutrec.automation.AutomationStatusEvaluator
 import com.workoutrec.data.SelectedAccount
 import com.workoutrec.data.SpreadsheetBinding
@@ -37,7 +38,7 @@ class ScriptUpgradeRefreshTest {
     fun `a script without a recorded version is upgraded`() = runTest {
         val result = flowWith(enabled).refresh(account)
         assertEquals(listOf("upgrade:s1:script-1"), installer.log)
-        assertEquals(RefreshResult.Status(null), result)
+        assertEquals(RefreshResult.Status(AutomationStatus.On), result)
     }
 
     @Test
@@ -62,7 +63,7 @@ class ScriptUpgradeRefreshTest {
     fun `a failed upgrade changes nothing for the user, is reported, and is tried again`() = runTest {
         val flow = flowWith(enabled)
         installer.failNext = ApiError.Unexpected(500, "boom")
-        assertEquals(RefreshResult.Status(null), flow.refresh(account))
+        assertEquals(RefreshResult.Status(AutomationStatus.On), flow.refresh(account))
         val report = monitoring.nonFatals.single()
         assertEquals(NonFatalIssue.SCRIPT_UPGRADE_FAILED, report.issue)
         assertEquals("operation=script-upgrade", report.details)

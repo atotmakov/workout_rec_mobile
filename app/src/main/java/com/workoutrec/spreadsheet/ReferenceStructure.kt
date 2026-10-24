@@ -118,7 +118,7 @@ object ReferenceStructure {
         val rec = sheetId("rec")
         add(updateCells(rec, rowIndex = 0, columnIndex = 3, cell = stringCell(REC_NOTE)))
         add(updateCells(rec, rowIndex = 1, columnIndex = 0, cell = formulaCell(REC_FORMULA)))
-        add(updateCells(sheetId("balance"), rowIndex = 0, columnIndex = 0, cell = numberCell(0)))
+        add(updateCells(sheetId("balance"), rowIndex = 0, columnIndex = 0, cell = formulaCell(BALANCE_FORMULA)))
         add(
             buildJsonObject {
                 putJsonObject("setDataValidation") {
@@ -221,7 +221,7 @@ object ReferenceStructure {
             row(listOf(buildJsonObject { put("dataValidation", dropDownRule()) }, JsonObject(emptyMap()), JsonObject(emptyMap()), stringCell(REC_NOTE))),
             row(listOf(formulaCell(REC_FORMULA))),
         )
-        "balance" -> listOf(row(listOf(numberCell(0))))
+        "balance" -> listOf(row(listOf(formulaCell(BALANCE_FORMULA))))
         // log rows 2..1000: date format in A and the exercise drop-down in B (contracts "Tabs").
         "log" -> listOf(row(HEADERS.getValue(tab).map(::stringCell))) +
             List(ROWS - 1) { row(listOf(dateFormatCell(), buildJsonObject { put("dataValidation", dropDownRule(LOG_DROPDOWN_RANGE)) })) }
@@ -242,8 +242,6 @@ object ReferenceStructure {
     private fun stringCell(text: String) = buildJsonObject { putJsonObject("userEnteredValue") { put("stringValue", text) } }
 
     private fun formulaCell(formula: String) = buildJsonObject { putJsonObject("userEnteredValue") { put("formulaValue", formula) } }
-
-    private fun numberCell(number: Int) = buildJsonObject { putJsonObject("userEnteredValue") { put("numberValue", number) } }
 
     private fun dateFormatCell() = buildJsonObject {
         putJsonObject("userEnteredFormat") {
