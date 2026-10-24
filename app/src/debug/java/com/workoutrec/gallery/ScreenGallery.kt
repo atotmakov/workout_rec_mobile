@@ -79,6 +79,7 @@ import com.workoutrec.sync.NoticeKind
 import com.workoutrec.sync.SyncNotice
 import com.workoutrec.sync.SyncPhase
 import com.workoutrec.ui.theme.WorkoutRecTheme
+import com.workoutrec.workout.DayStatus
 import com.workoutrec.workout.DaySummary
 import com.workoutrec.workout.DisplaySet
 import com.workoutrec.workout.Exercise
@@ -199,14 +200,14 @@ object ScreenGallery {
         GalleryScreen("29-day-detail") {
             BarFrame(Tab.HISTORY) { barModifier ->
                 Box(barModifier) {
-                    RouteFrame(Samples.DAY_TITLE, pendingCount = 1) { modifier -> DayDetailScreen(Samples.dayGroups(), onEditSet = {}, modifier = modifier) }
+                    RouteFrame(Samples.DAY_TITLE, pendingCount = 1) { modifier -> DayDetailScreen(Samples.dayGroups(), onEditSet = {}, modifier = modifier, status = DayStatus.PAID) }
                 }
             }
         },
         GalleryScreen("30-edit-set-dialog") {
             BarFrame(Tab.HISTORY) { barModifier ->
                 Box(barModifier) {
-                    RouteFrame(Samples.DAY_TITLE, pendingCount = 1) { modifier -> DayDetailScreen(Samples.dayGroups(), onEditSet = {}, modifier = modifier) }
+                    RouteFrame(Samples.DAY_TITLE, pendingCount = 1) { modifier -> DayDetailScreen(Samples.dayGroups(), onEditSet = {}, modifier = modifier, status = DayStatus.PAID) }
                 }
             }
             EditSetDialog(set = Samples.dayGroups().first().sets.first(), exercises = Samples.exercises(), onSave = { _, _, _ -> }, onDelete = {}, onDismiss = {}, zone = Samples.ZONE)
@@ -537,10 +538,11 @@ private object Samples {
     )
 
     fun pastDays(): List<DaySummary> = listOf(
-        DaySummary(TODAY.minusDays(2), exerciseCount = 4, setCount = 14),
-        DaySummary(TODAY.minusDays(4), exerciseCount = 3, setCount = 11),
-        DaySummary(TODAY.minusDays(7), exerciseCount = 5, setCount = 17),
-        DaySummary(TODAY.minusDays(9), exerciseCount = 3, setCount = 9),
+        // Feature 006: mixed statuses, the newest change still waiting for sync.
+        DaySummary(TODAY.minusDays(2), exerciseCount = 4, setCount = 14, status = DayStatus.PAID, statusPending = true),
+        DaySummary(TODAY.minusDays(4), exerciseCount = 3, setCount = 11, status = DayStatus.PAID),
+        DaySummary(TODAY.minusDays(7), exerciseCount = 5, setCount = 17, status = DayStatus.FREE),
+        DaySummary(TODAY.minusDays(9), exerciseCount = 3, setCount = 9, status = DayStatus.PAID),
     )
 
     @Composable
