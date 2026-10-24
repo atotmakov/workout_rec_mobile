@@ -19,9 +19,15 @@ import java.time.LocalDate
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 
-/** The Money tab's first screen (feature 004 US4); [onEnableAutomation] is feature 001's fix. */
+/** The Money tab's first screen (feature 004 US4); [onEnableAutomation] starts the optional automation steps (feature 007). */
 @Composable
-fun MoneyRoute(container: AppContainer, onEnableAutomation: () -> Unit, modifier: Modifier = Modifier, actions: @Composable () -> Unit = {}) {
+fun MoneyRoute(
+    container: AppContainer,
+    onEnableAutomation: () -> Unit,
+    modifier: Modifier = Modifier,
+    actions: @Composable () -> Unit = {},
+    automation: AutomationStatus? = null,
+) {
     val payments by container.workoutRepository.payments.collectAsState(initial = emptyList())
     val summary by container.workoutRepository.moneySummary.collectAsState(initial = null)
     val waiting by container.workoutRepository.waitingCount.collectAsState(initial = 0)
@@ -64,6 +70,7 @@ fun MoneyRoute(container: AppContainer, onEnableAutomation: () -> Unit, modifier
         modifier = modifier,
         refreshing = refreshing,
         actions = actions,
+        automation = automation,
     )
     if (adding) {
         // The last payment is the usual one: start from its values (contracts/screens.md "Payment dialog").

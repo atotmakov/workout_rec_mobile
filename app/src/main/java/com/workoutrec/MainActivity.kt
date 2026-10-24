@@ -6,7 +6,11 @@ import com.workoutrec.exercises.ExercisesRoute
 import com.workoutrec.nav.logToday
 import androidx.navigation.NavDestination.Companion.hierarchy
 import com.workoutrec.home.AccountActions
+import com.workoutrec.nav.Tab
 import com.workoutrec.nav.TabRoutes
+import com.workoutrec.nav.selectTab
+import com.workoutrec.nav.tabOf
+import com.workoutrec.home.AutomationMenuState
 import com.workoutrec.nav.TabScaffold
 import com.workoutrec.nav.leaveTabs
 import com.workoutrec.nav.mainTabs
@@ -147,6 +151,14 @@ private fun AppNavHost(container: AppContainer) {
     }
     val onSignOut: () -> Unit = { scope.launch { clearWorkoutData(); viewModel.signOut() } }
     val onShareLog: () -> Unit = { context.startActivity(shareLogIntent(context, container.diagnosticLog)) }
+    // Feature 007 FR-012: the optional automation steps, back to the tab they were opened from.
+    val automation by viewModel.automation.collectAsState()
+    var automationReturn by rememberSaveable { mutableStateOf<String?>(null) }
+    val startAutomation: () -> Unit = {
+        automationReturn = tabOf(backStack?.destination?.route)?.name
+        viewModel.onAction(SetupAction.StartAutomation)
+    }
+    val automationItem = AutomationMenuState(automation, onClick = startAutomation)
     // The sync icon and the avatar on every tab's first screen (feature 004 spec edge case).
     val accountActions: @Composable () -> Unit = {
         account?.let {
@@ -160,6 +172,7 @@ private fun AppNavHost(container: AppContainer) {
                 onShareLog = onShareLog,
                 diagnostics = diagnosticsMenuState(container),
                 syncStatus = { SyncStatusAction(container) },
+                automation = automationItem,
             )
         }
     }
@@ -171,6 +184,8 @@ private fun AppNavHost(container: AppContainer) {
                     val setupAccount by container.settingsStore.account.collectAsState(initial = null)
                     SetupRoute(viewModel, state, accountEmail = setupAccount?.email, onShareLog = onShareLog, onReady = {
                         navController.navigate(TabRoutes.MAIN) { popUpTo(Routes.SETUP) { inclusive = true } }
+                        automationReturn?.let { tab -> Tab.entries.firstOrNull { it.name == tab } }?.let { navController.selectTab(it, reselect = false) }
+                        automationReturn = null
                     })
                 }
                 mainTabs(
@@ -187,6 +202,7 @@ private fun AppNavHost(container: AppContainer) {
                                     onShareLog = onShareLog,
                                     diagnostics = diagnosticsMenuState(container),
                                     syncStatus = { SyncStatusAction(container) },
+                                    automation = automationItem,
                                 ) { modifier ->
                                     TodayRoute(
                                         container = container,
@@ -254,7 +270,7 @@ private fun AppNavHost(container: AppContainer) {
                     },
                     money = {
                         composable(TabRoutes.MONEY) {
-                            MoneyRoute(container, onEnableAutomation = { viewModel.onAction(SetupAction.StartAutomation) }, actions = accountActions)
+                            MoneyRoute(container, onEnableAutomation = startAutomation, actions = accountActions, automation = automation)
                         }
                     },
                 )

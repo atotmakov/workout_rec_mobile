@@ -1,6 +1,7 @@
 package com.workoutrec.home
 
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -9,6 +10,7 @@ import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.workoutrec.R
+import com.workoutrec.automation.AutomationStatus
 import com.workoutrec.data.SelectedAccount
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -59,5 +61,28 @@ class AccountAvatarTest {
         compose.onNodeWithTag(AccountAvatarTag).performClick()
         compose.onNodeWithText(context.getString(R.string.account_share_log)).assertIsDisplayed().performClick()
         assertEquals(1, shared)
+    }
+
+    // Feature 007 FR-012: the automation entry is in the account menu too.
+    @Test
+    fun theMenuOffersSpreadsheetAutomationWithItsStatus() {
+        var taps = 0
+        compose.setContent {
+            MainScreen(account = account, onSwitchAccount = {}, onSignOut = {}, automation = AutomationMenuState(AutomationStatus.On, onClick = { taps++ }))
+        }
+        compose.onNodeWithTag(AccountAvatarTag).performClick()
+        compose.onNodeWithTag(AccountAutomationTag).assertTextContains(context.getString(R.string.automation_entry_title), substring = true)
+        compose.onNodeWithTag(AccountAutomationTag).assertTextContains(context.getString(R.string.automation_status_on), substring = true)
+        compose.onNodeWithTag(AccountAutomationTag).performClick()
+        assertEquals(1, taps)
+    }
+
+    @Test
+    fun theMenuSaysWhenAutomationIsOff() {
+        compose.setContent {
+            MainScreen(account = account, onSwitchAccount = {}, onSignOut = {}, automation = AutomationMenuState(AutomationStatus.ScriptMissing, onClick = {}))
+        }
+        compose.onNodeWithTag(AccountAvatarTag).performClick()
+        compose.onNodeWithTag(AccountAutomationTag).assertTextContains(context.getString(R.string.automation_status_off), substring = true)
     }
 }

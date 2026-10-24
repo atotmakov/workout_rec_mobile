@@ -4,6 +4,7 @@ import com.workoutrec.fakes.FakeScriptApi
 import com.workoutrec.fakes.FakeSheetsApi
 import com.workoutrec.google.GoogleJson
 import com.workoutrec.google.ScriptFileType
+import com.workoutrec.spreadsheet.ReferenceStructure
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -40,7 +41,7 @@ class ScriptInstallerTest {
             mapOf(
                 "workout_rec.script_id" to "script-1",
                 "workout_rec.enable_url" to "https://script.google.com/macros/s/dep/exec",
-                "workout_rec.script_version" to "2",
+                "workout_rec.script_version" to "3",
             ),
             sheets.upserts.single(),
         )
@@ -60,7 +61,11 @@ class ScriptInstallerTest {
         assertEquals("V8", manifest["runtimeVersion"]!!.jsonPrimitive.content)
         val config = files.getValue("Config").source
         assertTrue(config.contains("const SPREADSHEET_ID = 'sheet-1';"))
-        assertTrue(config.contains("const SCRIPT_VERSION = 2;"))
+        assertTrue(config.contains("const SCRIPT_VERSION = 3;"))
+        // Feature 007 research R7: the script writes the app's duration formula, as a JS string.
+        val line = config.lines().single { it.startsWith("const DURATION_FORMULA = ") }
+        val literal = line.removePrefix("const DURATION_FORMULA = ").removeSuffix(";")
+        assertEquals(ReferenceStructure.DURATION_FORMULA, GoogleJson.parseToJsonElement(literal).jsonPrimitive.content)
     }
 
     @Test

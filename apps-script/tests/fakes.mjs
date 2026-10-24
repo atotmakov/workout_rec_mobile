@@ -26,6 +26,16 @@ export function createFakes({ timeZone = 'Etc/UTC' } = {}) {
       this.sheet.setCell(this.row, this.col, value);
       return this;
     }
+    // Feature 007: a formula is kept as its text, which starts with "=".
+    setFormula(formula) {
+      calls.push(['setFormula', `${this.sheet.name}!${a1(this.row, this.col)}`, formula]);
+      this.sheet.setCell(this.row, this.col, formula);
+      return this;
+    }
+    getFormula() {
+      const value = this.getValue();
+      return typeof value === 'string' && value.startsWith('=') ? value : '';
+    }
   }
 
   class FakeSheet {
@@ -54,6 +64,11 @@ export function createFakes({ timeZone = 'Etc/UTC' } = {}) {
     getLastRow() { return this.rows.length; }
     getLastColumn() { return Math.max(0, ...this.rows.map((r) => r.length)); }
     getDataRange() { return new FakeRange(this, 1, 1, this.getLastRow(), Math.max(1, this.getLastColumn())); }
+    deleteRow(row) {
+      calls.push(['deleteRow', this.name, row]);
+      this.rows.splice(row - 1, 1);
+      return this;
+    }
     appendRow(values) {
       calls.push(['appendRow', this.name, [...values]]);
       this.rows.push([...values]);

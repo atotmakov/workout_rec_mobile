@@ -226,34 +226,34 @@ depends on them (plan risk 1).
 
 ### Tests (write first, see them fail)
 
-- [ ] T033 [P] [US4] Write failing Node tests in `script/tests/logic.test.mjs`:
+- [X] T033 [P] [US4] Write failing Node tests in `script/tests/logic.test.mjs`:
   - `workoutRowsPlan` v3 runs every case in `tests/fixtures/day-rows.json`
   - plus `formulaRows`: rows with an empty B, numbered after removals, excluding removed ones
   - removals in descending order
   - empty-log guard
-- [ ] T034 [P] [US4] Write failing Node tests in `script/tests/code.test.mjs`, using `fakes.mjs`:
+- [X] T034 [P] [US4] Write failing Node tests in `script/tests/code.test.mjs`, using `fakes.mjs`:
   - `dailyJob` deletes removal rows in descending order, calls `setFormula(DURATION_FORMULA)` on empty B cells, and appends `[date, DURATION_FORMULA, flag]`
   - never calls `setValue` on column B
   - writes `balance!A1` only when `getFormula()` returns `''`
   - always writes `last_daily_run`
   - `ENABLE_TEXTS` no longer mention the balance
   - Extend `fakes.mjs` with `deleteRow`, `setFormula` and `getFormula`
-- [ ] T035 [P] [US4] Write failing tests in `test/automation/ScriptInstallerTest.kt`: `SCRIPT_VERSION == 3`; the generated `Config.gs` contains `const DURATION_FORMULA = ` followed by the JSON-escaped `ReferenceStructure.DURATION_FORMULA`
-- [ ] T036 [P] [US4] Write failing UI tests in `uitest/money/AutomationEntryTest.kt` and `uitest/home/AccountMenuTest.kt`:
+- [X] T035 [P] [US4] Write failing tests in `test/automation/ScriptInstallerTest.kt`: `SCRIPT_VERSION == 3`; the generated `Config.gs` contains `const DURATION_FORMULA = ` followed by the JSON-escaped `ReferenceStructure.DURATION_FORMULA`
+- [X] T036 [P] [US4] Write failing UI tests in `uitest/money/AutomationEntryTest.kt` and `uitest/home/AccountMenuTest.kt`: — *account menu cases added to `uitest/home/AccountAvatarTest.kt`*
   - the Money tab shows `automation_entry`, with the Off text for NotEnabled and ScriptMissing, "On. Runs every night." for On, and the stopped text for Stopped, in every money state including errors
   - the account menu item shows the same status
   - tapping either sends `StartAutomation`
 
 ### Implementation
 
-- [ ] T037 [US4] In `script/Logic.gs`, make `workoutRowsPlan` return `{ appends, removals, formulaRows }` (contracts/apps-script.md); keep `balance`. This makes T033 pass
-- [ ] T038 [US4] In `script/Code.gs`:
+- [X] T037 [US4] In `script/Logic.gs`, make `workoutRowsPlan` return `{ appends, removals, formulaRows }` (contracts/apps-script.md); keep `balance`. This makes T033 pass
+- [X] T038 [US4] In `script/Code.gs`:
   - make `dailyJob` follow contracts/apps-script.md steps 1–6
   - update `ENABLE_TEXTS` in en and ru to say the job adds new days every night, without "and balance"
   - This makes T034 pass
-- [ ] T039 [US4] In `main/automation/ScriptInstaller.kt`, set `SCRIPT_VERSION = 3` and add `const DURATION_FORMULA = <JSON string>;` to the generated `Config.gs`. This makes T035 pass
-- [ ] T040 [US4] Create `main/automation/AutomationEntry.kt`: a composable `AutomationEntry(status: AutomationStatus?, onClick)` (a Material 3 `ListItem` with tag `automation_entry`). Add the strings `automation_entry_title`, `automation_entry_off`, `automation_entry_on` and `automation_entry_stopped` to `res/values{,-ru}/strings.xml`, using the texts from contracts/screens.md
-- [ ] T041 [US4] Wire the entry:
+- [X] T039 [US4] In `main/automation/ScriptInstaller.kt`, set `SCRIPT_VERSION = 3` and add `const DURATION_FORMULA = <JSON string>;` to the generated `Config.gs`. This makes T035 pass
+- [X] T040 [US4] Create `main/automation/AutomationEntry.kt`: a composable `AutomationEntry(status: AutomationStatus?, onClick)` (a Material 3 `ListItem` with tag `automation_entry`). Add the strings `automation_entry_title`, `automation_entry_off`, `automation_entry_on` and `automation_entry_stopped` to `res/values{,-ru}/strings.xml`, using the texts from contracts/screens.md
+- [X] T041 [US4] Wire the entry:
   - below the balance card in `main/money/MoneyScreens.kt` (all states), fed from `SetupViewModel.automation` through `main/money/MoneyRoute.kt`
   - as an item above "Share sync log" in `AccountMenu` in `main/home/MainScreen.kt`
   - in `main/MainActivity.kt`, tapping either sends `SetupAction.StartAutomation`, and when the state returns to `Ready` the app goes back to the tab the user came from instead of Today
@@ -271,12 +271,12 @@ depends on them (plan risk 1).
 
 ### Tests (write first, see them fail)
 
-- [ ] T042 [P] [US5] Add cases to `test/setup/SpreadsheetSetupFlowTest.kt`: `refresh` with a script at version 2 upgrades to 3 (no `install`, no state change); an upgrade failure still reports `SCRIPT_UPGRADE_FAILED` and still returns `Status(automation)`; automation On stays On
+- [X] T042 [P] [US5] Add cases to `test/setup/SpreadsheetSetupFlowTest.kt`: `refresh` with a script at version 2 upgrades to 3 (no `install`, no state change); an upgrade failure still reports `SCRIPT_UPGRADE_FAILED` and still returns `Status(automation)`; automation On stays On
 - [X] T043 [P] [US5] Add a case to `test/sync/FormCheckTest.kt`: automation On with `script_version` 2 → no balance write, no marker, no `CALCULATION_RESTORED` for a number in `balance!A1`; after the metadata says 3 → balance formula and marker
 
 ### Implementation
 
-- [ ] T044 [US5] Confirm that `upgradeScript` in `main/setup/SpreadsheetSetupFlow.kt` runs for every attached script whatever the automation status, and that `refresh` runs before the first sync on app start (`main/setup/SetupViewModel.kt`, `main/sync/SyncScheduler.kt`). Fix whatever T042 or T043 shows
+- [X] T044 [US5] Confirm that `upgradeScript` in `main/setup/SpreadsheetSetupFlow.kt` runs for every attached script whatever the automation status, and that `refresh` runs before the first sync on app start (`main/setup/SetupViewModel.kt`, `main/sync/SyncScheduler.kt`). Fix whatever T042 or T043 shows — *confirmed: `upgradeScript` needs only a script ID; a sync that runs before the start-up upgrade simply keeps the gate closed until the next sync (no wrong write)*
 
 **Checkpoint**: Spreadsheets with automation on show the same balance as before, then switch to the formula once their script is v3.
 

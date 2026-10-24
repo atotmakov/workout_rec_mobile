@@ -48,6 +48,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.workoutrec.R
+import com.workoutrec.automation.AutomationEntry
+import com.workoutrec.automation.AutomationStatus
 import com.workoutrec.workout.MoneyTotals
 import com.workoutrec.workout.ShownPayment
 import java.text.NumberFormat
@@ -103,6 +105,8 @@ fun MoneyScreen(
     modifier: Modifier = Modifier,
     refreshing: Boolean = false,
     actions: @Composable () -> Unit = {},
+    /** Feature 007: shown by the automation entry; null = not known yet. */
+    automation: AutomationStatus? = null,
 ) {
     val locale = LocalConfiguration.current.locales[0]
     Scaffold(
@@ -124,6 +128,8 @@ fun MoneyScreen(
         ) {
             LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 item { BalanceCard(state, zone, locale) }
+                // Feature 007 FR-012: optional, shown whatever the balance state.
+                item { AutomationEntry(automation, onClick = onEnableAutomation) }
                 errorText(state.error)?.let { id ->
                     item { Text(stringResource(id), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall, modifier = Modifier.testTag(MoneyTags.ERROR)) }
                 }

@@ -20,13 +20,15 @@ function autoFillPlan(columnB, editedRow) {
 }
 
 /**
- * Feature 006 (contracts/apps-script.md): what the nightly job writes to the workout tab.
- * `workoutRows` are its data rows ([date, duration, flag], sheet row 2 first). Returns
- * `appends`: one [first set, minutes, flag] per log day without a row, in date order, where flag
- * copies the latest earlier day's "work alone" (1 stays 1, anything else 0; 1 when there is none);
- * `durations`: {row, minutes} for rows with an empty duration whose day is in the log (rows the
- * app added). Duration = last minus first logged time that day. `toDayKey(date)` returns
- * 'yyyy-MM-dd' in the spreadsheet's time zone.
+ * Feature 007 (contracts/apps-script.md): what the nightly job changes in the workout tab, so it has
+ * one row per log day and only those. `workoutRows` are its data rows ([date, duration, flag],
+ * sheet row 2 first). Returns
+ * `appends`: [first set, flag] per log day without a row, in date order; flag copies the latest
+ * earlier remaining day's "work alone" (1 stays 1, anything else 0; 1 when there is none);
+ * `removals`: sheet rows whose date has no log day, highest first (none when the log has no sets);
+ * `formulaRows`: rows that stay and have an empty duration, numbered as after the removals.
+ * `toDayKey(date)` returns 'yyyy-MM-dd' in the spreadsheet's time zone. The app's DayRowsPlan
+ * follows the same rule (tests/fixtures/day-rows.json).
  */
 function workoutRowsPlan(logRows, workoutRows, toDayKey) {
   const days = {};
@@ -34,28 +36,30 @@ function workoutRowsPlan(logRows, workoutRows, toDayKey) {
     const when = row[0];
     if (!(when instanceof Date)) return;
     const key = toDayKey(when);
-    const time = when.getTime();
     const day = days[key];
-    if (!day) {
-      days[key] = { first: when, min: time, max: time };
-    } else {
-      if (time < day.min) {
-        day.min = time;
-        day.first = when;
-      }
-      if (time > day.max) day.max = time;
-    }
+    if (!day || when.getTime() < day.getTime()) days[key] = when;
   });
-  const minutes = function (key) { return Math.round((days[key].max - days[key].min) / 60000); };
+  const logEmpty = Object.keys(days).length === 0;
 
-  const flags = {}; // day key -> 0 or 1, from existing rows and planned appends
-  const durations = [];
+  const flags = {}; // day key -> 0 or 1, from remaining rows and planned appends
+  const removals = [];
+  const kept = [];
   workoutRows.forEach(function (row, i) {
     if (!(row[0] instanceof Date)) return;
     const key = toDayKey(row[0]);
+    const sheetRow = i + 2;
+    if (!logEmpty && !days[key]) {
+      removals.push(sheetRow);
+      return;
+    }
     if (!(key in flags)) flags[key] = String(row[2]) === '1' ? 1 : 0;
-    if (row[1] === '' && days[key]) durations.push({ row: i + 2, minutes: minutes(key) });
+    if (row[1] === '') kept.push(sheetRow);
   });
+  removals.sort(function (a, b) { return b - a; });
+  const formulaRows = kept.map(function (row) {
+    return row - removals.filter(function (removed) { return removed < row; }).length;
+  });
+
   const appends = Object.keys(days)
     .filter(function (key) { return !(key in flags); })
     .sort()
@@ -63,14 +67,16 @@ function workoutRowsPlan(logRows, workoutRows, toDayKey) {
       const earlier = Object.keys(flags).filter(function (k) { return k < key; }).sort();
       const flag = earlier.length ? flags[earlier[earlier.length - 1]] : 1;
       flags[key] = flag;
-      return [days[key].first, minutes(key), flag];
+      return [days[key], flag];
     });
-  return { appends: appends, durations: durations };
+  return { appends: appends, removals: removals, formulaRows: formulaRows };
 }
 
 /**
  * Balance = total of numeric money "workouts" values minus the number of workouts not done
  * alone. `workoutAloneFlags` has one entry per non-empty workout row; "1" means alone.
+ * Feature 007: only for a spreadsheet the app has not converted yet; afterwards balance!A1 is a
+ * formula with the same rule.
  */
 function balance(moneyWorkouts, workoutAloneFlags) {
   const paid = moneyWorkouts.reduce(function (sum, value) {
