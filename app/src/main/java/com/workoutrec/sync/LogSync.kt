@@ -127,6 +127,8 @@ class LogSync(
     private val monitoring: Monitoring = NoMonitoring,
     /** Feature 004 research R6: payments reached the money tab; the Money tab downloads again. */
     private val onPaymentsWritten: suspend () -> Unit = {},
+    /** Feature 007 research R5: checks and repairs the calculated cells after each successful run. */
+    private val formCheck: FormCheck? = null,
 ) {
 
     /** Never throws for Google or network errors; they become [SyncOutcome.Failed] (contracts "Errors"). */
@@ -274,6 +276,8 @@ class LogSync(
             store.commit(read.drills.map { Exercise(it.name, it.muscleGroup) }, rows, done, notices, exercisesDone, exercisePlan.renamesBack, paymentsDone, statuses)
             status.markSuccess(now())
         }
+        // Feature 007: its failures are reported inside and never change this run's outcome.
+        formCheck?.let { check -> profile.section("form").use { check.run(id, sheet) } }
         if (paymentAppends.isNotEmpty()) onPaymentsWritten()
         log("sync: done, wrote ${appends.size} new, ${edits.size} edited, ${deletes.size} deleted, ${exercisePlan.written.size} exercise changes")
         return SyncOutcome.Synced(wrote)

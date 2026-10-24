@@ -189,7 +189,7 @@ depends on them (plan risk 1).
 
 ### Tests (write first, see them fail)
 
-- [ ] T027 [P] [US3] Write failing tests in `test/spreadsheet/CalculatedFormTest.kt`, covering the data-model "Calculated cells: states" table row by row:
+- [X] T027 [P] [US3] Write failing tests in `test/spreadsheet/CalculatedFormTest.kt`, covering the data-model "Calculated cells: states" table row by row:
   - a matching formula → nothing
   - an empty cell → write, no report
   - another value before version 3 → write, no report
@@ -200,7 +200,7 @@ depends on them (plan risk 1).
   - gate closed (On and script version < 3) → durations only, no balance, no marker
   - gate open below version 3 → balance and marker
   - at version 3 with everything right → no repair
-- [ ] T028 [P] [US3] Write failing tests in `test/sync/FormCheckTest.kt`:
+- [X] T028 [P] [US3] Write failing tests in `test/sync/FormCheckTest.kt`:
   - runs call 24 after a successful sync and call 25 only when `CalculatedForm` asks for it
   - skipped when `workoutSheetId` or `balanceSheetId` is unknown
   - a call-24 or call-25 failure reports `CALCULATION_CHECK_FAILED` through `failure` and leaves the outcome `Synced`
@@ -210,9 +210,9 @@ depends on them (plan risk 1).
 
 ### Implementation
 
-- [ ] T030 [US3] Create `main/spreadsheet/CalculatedForm.kt`: an `object CalculatedForm` with `decide(cells: CalculatedCells, automation: AutomationStatus, scriptVersion: Int): FormDecision(repair: CalculatedRepair?, restored: Map<String, Int>)`. It reuses `StructureValidator`'s normalisation, which you should move to an `internal fun normalizeFormula` in `main/spreadsheet/StructureValidator.kt`. This makes T027 pass
-- [ ] T031 [US3] Create `main/sync/FormCheck.kt`: `class FormCheck(api: SheetsLogApi, monitoring: Monitoring, now: () -> Instant, log: (String) -> Unit)` with `suspend fun run(spreadsheetId, sheet: SheetInfoCache)`. It reads with call 24, evaluates automation from the metadata (`AutomationStatusEvaluator.evaluate`) and `script_version` (default 1), calls `CalculatedForm.decide`, writes with call 25, and reports as in T028. Wire it in `main/AppContainer.kt`
-- [ ] T032 [US3] In `main/sync/LogSync.kt`, call `formCheck.run(id, sheet)` after step 6 (commit), inside its own `profile.section("form")`. Its failures never change the returned `SyncOutcome`. This makes T028 and T029 pass
+- [X] T030 [US3] Create `main/spreadsheet/CalculatedForm.kt`: an `object CalculatedForm` with `decide(cells: CalculatedCells, automation: AutomationStatus, scriptVersion: Int): FormDecision(repair: CalculatedRepair?, restored: Map<String, Int>)`. It reuses `StructureValidator`'s normalisation, which you should move to an `internal fun normalizeFormula` in `main/spreadsheet/StructureValidator.kt`. This makes T027 pass
+- [X] T031 [US3] Create `main/sync/FormCheck.kt`: `class FormCheck(api: SheetsLogApi, monitoring: Monitoring, now: () -> Instant, log: (String) -> Unit)` with `suspend fun run(spreadsheetId, sheet: SheetInfoCache)`. It reads with call 24, evaluates automation from the metadata (`AutomationStatusEvaluator.evaluate`) and `script_version` (default 1), calls `CalculatedForm.decide`, writes with call 25, and reports as in T028. Wire it in `main/AppContainer.kt`
+- [X] T032 [US3] In `main/sync/LogSync.kt`, call `formCheck.run(id, sheet)` after step 6 (commit), inside its own `profile.section("form")`. Its failures never change the returned `SyncOutcome`. This makes T028 and T029 pass
 
 **Checkpoint**: A copy of a real spreadsheet converts. Durations are kept, rows without sets go, and the balance changes only by those rows (SC-003).
 
@@ -272,7 +272,7 @@ depends on them (plan risk 1).
 ### Tests (write first, see them fail)
 
 - [ ] T042 [P] [US5] Add cases to `test/setup/SpreadsheetSetupFlowTest.kt`: `refresh` with a script at version 2 upgrades to 3 (no `install`, no state change); an upgrade failure still reports `SCRIPT_UPGRADE_FAILED` and still returns `Status(automation)`; automation On stays On
-- [ ] T043 [P] [US5] Add a case to `test/sync/FormCheckTest.kt`: automation On with `script_version` 2 → no balance write, no marker, no `CALCULATION_RESTORED` for a number in `balance!A1`; after the metadata says 3 → balance formula and marker
+- [X] T043 [P] [US5] Add a case to `test/sync/FormCheckTest.kt`: automation On with `script_version` 2 → no balance write, no marker, no `CALCULATION_RESTORED` for a number in `balance!A1`; after the metadata says 3 → balance formula and marker
 
 ### Implementation
 
