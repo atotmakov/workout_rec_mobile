@@ -118,7 +118,14 @@ class SheetsClient(
     /** Call 6: one entry per key; update existing entries, create missing ones. */
     override suspend fun upsertMetadata(spreadsheetId: String, values: Map<String, String>, existingIds: Map<String, Int>) {
         if (values.isEmpty()) return
-        val requests = buildJsonArray {
+        batchUpdate(spreadsheetId, metadataRequests(values, existingIds))
+    }
+
+    private fun spreadsheets(): HttpUrl.Builder = baseUrl.newBuilder().addPathSegments("v4/spreadsheets")
+
+    companion object {
+        /** Update each key that has an ID in [existingIds], create the others (feature 006; reused by call 25). */
+        fun metadataRequests(values: Map<String, String>, existingIds: Map<String, Int>): JsonArray = buildJsonArray {
             values.forEach { (key, value) ->
                 val id = existingIds[key]
                 if (id != null) {
@@ -138,12 +145,7 @@ class SheetsClient(
                 }
             }
         }
-        batchUpdate(spreadsheetId, requests)
-    }
 
-    private fun spreadsheets(): HttpUrl.Builder = baseUrl.newBuilder().addPathSegments("v4/spreadsheets")
-
-    companion object {
         /** Spreadsheet-level metadata visible to anyone with access (contracts/spreadsheet.md). */
         fun documentMetadata(key: String, value: String): JsonObject = buildJsonObject {
             put("metadataKey", key)

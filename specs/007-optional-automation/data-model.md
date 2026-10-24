@@ -72,7 +72,7 @@ whose rows the run removed (next read).
 ## Validation rules from requirements
 
 - FR-004: duration = round((last − first) × 1440) minutes; one set → 0.
-- FR-003: balance = Σ numeric `money!B` − count(rows with A non-empty and C ≠ "1").
+- FR-003: balance = Σ numeric `money!B` − count(rows with any of A–C non-empty and C ≠ "1").
 - FR-007: never append a date that has a row (fresh read + planned appends).
 - FR-009: every step is idempotent; the marker is written in the same `batchUpdate` as the
   balance formula.

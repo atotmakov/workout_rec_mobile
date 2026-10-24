@@ -77,6 +77,10 @@ enum class NonFatalIssue(val key: String, val severity: IssueSeverity) {
     // Feature 006 research R6, R7
     WORKOUT_TAB_MISSING("workout-tab-missing", IssueSeverity.WARNING),
     SCRIPT_UPGRADE_FAILED("script-upgrade-failed", IssueSeverity.WARNING),
+
+    // Feature 007 research R10
+    CALCULATION_RESTORED("calculation-restored", IssueSeverity.WARNING),
+    CALCULATION_CHECK_FAILED("calculation-check-failed", IssueSeverity.WARNING),
 }
 
 enum class IssueSeverity { ERROR, WARNING, INFO }

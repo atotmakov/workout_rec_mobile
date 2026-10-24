@@ -34,21 +34,20 @@ write time, which `appendCells` does not give. Rejected.
 **Decision**:
 
 ```text
-=SUM(money!B2:B) - SUMPRODUCT((workout!A2:A <> "") * (TO_TEXT(workout!C2:C) <> "1"))
+=SUM(money!B2:B) - SUMPRODUCT(((workout!A2:A <> "") + (workout!B2:B <> "") + (workout!C2:C <> "") > 0)
+                                * (TO_TEXT(workout!C2:C) <> "1"))
 ```
 
 `ReferenceStructure.BALANCE_FORMULA`. `TO_TEXT` treats a number `1` and a text `"1"` alike, as the
-script's `String(flag) !== '1'` does.
+script's `String(flag) !== '1'` does. A row counts when any of A–C is non-empty, exactly like the
+script's `r.join('') !== ''` (analysis I2), so a converted balance differs only by removed rows.
 
 **Why**: Same rule as `Logic.gs balance` (FR-003), in the same cell, so call 23 and anything else
 that reads A1 keeps working.
 
-**Differences from the script, accepted**: (a) `SUM` ignores text such as `"2 pcs"`, which the
-script's `parseFloat` counted as 2. The `money` table's column B is typed DOUBLE, so the app and
-the web UI store numbers there. (b) The script counted every non-empty row, but the formula counts
-only rows with a value in A. A row without a date is no longer a workout day (FR-007a removes
-rows without sets, and such a row has no date to match). Both are listed in quickstart #4 as
-values to compare before and after.
+**Difference from the script, accepted** (spec Assumptions): `SUM` ignores text such as
+`"2 pcs"`, which the script's `parseFloat` counted as 2. The `money` table's column B is typed
+DOUBLE, so the app and the web UI store numbers there.
 
 ## R3. Which rows exist: the app keeps `workout` in step with `log` on every sync
 

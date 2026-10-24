@@ -14,7 +14,8 @@ import kotlinx.serialization.json.putJsonObject
 object ReferenceStructure {
     const val TITLE = "workout_rec_database_"
     const val LOCALE = "ru_RU"
-    const val STRUCTURE_VERSION = "2"
+    /** Feature 007: 3 = durations and the balance are the spreadsheet's own formulas (research R5). */
+    const val STRUCTURE_VERSION = "3"
     const val STRUCTURE_VERSION_KEY = "workout_rec.structure_version"
     val TABS = listOf("log", "drills", "rec", "money", "workout", "balance")
     val HEADERS: Map<String, List<String>> = mapOf(
@@ -24,6 +25,18 @@ object ReferenceStructure {
         "workout" to listOf("date", "duration, min", "work alone"),
     )
     const val REC_FORMULA = "=FILTER(log!A:Z, log!B:B=A1)"
+
+    /**
+     * Feature 007 research R1: a `workout` row's duration, minutes from the first to the last set of
+     * its date. The same text in every row: it finds its own date with INDEX(A:A, ROW()).
+     */
+    const val DURATION_FORMULA = "=LET(d, INDEX(A:A, ROW()), IF(d = \"\", \"\", " +
+        "ROUND((MAXIFS(log!A:A, log!A:A, \">=\" & INT(d), log!A:A, \"<\" & INT(d) + 1) - " +
+        "MINIFS(log!A:A, log!A:A, \">=\" & INT(d), log!A:A, \"<\" & INT(d) + 1)) * 1440)))"
+
+    /** Feature 007 research R2: paid workouts left, the old nightly rule (any non-empty row counts). */
+    const val BALANCE_FORMULA = "=SUM(money!B2:B) - SUMPRODUCT(((workout!A2:A <> \"\") + (workout!B2:B <> \"\") + " +
+        "(workout!C2:C <> \"\") > 0) * (TO_TEXT(workout!C2:C) <> \"1\"))"
     const val REC_NOTE = "FILTER(log!A:Z, log!B:B=A1)"
     const val REC_DROPDOWN_RANGE = "=drills!\$B:\$B"
     val REC_RULES = listOf(

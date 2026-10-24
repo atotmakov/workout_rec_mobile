@@ -174,8 +174,8 @@ calculation.
 
 1. **Given** automation is on, **When** the app updates, **Then** automation stays on with no
    action from the user.
-2. **Given** both the app and the nightly run may add a day's row, **When** both run for the same
-   day, **Then** the day still counts once in the balance.
+2. **Given** both the app and the nightly run may add a day's row, **When** one of them has
+   already added it, **Then** the other does not add a second row (FR-007).
 
 ---
 
@@ -233,7 +233,8 @@ calculation.
 - **FR-007**: The app and the nightly run MUST NOT add a row for a date that already has one.
 - **FR-007a**: A `workout` row whose date has no sets in `log` MUST be removed: by the app on
   every sync, and by the nightly run when automation is on. A hand-typed duration is never kept;
-  the calculation always applies (FR-004, FR-011).
+  the calculation always applies (FR-004, FR-011). Exception: when the `log` tab has no sets at
+  all, nothing is removed (an empty log is far more likely a mistake than a real request).
 
 **Conversion of existing spreadsheets**
 
@@ -255,8 +256,8 @@ calculation.
 - **FR-013**: Turning automation on MUST use the same two steps as before (Allow scripts, Enable
   automation), each skippable, and the entry MUST show the result.
 - **FR-014**: When automation is on, the nightly run MUST add missing day rows with the default
-  status, remove rows of dates without sets (FR-007a), and MUST NOT write durations or the
-  balance.
+  status, remove rows of dates without sets (FR-007a), and MUST NOT write durations, nor the
+  balance of a converted spreadsheet.
 - **FR-015**: Spreadsheets with automation already on MUST keep it on through the update with no
   user action; the app MUST update their script to the version that follows FR-014 (as the app
   already updates outdated scripts).
@@ -303,6 +304,11 @@ calculation.
 - Removing rows without sets in existing spreadsheets is accepted by the owner even though it can
   change the balance (Clarifications, Q2). Removed rows stay recoverable from the spreadsheet's
   own version history.
+- While automation is on with a script that can't be upgraded yet (for example, the Allow scripts
+  setting was turned off later), the nightly run keeps writing the balance and the spreadsheet is
+  converted only once the upgrade succeeds; durations are calculated in the meantime.
+- The balance formula counts numbers in `money` "workouts"; a text such as "2 pcs" counts as 0
+  (the old nightly run read it as 2). The app and the web UI's number column store numbers.
 - The `rec` tab and the auto-filled time stay script features; making them work without the
   script is out of scope.
 - Removing the script from spreadsheets that already have it is out of scope; it simply stops

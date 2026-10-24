@@ -1,6 +1,10 @@
 package com.workoutrec.fakes
 
 import com.workoutrec.google.ApiError
+import com.workoutrec.google.CalculatedCells
+import com.workoutrec.google.CalculatedRepair
+import com.workoutrec.google.CalculatedRow
+import com.workoutrec.google.CellContent
 import com.workoutrec.google.DrillsWrite
 import com.workoutrec.google.MoneyWrite
 import com.workoutrec.google.SheetMoneyRow
@@ -15,6 +19,7 @@ import com.workoutrec.google.SheetsLogApi
 import com.workoutrec.google.SheetWorkoutRow
 import com.workoutrec.google.WorkoutWrite
 import com.workoutrec.money.PaymentValues
+import com.workoutrec.spreadsheet.ReferenceStructure
 import com.workoutrec.workout.DayStatusRules
 import kotlinx.coroutines.awaitCancellation
 
@@ -38,9 +43,16 @@ class FakeSheetsLogApi(
     /** Feature 006: null = no `workout` tab. */
     var workoutSheetId: Int? = null,
     val workout: MutableList<WorkoutCells> = mutableListOf(),
+    /** Feature 007: `balance!A1` as stored; a String starting with "=" is a formula. */
+    var balanceA1: Any? = 0.0,
+    /** Feature 007: the spreadsheet's developer metadata, as call 24 returns it. */
+    val metadata: MutableMap<String, String> = mutableMapOf(),
 ) : SheetsLogApi {
 
-    /** A `workout` row: date serial (null = not a date), duration, "work alone" as stored. */
+    /** Feature 007: call 25 requests, in order. */
+    val repairs = mutableListOf<CalculatedRepair>()
+
+    /** A `workout` row: date serial (null = not a date), duration (a String "=…" is a formula), "work alone" as stored. */
     data class WorkoutCells(val serial: Double?, val duration: Any? = null, val alone: Any? = 0.0)
 
     val workoutReads get() = workoutReadCount
@@ -124,7 +136,8 @@ class FakeSheetsLogApi(
         writes += Write(deletes, edits, appends, drillsPart, moneyPart, workoutPart)
         workoutPart?.let { w ->
             w.updates.forEach { this.workout[it.rowIndex - 1] = this.workout[it.rowIndex - 1].copy(alone = DayStatusRules.toSheet(it.status).toDouble()) }
-            w.appends.forEach { this.workout += WorkoutCells(it.serial, null, DayStatusRules.toSheet(it.status).toDouble()) }
+            w.deletes.sortedDescending().forEach { this.workout.removeAt(it - 1) }
+            w.appends.forEach { this.workout += WorkoutCells(it.serial, ReferenceStructure.DURATION_FORMULA, DayStatusRules.toSheet(it.status).toDouble()) }
         }
         moneyPart?.appends?.forEach { this.money += MoneyCells(it.serial, it.workouts.toDouble(), it.sum) }
         val ops = deletes.map { it to null } + edits.map { it.rowIndex to it }
@@ -153,5 +166,32 @@ class FakeSheetsLogApi(
             loseNextWriteResponse = false
             throw ApiError.Offline
         }
+    }
+
+    override suspend fun readCalculatedCells(spreadsheetId: String): CalculatedCells {
+        calls += "cells:$spreadsheetId"
+        maybeFail("cells")
+        return CalculatedCells(
+            rows = workout.mapIndexed { i, w -> CalculatedRow(i + 1, hasDate = w.serial != null, duration = content(w.duration)) },
+            balance = content(balanceA1),
+            metadata = metadata.toMap(),
+            metadataIds = metadata.keys.withIndex().associate { (i, key) -> key to i + 100 },
+        )
+    }
+
+    override suspend fun repairCalculatedCells(spreadsheetId: String, repair: CalculatedRepair) {
+        if (repair.isEmpty) return
+        calls += "repair:$spreadsheetId"
+        maybeFail("repair")
+        repairs += repair
+        repair.durationRuns.forEach { run -> run.forEach { workout[it - 1] = workout[it - 1].copy(duration = ReferenceStructure.DURATION_FORMULA) } }
+        if (repair.balanceSheetId != null) balanceA1 = ReferenceStructure.BALANCE_FORMULA
+        metadata += repair.metadata
+    }
+
+    private fun content(value: Any?): CellContent = when {
+        value == null -> CellContent(formula = null, empty = true)
+        value is String && value.startsWith("=") -> CellContent(formula = value, empty = false)
+        else -> CellContent(formula = null, empty = false)
     }
 }
