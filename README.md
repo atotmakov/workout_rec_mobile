@@ -1,7 +1,8 @@
 # Workout Rec
 
 Android app (Kotlin, Jetpack Compose) for logging workouts into the user's own Google Sheets
-spreadsheet, with an Apps Script attached to the spreadsheet for daily automation. No custom
+spreadsheet. The spreadsheet calculates the balance and each day's duration itself; an Apps Script
+attached to it is an optional extra (spec [007](specs/007-optional-automation/spec.md)). No custom
 backend. Specs live in [`specs/`](specs/); project rules in
 [`.specify/memory/constitution.md`](.specify/memory/constitution.md).
 
@@ -70,14 +71,27 @@ Needed only to sign in on a real device (task T007; research R12 in
 ## First run on a phone
 
 1. Choose a Google account and allow access (the app only sees files it creates).
-2. The app creates `workout_rec_database_` with the tabs log, drills, rec, money, workout, balance.
-3. **Step 1 (once per Google account):** the app opens script.google.com/home/usersettings — turn
-   on **Google Apps Script API**, then return to the app.
-4. **Step 2 (once per spreadsheet):** the app opens the script's "Enable automation" page. Google
-   shows "Google hasn't verified this app" because the script is your own: tap **Advanced →
-   Go to workout_rec_automation → Allow**, then return to the app.
+2. The app creates `workout_rec_database_` with the tabs log, drills, rec, money, workout, balance,
+   and opens Today. That's all.
 
-Either step can be skipped for now; a reminder stays on the main screen until both are done.
+The spreadsheet calculates the balance (`balance!A1`) and each day's duration (`workout` column B)
+with formulas, and the app adds a `workout` row for every day with sets on each sync. An existing
+spreadsheet is converted once, on its first sync with this version: rows of days without sets are
+removed (they stay in the spreadsheet's version history).
+
+### Optional: spreadsheet automation
+
+**Money → Spreadsheet automation** (or the same item in the account menu) attaches a script that
+adds new days' rows at night while the app is closed, fills in the time when you type a set in the
+spreadsheet, and makes the `rec` tab follow the selected exercise. It takes two steps, as before:
+
+1. **Allow scripts (once per Google account):** the app opens script.google.com/home/usersettings —
+   turn on **Google Apps Script API**, then return to the app.
+2. **Enable automation (once per spreadsheet):** the app opens the script's "Enable automation"
+   page. Google shows "Google hasn't verified this app" because the script is your own: tap
+   **Advanced → Go to workout_rec_automation → Allow**, then return to the app.
+
+Either step can be left for later with **Continue for now**; nothing reminds you.
 
 ## Logging workouts
 
@@ -96,7 +110,7 @@ A bar at the bottom has four tabs (spec [004](specs/004-bottom-tab-navigation/sp
 - **History** lists earlier days; tap a set (there, or in today's exercise) to change or delete
   it, also when it is already in the spreadsheet or was typed in the web UI.
 - **Enter a past workout** (the + in History) adds a forgotten workout: date, start time and duration; the set times
-  are spread over the duration, so the daily job computes the right workout length.
+  are spread over the duration, so the spreadsheet computes the right workout length.
 - **Paid | Free** (spec [006](specs/006-workout-paid-status/spec.md)): each workout day is paid
   (with the coach, it uses a prepaid workout) or free (alone). Today has the control; a day's
   details in History and **Enter a past workout** have it too, and History shows each day's
@@ -106,9 +120,9 @@ A bar at the bottom has four tabs (spec [004](specs/004-bottom-tab-navigation/sp
 - **Exercises** adds, renames and deletes exercises in the `drills` tab, also offline. A rename
   also renames the exercise in every `log` row and in the `rec` tab. Only exercises with no
   logged sets can be deleted.
-- **Money** shows the paid workouts left (`balance` A1, calculated by the daily job) and the
-  payments of the `money` tab; **Add payment** adds a row there. A new payment changes the
-  balance at the next daily calculation.
+- **Money** shows the paid workouts left (`balance` A1, calculated by the spreadsheet) and the
+  payments of the `money` tab; **Add payment** adds a row there. Changes on the phone reach the
+  balance once they sync ("Updates after your changes sync" while they wait).
 
 Troubleshooting:
 
@@ -119,8 +133,7 @@ Troubleshooting:
 | A set "was changed in the spreadsheet…" | You and the web UI changed the same row; the spreadsheet version was kept |
 | "…was changed in the spreadsheet before your change reached it" (an exercise) | The exercise was renamed or removed in the web UI first; the spreadsheet version was kept |
 | "…has sets in the log, so it was not deleted" | The log has sets of that exercise, e.g. typed in the web UI |
-| "The balance is not updated" (Money) | The spreadsheet's daily automation is off; tap **Enable automation** |
-| "…its row there was not updated" | You deleted the first or last set of a day the daily job already counted; fix the `workout` row by hand if needed |
+| "No balance yet" (Money) | `balance!A1` shows an error, e.g. a tab it reads was renamed; rename it back |
 
 ## Inspecting the automation status
 
@@ -133,10 +146,13 @@ workout_rec.automation_enabled_at = 2026-10-03T09:12:44Z
 workout_rec.enable_url = https://script.google.com/macros/s/…/exec
 workout_rec.last_daily_run = 2026-10-04T00:03:10Z
 workout_rec.script_id = 1AbC…
-workout_rec.structure_version = 1
+workout_rec.structure_version = 3
 ```
 
-The daily job (`dailyJob`) runs at about 03:00 in the spreadsheet's time zone: it adds a row to
-`workout` for each new day in `log` (with the previous day's paid/free status), fills the duration
-of rows the app added, then recalculates `balance!A1`. The app updates the attached script on start
-when `workout_rec.script_version` is older than its own.
+`structure_version = 3` means the spreadsheet calculates durations and the balance. When
+automation is on, the daily job (`dailyJob`) runs at about 03:00 in the spreadsheet's time zone: it
+adds a row to `workout` for each new day in `log` (with the previous day's paid/free status),
+removes rows of days without sets, and puts the duration formula in empty cells; it never writes
+durations, nor the balance of a converted spreadsheet. The app updates the attached script on start
+when `workout_rec.script_version` is older than its own. If a duration or `balance!A1` is typed
+over, the next sync puts the formula back.

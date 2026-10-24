@@ -284,9 +284,9 @@ depends on them (plan risk 1).
 
 ## Phase 8: Polish & Cross-Cutting Concerns
 
-- [ ] T045 [P] Update `README.md`: the first run (account → Today), automation as an optional extra, and what the spreadsheet calculates
-- [ ] T046 [P] Update the screen gallery samples in `app/src/debug/java/com/workoutrec/gallery/ScreenGallery.kt`: Money with the `Calculated` note, the waiting line and the automation entry; the account menu item; no Today banner. Re-record with `./gradlew recordRoborazziDebug --tests '*ScreenGalleryTest*'`
-- [ ] T047 Run the full checks: `./gradlew :app:testDebugUnitTest :app:lintDebug`, `node --test "apps-script/tests/*.test.mjs"`, and `./gradlew connectedDebugAndroidTest` on the local emulator. Fix what fails
+- [X] T045 [P] Update `README.md`: the first run (account → Today), automation as an optional extra, and what the spreadsheet calculates
+- [X] T046 [P] Update the screen gallery samples in `app/src/debug/java/com/workoutrec/gallery/ScreenGallery.kt`: Money with the `Calculated` note, the waiting line and the automation entry; the account menu item; no Today banner. Re-record with `./gradlew recordRoborazziDebug --tests '*ScreenGalleryTest*'`
+- [X] T047 Run the full checks: `./gradlew :app:testDebugUnitTest :app:lintDebug`, `node --test "apps-script/tests/*.test.mjs"`, and `./gradlew connectedDebugAndroidTest` on the local emulator. Fix what fails **Result 2026-10-24**: unit tests + lint green, script tests 45/45, emulator UI tests 156/156
 - [ ] T048 Open the PR (title `feat: optional automation, spreadsheet-calculated balance and durations (007)`). Merge it when CI is green, per standing permission, and check that the release reaches internal testing
 - [ ] T049 Device quickstart #1–#13 on test spreadsheets (the user's device check). Record the results in this file
 - [ ] T050 After the release, update the user guide doc's "Getting started" and "Paid or Free, and your balance" sections (Claude Docs, https://claude.ai/artifact/MUVVKpyT7g2rcVmAAQtPD2) for the shorter first run and the optional automation

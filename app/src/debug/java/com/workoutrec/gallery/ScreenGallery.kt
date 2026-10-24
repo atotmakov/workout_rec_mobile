@@ -45,6 +45,7 @@ import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import com.workoutrec.R
 import com.workoutrec.automation.AutomationStatus
+import com.workoutrec.home.AutomationMenuState
 import com.workoutrec.data.SelectedAccount
 import com.workoutrec.google.ApiError
 import com.workoutrec.home.MainScreen
@@ -292,6 +293,8 @@ object ScreenGallery {
             PaymentDialog(today = Samples.TODAY, defaultWorkouts = 8, defaultSum = 800_000, onSave = { _, _, _ -> }, onDismiss = {})
         },
         GalleryScreen("64-money-empty") { MoneyFrame(Samples.moneyState(balance = null, payments = false, error = MoneyError.MISSING_TAB)) },
+        // Feature 007: the optional automation entry once it is on.
+        GalleryScreen("65-money-automation-on") { MoneyFrame(Samples.moneyState(balance = 11.0), automation = AutomationStatus.On) },
     )
 }
 
@@ -311,6 +314,7 @@ private fun TodayFrame(
                 onSignOut = {},
                 unsyncedCount = pendingCount,
                 syncStatus = { SampleSyncStatus(pendingCount, phase) },
+                automation = Samples.AUTOMATION_MENU,
             ) { modifier ->
                 TodayScreen(
                     groups, onAddExercise = {}, onOpenExercise = {}, modifier = modifier,
@@ -335,16 +339,23 @@ private fun BarFrame(tab: Tab, content: @Composable (Modifier) -> Unit) {
 }
 
 @Composable
-private fun MoneyFrame(state: MoneyState) {
+private fun MoneyFrame(state: MoneyState, automation: AutomationStatus = AutomationStatus.NotEnabled) {
     BarFrame(Tab.MONEY) { modifier ->
-        MoneyScreen(state, Samples.ZONE, onAdd = {}, onRefresh = {}, onEnableAutomation = {}, modifier = modifier, actions = { SampleAccountActions(pendingCount = if (state.payments.any { it.pending }) 1 else 0) })
+        MoneyScreen(
+            state, Samples.ZONE, onAdd = {}, onRefresh = {}, onEnableAutomation = {}, modifier = modifier,
+            actions = { SampleAccountActions(pendingCount = if (state.payments.any { it.pending }) 1 else 0) },
+            automation = automation,
+        )
     }
 }
 
 /** The sync icon and the avatar, as on every tab's first screen. */
 @Composable
 private fun SampleAccountActions(pendingCount: Int = 0) {
-    AccountActions(account = Samples.ACCOUNT, onSwitchAccount = {}, onSignOut = {}, syncStatus = { SampleSyncStatus(pendingCount, SyncPhase.Idle) })
+    AccountActions(
+        account = Samples.ACCOUNT, onSwitchAccount = {}, onSignOut = {}, syncStatus = { SampleSyncStatus(pendingCount, SyncPhase.Idle) },
+        automation = Samples.AUTOMATION_MENU,
+    )
 }
 
 @Composable
@@ -477,6 +488,9 @@ private object Samples {
         return exercises().map { ShownExercise(it.name, it.muscleGroup, pending = false, deletable = it.name !in logged) } +
             ShownExercise(name("Face pull", "Тяга к лицу"), name("Shoulders", "Плечи"), pending = true, deletable = true)
     }
+
+    /** Feature 007: the account menu's automation item, off. */
+    val AUTOMATION_MENU = AutomationMenuState(AutomationStatus.NotEnabled, onClick = {})
 
     fun moneyState(
         balance: Double?,

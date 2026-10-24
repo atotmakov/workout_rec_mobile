@@ -37,7 +37,7 @@ This is a list item below the balance card, shown in every state, including erro
 - Supporting text when On: "On. Runs every night." When Stopped, the existing stopped wording is
   used.
 - Tap: `SetupAction.StartAutomation`. This opens the existing guide screens for "Allow scripts"
-  and "Enable automation". "Not now" (`ContinueForNow`) and finishing both go back to the tab the
+  and "Enable automation". "Continue for now" (`ContinueForNow`) and finishing both go back to the tab the
   entry was opened from.
 
 ## Account menu (FR-012)
