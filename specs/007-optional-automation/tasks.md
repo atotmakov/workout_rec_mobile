@@ -137,7 +137,7 @@ depends on them (plan risk 1).
 
 ### Tests (write first, see them fail)
 
-- [ ] T018 [P] [US2] Write failing tests in `test/sync/LogSyncDayRowsTest.kt`, using the fake API:
+- [X] T018 [P] [US2] Write failing tests in `test/sync/LogSyncDayRowsTest.kt`, using the fake API:
   - a new day's sets and its waiting status go out in one call 22 with the row appended (formula in B)
   - a date typed only in the sheet gets a row with the default
   - a hand-added row for a date without sets is deleted
@@ -146,31 +146,31 @@ depends on them (plan risk 1).
   - no `WORKOUT_ROW_NOT_UPDATED` notice is produced any more
   - a missing `workout` tab still reports `WORKOUT_TAB_MISSING` only when statuses are waiting
   - a run with no other changes but a missing row still writes
-- [ ] T019 [P] [US2] Write failing tests in `test/money/BalanceNotesTest.kt` (contracts/screens.md "Balance card"):
+- [X] T019 [P] [US2] Write failing tests in `test/money/BalanceNotesTest.kt` (contracts/screens.md "Balance card"):
   - `calculated` → `Calculated`
   - not calculated + On → `Daily(lastRun)`; + Stopped → `Stopped`; + otherwise → `Calculated`
   - `waiting` is true when any set, day status or payment is waiting
   - there is no `Off` state
-- [ ] T020 [P] [US2] Write a failing migration test in `uitest/workout/data/MigrationTest.kt`: schema 3 with a `money_summary` row migrates to 4 and keeps its values, with `calculated = 0`
-- [ ] T021 [P] [US2] Write a failing test in `test/money/MoneyRefresherTest.kt`: metadata `structure_version` "3" (and "4") → `calculated = true`; "2" or missing → false. Analysis C1: a formula error in `balance!A1` (e.g. `#REF!` because a tab was renamed) gives `balance = null` and is reported as `BAD_SHEET_DATA` with no value
+- [X] T020 [P] [US2] Write a failing migration test in `uitest/workout/data/MigrationTest.kt`: schema 3 with a `money_summary` row migrates to 4 and keeps its values, with `calculated = 0`
+- [X] T021 [P] [US2] Write a failing test in `test/money/MoneyRefresherTest.kt`: metadata `structure_version` "3" (and "4") → `calculated = true`; "2" or missing → false. Analysis C1: a formula error in `balance!A1` (e.g. `#REF!` because a tab was renamed) gives `balance = null` and is reported as `BAD_SHEET_DATA` with no value
 
 ### Implementation
 
-- [ ] T022 [US2] In `main/sync/LogSync.kt`:
+- [X] T022 [US2] In `main/sync/LogSync.kt`:
   - replace `planStatuses` with a call to `DayRowsPlan.plan`. `daysWithSets` comes from the read rows minus this run's deletes plus its appends, using `SheetTime.workoutDay`. `logEmpty` = the log read *before* this run's writes has no rows (analysis U1: deleting every set in the app still removes the rows)
   - pass `deletes` in `WorkoutWrite`
   - count a plan with appends or deletes as `wrote`
   - drop `changesWorkoutRow` and the `WORKOUT_ROW_NOT_UPDATED` notice. Keep the enum value and string, per research R10
   - This makes T018 pass
-- [ ] T023 [US2] Add `calculated: Boolean` to `MoneySummary` (`main/money/MoneyRefresher.kt`). Set it from `read.metadata[ReferenceStructure.STRUCTURE_VERSION_KEY]`: the integer is at least 3. Report a text (error) balance cell as in T021. This makes T021 pass
-- [ ] T024 [US2] Add `val calculated: Boolean = false` (`@ColumnInfo(defaultValue = "0")`) to `MoneySummaryEntity` in `main/workout/data/Entities.kt`. In `main/workout/data/WorkoutDatabase.kt`, set `version = 4` and add `AutoMigration(from = 3, to = 4)`. Build to export `app/schemas/com.workoutrec.workout.data.WorkoutDatabase/4.json`, and map the field in `main/workout/data/WorkoutRepository.kt`. This makes T020 pass
-- [ ] T025 [US2] In `main/money/BalanceNote.kt`:
+- [X] T023 [US2] Add `calculated: Boolean` to `MoneySummary` (`main/money/MoneyRefresher.kt`). Set it from `read.metadata[ReferenceStructure.STRUCTURE_VERSION_KEY]`: the integer is at least 3. Report a text (error) balance cell as in T021. This makes T021 pass
+- [X] T024 [US2] Add `val calculated: Boolean = false` (`@ColumnInfo(defaultValue = "0")`) to `MoneySummaryEntity` in `main/workout/data/Entities.kt`. In `main/workout/data/WorkoutDatabase.kt`, set `version = 4` and add `AutoMigration(from = 3, to = 4)`. Build to export `app/schemas/com.workoutrec.workout.data.WorkoutDatabase/4.json`, and map the field in `main/workout/data/WorkoutRepository.kt`. This makes T020 pass
+- [X] T025 [US2] In `main/money/BalanceNote.kt`: — *`waiting` uses the repository's `waitingCount` (sets, statuses, payments and exercise changes)*
   - change `BalanceNote` to `Calculated`, `Daily(lastRun)` and `Stopped(lastRun)`
   - change `BalanceNoteState(note, waiting)`
   - `BalanceNotes.of(calculated, automation, lastDailyRun, waiting)`
   - in `main/money/MoneyRoute.kt`, set `waiting` from the repository's pending sets, statuses and payments flows
   - This makes T019 pass
-- [ ] T026 [US2] In `main/money/MoneyScreens.kt` `BalanceCard`:
+- [X] T026 [US2] In `main/money/MoneyScreens.kt` `BalanceCard`:
   - note texts as in contracts/screens.md, plus the "Updates after your changes sync." line when `waiting`
   - remove the "Enable automation" `TextButton` and the `onEnableAutomation` parameter from the card
   - strings `money_note_calculated` and `money_note_waiting` in `res/values{,-ru}/strings.xml`
@@ -206,7 +206,7 @@ depends on them (plan risk 1).
   - a call-24 or call-25 failure reports `CALCULATION_CHECK_FAILED` through `failure` and leaves the outcome `Synced`
   - `CALCULATION_RESTORED` is reported with a details string that has no dates or values
   - `CancellationException` is rethrown
-- [ ] T029 [P] [US3] Add a case to `test/sync/LogSyncDayRowsTest.kt`: an old spreadsheet with a v2-style row (A date-time, B number) for a day with sets keeps the row, and a row for a day without sets is deleted (US3 #2)
+- [X] T029 [P] [US3] Add a case to `test/sync/LogSyncDayRowsTest.kt`: an old spreadsheet with a v2-style row (A date-time, B number) for a day with sets keeps the row, and a row for a day without sets is deleted (US3 #2)
 
 ### Implementation
 

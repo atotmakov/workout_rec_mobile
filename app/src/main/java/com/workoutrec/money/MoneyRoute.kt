@@ -24,7 +24,7 @@ import kotlinx.coroutines.launch
 fun MoneyRoute(container: AppContainer, onEnableAutomation: () -> Unit, modifier: Modifier = Modifier, actions: @Composable () -> Unit = {}) {
     val payments by container.workoutRepository.payments.collectAsState(initial = emptyList())
     val summary by container.workoutRepository.moneySummary.collectAsState(initial = null)
-    val hasPending by container.workoutRepository.hasPendingPayment.collectAsState(initial = false)
+    val waiting by container.workoutRepository.waitingCount.collectAsState(initial = 0)
     val status by container.syncStatusStore.status.collectAsState(initial = SyncStatus())
     val zone = status.zone()
     val scope = rememberCoroutineScope()
@@ -34,11 +34,10 @@ fun MoneyRoute(container: AppContainer, onEnableAutomation: () -> Unit, modifier
     LaunchedEffect(Unit) { container.moneyRefresher.onOpen() }
 
     val note = BalanceNotes.of(
+        calculated = summary?.calculated ?: false,
         automation = summary?.automation ?: AutomationStatus.ScriptMissing,
         lastDailyRun = summary?.lastDailyRun,
-        pendingPayment = hasPending,
-        latestPayment = payments.filterNot { it.pending }.maxOfOrNull { it.date },
-        zone = zone,
+        waiting = waiting > 0,
     )
     MoneyScreen(
         state = MoneyState(

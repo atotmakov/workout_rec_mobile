@@ -183,9 +183,8 @@
     <string name="money_note_daily">The balance is calculated once a day; last at %1$s.</string>
     <string name="money_note_daily_unknown">The balance is calculated once a day.</string>
     <string name="money_note_stopped">The daily calculation seems stopped; the balance is from %1$s.</string>
-    <string name="money_note_off">The balance is not updated: the spreadsheet’s daily automation is off.</string>
-    <string name="money_note_new_payments">New payments are counted at the next daily calculation.</string>
-    <string name="money_enable_automation">Enable automation</string>
+    <string name="money_note_calculated">The balance is calculated by your spreadsheet.</string>
+    <string name="money_note_waiting">Updates after your changes sync.</string>
     <string name="money_downloaded">Updated %1$s</string>
     <string name="money_totals">Paid in total: %1$s workouts, %2$s</string>
     <string name="money_payment">%1$s workouts · %2$s</string>

@@ -66,7 +66,6 @@ object MoneyTags {
     const val SCREEN = "money_screen"
     const val BALANCE = "money_balance"
     const val NOTE = "money_balance_note"
-    const val ENABLE_AUTOMATION = "money_enable_automation"
     const val DOWNLOADED = "money_downloaded"
     const val TOTALS = "money_totals"
     const val ADD = "money_add"
@@ -124,7 +123,7 @@ fun MoneyScreen(
             modifier = Modifier.padding(padding).fillMaxSize().testTag(MoneyTags.REFRESH),
         ) {
             LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                item { BalanceCard(state, zone, locale, onEnableAutomation) }
+                item { BalanceCard(state, zone, locale) }
                 errorText(state.error)?.let { id ->
                     item { Text(stringResource(id), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall, modifier = Modifier.testTag(MoneyTags.ERROR)) }
                 }
@@ -161,7 +160,7 @@ fun MoneyScreen(
 }
 
 @Composable
-private fun BalanceCard(state: MoneyState, zone: ZoneId, locale: Locale, onEnableAutomation: () -> Unit) {
+private fun BalanceCard(state: MoneyState, zone: ZoneId, locale: Locale) {
     val owed = (state.balance ?: 0.0) < 0
     Card(
         Modifier.fillMaxWidth().padding(top = 8.dp),
@@ -185,18 +184,14 @@ private fun BalanceCard(state: MoneyState, zone: ZoneId, locale: Locale, onEnabl
             }
             Column(Modifier.testTag(MoneyTags.NOTE).semantics(mergeDescendants = true) {}) {
                 val note = when (val n = state.note.note) {
-                    is BalanceNote.Calculated -> n.lastRun?.let { stringResource(R.string.money_note_daily, dateTime(it, zone, locale)) }
+                    BalanceNote.Calculated -> stringResource(R.string.money_note_calculated)
+                    is BalanceNote.Daily -> n.lastRun?.let { stringResource(R.string.money_note_daily, dateTime(it, zone, locale)) }
                         ?: stringResource(R.string.money_note_daily_unknown)
                     is BalanceNote.Stopped -> stringResource(R.string.money_note_stopped, n.lastRun?.let { dateTime(it, zone, locale) } ?: "—")
-                    BalanceNote.Off -> stringResource(R.string.money_note_off)
                 }
                 Text(note, style = MaterialTheme.typography.bodySmall)
-                if (state.note.newPaymentsWaiting) Text(stringResource(R.string.money_note_new_payments), style = MaterialTheme.typography.bodySmall)
-            }
-            if (state.note.note !is BalanceNote.Calculated) {
-                TextButton(onClick = onEnableAutomation, modifier = Modifier.testTag(MoneyTags.ENABLE_AUTOMATION)) {
-                    Text(stringResource(R.string.money_enable_automation))
-                }
+                // Feature 007 FR-005a: the app never calculates the balance; it says when it will change.
+                if (state.note.waiting) Text(stringResource(R.string.money_note_waiting), style = MaterialTheme.typography.bodySmall)
             }
         }
     }

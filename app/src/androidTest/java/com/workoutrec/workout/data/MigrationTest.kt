@@ -55,6 +55,18 @@ class MigrationTest {
         }
     }
 
+    // Feature 007 data-model.md "App (Room schema 3 → 4)"
+    @Test
+    fun version3MoneySummarySurvivesAndIsNotCalculatedYet() {
+        helper.createDatabase(db, 3).use { v3 ->
+            v3.execSQL("INSERT INTO money_summary (id, balance, lastDailyRun, automation, downloadedAt, error) VALUES (1, 7.0, 10, 'On', 20, 'NONE')")
+        }
+
+        helper.runMigrationsAndValidate(db, 4, true).use { v4 ->
+            assertEquals(1, v4.count("money_summary WHERE balance = 7.0 AND automation = 'On' AND downloadedAt = 20 AND calculated = 0"))
+        }
+    }
+
     private fun SupportSQLiteDatabase.count(from: String): Int =
         query("SELECT COUNT(*) FROM $from").use { it.moveToFirst(); it.getInt(0) }
 }

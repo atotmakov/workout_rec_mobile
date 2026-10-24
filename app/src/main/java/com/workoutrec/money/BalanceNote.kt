@@ -1,32 +1,32 @@
 package com.workoutrec.money
 
 import com.workoutrec.automation.AutomationStatus
-import java.time.Instant
-import java.time.LocalDate
-import java.time.ZoneId
 
-/** What the note under the balance says (feature 004 FR-009a, research R7). */
+/** What the note under the balance says (feature 007 research R9). */
 sealed interface BalanceNote {
-    /** Calculated once a day; [lastRun] epoch millis when known. */
-    data class Calculated(val lastRun: Long?) : BalanceNote
-    /** The daily update seems stopped; the balance is from [lastRun]. */
+    /** The spreadsheet calculates the balance from every change. */
+    data object Calculated : BalanceNote
+    /** Not converted yet: an old attached script still calculates it once a day; [lastRun] epoch millis when known. */
+    data class Daily(val lastRun: Long?) : BalanceNote
+    /** Not converted yet and that daily update seems stopped; the balance is from [lastRun]. */
     data class Stopped(val lastRun: Long?) : BalanceNote
-    /** Daily automation is off: the balance is not updated. */
-    data object Off : BalanceNote
 }
 
-/** [newPaymentsWaiting]: a payment the next daily calculation will count (spec US4 scenario 7). */
-data class BalanceNoteState(val note: BalanceNote, val newPaymentsWaiting: Boolean)
+/** [waiting]: changes on the phone the balance will include after they sync (spec FR-005a). */
+data class BalanceNoteState(val note: BalanceNote, val waiting: Boolean)
 
 object BalanceNotes {
-    fun of(automation: AutomationStatus, lastDailyRun: Long?, pendingPayment: Boolean, latestPayment: LocalDate?, zone: ZoneId): BalanceNoteState {
-        val note = when (automation) {
-            AutomationStatus.On -> BalanceNote.Calculated(lastDailyRun)
-            AutomationStatus.Stopped -> BalanceNote.Stopped(lastDailyRun)
-            AutomationStatus.NotEnabled, AutomationStatus.ScriptMissing -> BalanceNote.Off
+    /**
+     * [calculated]: the spreadsheet is in the calculated form. A spreadsheet without running
+     * automation is converted by its first sync, so it never shows a "not updated" note (FR-002).
+     */
+    fun of(calculated: Boolean, automation: AutomationStatus, lastDailyRun: Long?, waiting: Boolean): BalanceNoteState {
+        val note = when {
+            calculated -> BalanceNote.Calculated
+            automation == AutomationStatus.On -> BalanceNote.Daily(lastDailyRun)
+            automation == AutomationStatus.Stopped -> BalanceNote.Stopped(lastDailyRun)
+            else -> BalanceNote.Calculated
         }
-        val lastRunDay = lastDailyRun?.let { Instant.ofEpochMilli(it).atZone(zone).toLocalDate() }
-        val newer = latestPayment != null && lastRunDay != null && latestPayment.isAfter(lastRunDay)
-        return BalanceNoteState(note, newPaymentsWaiting = note != BalanceNote.Off && (pendingPayment || newer))
+        return BalanceNoteState(note, waiting)
     }
 }

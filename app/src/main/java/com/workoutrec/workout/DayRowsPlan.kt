@@ -41,7 +41,9 @@ object DayRowsPlan {
     fun plan(rows: List<DayRow>, daysWithSets: Set<LocalDate>, logEmpty: Boolean, waiting: List<PendingStatus>): DayRowsResult {
         // Several rows for one date: only the first counts (feature 006).
         val byDate = rows.distinctBy { it.date }.associateBy { it.date }
-        val known = byDate.mapValuesTo(mutableMapOf()) { it.value.status }
+        // A row about to be removed is not a workout day, so it never decides a default.
+        val removed = if (logEmpty) emptySet() else byDate.keys.filterTo(mutableSetOf()) { it !in daysWithSets }
+        val known = byDate.filterKeys { it !in removed }.mapValuesTo(mutableMapOf()) { it.value.status }
         val updates = mutableListOf<RowUpdate>()
         val appends = mutableListOf<RowAppend>()
         val synced = mutableListOf<LocalDate>()

@@ -33,6 +33,12 @@
     "expected": { "appends": [], "removals": ["2026-10-02"] }
   },
   {
+    "name": "a removed row does not decide the default",
+    "logDays": ["2026-10-01", "2026-10-03"],
+    "workoutRows": [{ "date": "2026-10-01", "free": true }, { "date": "2026-10-02", "free": false }],
+    "expected": { "appends": [{ "date": "2026-10-03", "free": true }], "removals": ["2026-10-02"] }
+  },
+  {
     "name": "an empty log removes nothing",
     "logDays": [],
     "workoutRows": [{ "date": "2026-10-01", "free": false }],
