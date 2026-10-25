@@ -105,7 +105,10 @@ class ScriptInstaller(
 
     companion object {
         const val PROJECT_TITLE = "workout_rec_automation"
-        /** Feature 006: 2 = `workoutRowsPlan`; feature 007: 3 = formulas and removals, no balance once converted. */
-        const val SCRIPT_VERSION = 3
+        /**
+         * Feature 006: 2 = `workoutRowsPlan`; feature 007: 3 = formulas and removals, no balance once
+         * converted; 4 = appended durations via setFormula, which takes English syntax in every locale.
+         */
+        const val SCRIPT_VERSION = 4
     }
 }

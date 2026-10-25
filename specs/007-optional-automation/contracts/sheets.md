@@ -30,9 +30,12 @@ The `workout` groups now come after the log, drills and money groups. All of the
    ```json
    {"appendCells": {"sheetId": WORKOUT, "fields": "userEnteredValue",
      "rows": [{"values": [{"userEnteredValue": {"numberValue": SERIAL}},
-                          {"userEnteredValue": {"formulaValue": DURATION_FORMULA}},
+                          {},
                           {"userEnteredValue": {"numberValue": 0|1}}]}]}}
    ```
+
+   B is left empty: the form step (calls 24–25) writes the duration formula in the spreadsheet's
+   locale right after (research R1 "Locale").
 
 ### What gets written
 
@@ -48,13 +51,15 @@ The `workout` groups now come after the log, drills and money groups. All of the
 
 ```text
 GET v4/spreadsheets/{id}?ranges=workout!A2:B&ranges=balance!A1
-    &fields=developerMetadata(metadataId,metadataKey,metadataValue),
-            sheets(properties(title),data(startRow,rowData(values(userEnteredValue))))
+    &fields=properties(locale),developerMetadata(metadataId,metadataKey,metadataValue),
+            sheets(properties(title),data(startRow,rowData(values(userEnteredValue,effectiveValue))))
 ```
 
 - `workout` row `i` → grid row `startRow + i`. A row needs B when its A is a number. For B,
   `formulaValue` is compared with `DURATION_FORMULA` after `StructureValidator`'s normalisation;
-  any other `userEnteredValue`, or one that is missing, is "not the formula".
+  any other `userEnteredValue`, or one that is missing, is "not the formula". A B whose
+  `effectiveValue.errorValue.type` is `ERROR` (parse error) also needs the formula; it is not
+  reported as overwritten when its text matches.
 - `balance` A1 is compared in the same way with `BALANCE_FORMULA`.
 - The metadata gives `structure_version`, `script_version` and the automation keys (for the gate).
 - Called only after a successful sync run, and only when both `workoutSheetId` and
@@ -65,7 +70,8 @@ GET v4/spreadsheets/{id}?ranges=workout!A2:B&ranges=balance!A1
 Called only when call 24 found something to write. One `batchUpdate`:
 
 - For each contiguous run of rows that need B, a `repeatCell` over B of those rows with
-  `{"userEnteredValue": {"formulaValue": DURATION_FORMULA}}`, `fields: "userEnteredValue"`.
+  `{"userEnteredValue": {"formulaValue": durationFormula(locale)}}`, `fields: "userEnteredValue"`.
+  In a locale with a decimal comma, such as `ru_RU`, the `,` separators are written as `;`.
 - `balance!A1` gets the formula when it needs it and the gate (R6) is open.
 - `upsertMetadata(structure_version = "3")` is added when the gate is open and the version is
   below 3. It uses the existing `SheetsClient.upsertMetadata` request shape, with IDs from call 24.

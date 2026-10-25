@@ -24,12 +24,13 @@ object CalculatedForm {
         // R6: an old script that still runs at night writes a value over the balance formula.
         val gateOpen = !(automation == AutomationStatus.On && scriptVersion < SCRIPT_VERSION_WITH_FORMULAS)
 
-        val durations = cells.rows.filter { it.hasDate && !it.duration.holds(ReferenceStructure.DURATION_FORMULA) }
+        // A formula with the right text can still be unparsed: one written in another locale's syntax.
+        val durations = cells.rows.filter { it.hasDate && (it.duration.parseError || !it.duration.holds(ReferenceStructure.DURATION_FORMULA)) }
         val writeBalance = gateOpen && !cells.balance.holds(ReferenceStructure.BALANCE_FORMULA)
         val restored = buildMap {
             // An empty cell is a row added by hand or by an old script, not an overwritten calculation.
             if (converted && writeBalance && !cells.balance.empty) put("balance", 1)
-            val typedOver = durations.count { !it.duration.empty }
+            val typedOver = durations.count { !it.duration.empty && !it.duration.holds(ReferenceStructure.DURATION_FORMULA) }
             if (converted && typedOver > 0) put("duration", typedOver)
         }
         val marker = if (gateOpen && !converted) mapOf(versionKey to ReferenceStructure.STRUCTURE_VERSION) else emptyMap()
@@ -39,6 +40,7 @@ object CalculatedForm {
             balanceSheetId = balanceSheetId.takeIf { writeBalance },
             metadata = marker,
             metadataIds = cells.metadataIds.filterKeys { it in marker },
+            durationFormula = ReferenceStructure.durationFormula(cells.locale),
         )
         return FormDecision(repair.takeUnless { it.isEmpty }, restored)
     }

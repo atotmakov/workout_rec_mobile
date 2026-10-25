@@ -341,8 +341,8 @@ class SheetsLogClientTest {
         assertEquals("userEnteredValue", append["fields"]!!.jsonPrimitive.content)
         val rows = append["rows"]!!.jsonArray.map { it.jsonObject["values"]!!.jsonArray.map { v -> v.jsonObject } }
         assertEquals(46033.0, rows[0][0]["userEnteredValue"]!!.jsonObject["numberValue"]!!.jsonPrimitive.double, 0.0)
-        // Feature 007 research R1: the duration is the spreadsheet's formula.
-        assertEquals(ReferenceStructure.DURATION_FORMULA, rows[0][1]["userEnteredValue"]!!.jsonObject["formulaValue"]!!.jsonPrimitive.content)
+        // Feature 007 research R1: B is left to the form step, which writes the formula in the spreadsheet's locale.
+        assertEquals(null, rows[0][1]["userEnteredValue"])
         assertEquals(0.0, rows[0][2]["userEnteredValue"]!!.jsonObject["numberValue"]!!.jsonPrimitive.double, 0.0)
         assertEquals(1.0, rows[1][2]["userEnteredValue"]!!.jsonObject["numberValue"]!!.jsonPrimitive.double, 0.0)
     }
@@ -391,7 +391,7 @@ class SheetsLogClientTest {
     fun `call 24 reads the duration and balance cells with the metadata`() = runTest {
         server.enqueue(
             MockResponse().setBody(
-                """{"developerMetadata":[{"metadataId":11,"metadataKey":"workout_rec.structure_version","metadataValue":"2"},
+                """{"properties":{"locale":"ru_RU"},"developerMetadata":[{"metadataId":11,"metadataKey":"workout_rec.structure_version","metadataValue":"2"},
                      {"metadataId":12,"metadataKey":"workout_rec.script_version","metadataValue":"3"}],
                    "sheets":[
                      {"properties":{"title":"workout"},"data":[{"startRow":1,"rowData":[
@@ -399,7 +399,11 @@ class SheetsLogClientTest {
                         {},
                         {"values":[{"userEnteredValue":{"numberValue":46001}},{"userEnteredValue":{"numberValue":25}}]},
                         {"values":[{"userEnteredValue":{"stringValue":"note"}}]},
-                        {"values":[{"userEnteredValue":{"numberValue":46002}}]}]}]},
+                        {"values":[{"userEnteredValue":{"numberValue":46002}}]},
+                        {"values":[{"userEnteredValue":{"numberValue":46003}},{"userEnteredValue":{"formulaValue":"=SUM(1, 2)"},
+                          "effectiveValue":{"errorValue":{"type":"ERROR","message":"Formula parse error."}}}]},
+                        {"values":[{"userEnteredValue":{"numberValue":46004}},{"userEnteredValue":{"formulaValue":"=1/0"},
+                          "effectiveValue":{"errorValue":{"type":"DIVIDE_BY_ZERO"}}}]}]}]},
                      {"properties":{"title":"balance"},"data":[{"rowData":[{"values":[{"userEnteredValue":{"numberValue":4}}]}]}]}]}""",
             ),
         )
@@ -407,7 +411,8 @@ class SheetsLogClientTest {
         val url = server.takeRequest().requestUrl!!
         assertEquals(listOf("workout!A2:B", "balance!A1"), url.queryParameterValues("ranges"))
         assertEquals(
-            "developerMetadata(metadataId,metadataKey,metadataValue),sheets(properties(title),data(startRow,rowData(values(userEnteredValue))))",
+            "properties(locale),developerMetadata(metadataId,metadataKey,metadataValue)," +
+                "sheets(properties(title),data(startRow,rowData(values(userEnteredValue,effectiveValue))))",
             url.queryParameter("fields"),
         )
         assertEquals(
@@ -417,12 +422,15 @@ class SheetsLogClientTest {
                 CalculatedRow(3, hasDate = true, duration = CellContent(formula = null, empty = false)),
                 CalculatedRow(4, hasDate = false, duration = CellContent(formula = null, empty = true)),
                 CalculatedRow(5, hasDate = true, duration = CellContent(formula = null, empty = true)),
+                CalculatedRow(6, hasDate = true, duration = CellContent(formula = "=SUM(1, 2)", empty = false, parseError = true)),
+                CalculatedRow(7, hasDate = true, duration = CellContent(formula = "=1/0", empty = false)),
             ),
             cells.rows,
         )
         assertEquals(CellContent(formula = null, empty = false), cells.balance)
         assertEquals("2", cells.metadata["workout_rec.structure_version"])
         assertEquals(12, cells.metadataIds["workout_rec.script_version"])
+        assertEquals("ru_RU", cells.locale)
     }
 
     @Test
@@ -432,6 +440,7 @@ class SheetsLogClientTest {
         assertEquals(emptyList<CalculatedRow>(), cells.rows)
         assertEquals(CellContent(formula = null, empty = true), cells.balance)
         assertEquals(emptyMap<String, String>(), cells.metadata)
+        assertEquals(null, cells.locale)
     }
 
     @Test
@@ -445,6 +454,7 @@ class SheetsLogClientTest {
                 balanceSheetId = 5,
                 metadata = mapOf("workout_rec.structure_version" to "3"),
                 metadataIds = mapOf("workout_rec.structure_version" to 11),
+                durationFormula = ReferenceStructure.durationFormula("ru_RU"),
             ),
         )
         val requests = GoogleJson.parseToJsonElement(server.takeRequest().body.readUtf8()).jsonObject["requests"]!!.jsonArray.map { it.jsonObject }
@@ -454,7 +464,7 @@ class SheetsLogClientTest {
             listOf(9, 1, 3, 1, 2),
             listOf("sheetId", "startRowIndex", "endRowIndex", "startColumnIndex", "endColumnIndex").map { first["range"]!!.jsonObject[it]!!.jsonPrimitive.int },
         )
-        assertEquals(ReferenceStructure.DURATION_FORMULA, first["cell"]!!.jsonObject["userEnteredValue"]!!.jsonObject["formulaValue"]!!.jsonPrimitive.content)
+        assertEquals(ReferenceStructure.durationFormula("ru_RU"), first["cell"]!!.jsonObject["userEnteredValue"]!!.jsonObject["formulaValue"]!!.jsonPrimitive.content)
         assertEquals("userEnteredValue", first["fields"]!!.jsonPrimitive.content)
         assertEquals(5, requests[1]["repeatCell"]!!.jsonObject["range"]!!.jsonObject["startRowIndex"]!!.jsonPrimitive.int)
         val balance = requests[2]["updateCells"]!!.jsonObject

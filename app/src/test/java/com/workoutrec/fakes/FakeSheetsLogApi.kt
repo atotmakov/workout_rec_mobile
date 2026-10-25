@@ -47,6 +47,8 @@ class FakeSheetsLogApi(
     var balanceA1: Any? = 0.0,
     /** Feature 007: the spreadsheet's developer metadata, as call 24 returns it. */
     val metadata: MutableMap<String, String> = mutableMapOf(),
+    /** The spreadsheet's locale; with `ru_RU` a formula with `,` separators does not parse. */
+    var locale: String? = null,
 ) : SheetsLogApi {
 
     /** Feature 007: call 25 requests, in order. */
@@ -137,7 +139,7 @@ class FakeSheetsLogApi(
         workoutPart?.let { w ->
             w.updates.forEach { this.workout[it.rowIndex - 1] = this.workout[it.rowIndex - 1].copy(alone = DayStatusRules.toSheet(it.status).toDouble()) }
             w.deletes.sortedDescending().forEach { this.workout.removeAt(it - 1) }
-            w.appends.forEach { this.workout += WorkoutCells(it.serial, ReferenceStructure.DURATION_FORMULA, DayStatusRules.toSheet(it.status).toDouble()) }
+            w.appends.forEach { this.workout += WorkoutCells(it.serial, null, DayStatusRules.toSheet(it.status).toDouble()) }
         }
         moneyPart?.appends?.forEach { this.money += MoneyCells(it.serial, it.workouts.toDouble(), it.sum) }
         val ops = deletes.map { it to null } + edits.map { it.rowIndex to it }
@@ -176,6 +178,7 @@ class FakeSheetsLogApi(
             balance = content(balanceA1),
             metadata = metadata.toMap(),
             metadataIds = metadata.keys.withIndex().associate { (i, key) -> key to i + 100 },
+            locale = locale,
         )
     }
 
@@ -184,14 +187,14 @@ class FakeSheetsLogApi(
         calls += "repair:$spreadsheetId"
         maybeFail("repair")
         repairs += repair
-        repair.durationRuns.forEach { run -> run.forEach { workout[it - 1] = workout[it - 1].copy(duration = ReferenceStructure.DURATION_FORMULA) } }
+        repair.durationRuns.forEach { run -> run.forEach { workout[it - 1] = workout[it - 1].copy(duration = repair.durationFormula) } }
         if (repair.balanceSheetId != null) balanceA1 = ReferenceStructure.BALANCE_FORMULA
         metadata += repair.metadata
     }
 
     private fun content(value: Any?): CellContent = when {
         value == null -> CellContent(formula = null, empty = true)
-        value is String && value.startsWith("=") -> CellContent(formula = value, empty = false)
+        value is String && value.startsWith("=") -> CellContent(formula = value, empty = false, parseError = locale == "ru_RU" && ',' in value)
         else -> CellContent(formula = null, empty = false)
     }
 }

@@ -97,8 +97,11 @@ data class WorkoutWrite(
     val isEmpty: Boolean get() = updates.isEmpty() && appends.isEmpty() && deletes.isEmpty()
 }
 
-/** Feature 007 call 24: a cell's content; [formula] is null for a value or an empty cell. */
-data class CellContent(val formula: String?, val empty: Boolean)
+/**
+ * Feature 007 call 24: a cell's content; [formula] is null for a value or an empty cell.
+ * [parseError] is a formula Sheets could not parse (`#ERROR!`), such as one in another locale.
+ */
+data class CellContent(val formula: String?, val empty: Boolean, val parseError: Boolean = false)
 
 /** A `workout` data row's date and duration cells; [rowIndex] is 0-based (row 2 → 1). */
 data class CalculatedRow(val rowIndex: Int, val hasDate: Boolean, val duration: CellContent)
@@ -109,6 +112,8 @@ data class CalculatedCells(
     val balance: CellContent,
     val metadata: Map<String, String>,
     val metadataIds: Map<String, Int>,
+    /** The spreadsheet's locale, such as `ru_RU`; formulas are written in its syntax. */
+    val locale: String? = null,
 )
 
 /**
@@ -121,6 +126,8 @@ data class CalculatedRepair(
     val balanceSheetId: Int?,
     val metadata: Map<String, String>,
     val metadataIds: Map<String, Int>,
+    /** The duration formula in the spreadsheet's locale ([ReferenceStructure.durationFormula]). */
+    val durationFormula: String = ReferenceStructure.DURATION_FORMULA,
 ) {
     val isEmpty: Boolean get() = durationRuns.isEmpty() && balanceSheetId == null && metadata.isEmpty()
 }
@@ -156,7 +163,7 @@ class SheetsLogClient(
 ) : SheetsLogApi {
 
     @Serializable
-    private data class Properties(val timeZone: String = "", val sheetId: Int = 0, val title: String = "")
+    private data class Properties(val timeZone: String = "", val sheetId: Int = 0, val title: String = "", val locale: String = "")
 
     @Serializable
     private data class Sheet(val properties: Properties = Properties())
@@ -266,7 +273,7 @@ class SheetsLogClient(
     }
 
     @Serializable
-    private data class CellJson(val userEnteredValue: JsonObject? = null)
+    private data class CellJson(val userEnteredValue: JsonObject? = null, val effectiveValue: JsonObject? = null)
 
     @Serializable
     private data class RowJson(val values: List<CellJson> = emptyList())
@@ -281,7 +288,11 @@ class SheetsLogClient(
     private data class MetadataJson(val metadataId: Int = 0, val metadataKey: String = "", val metadataValue: String = "")
 
     @Serializable
-    private data class CellsResponse(val developerMetadata: List<MetadataJson> = emptyList(), val sheets: List<GridSheet> = emptyList())
+    private data class CellsResponse(
+        val properties: Properties = Properties(),
+        val developerMetadata: List<MetadataJson> = emptyList(),
+        val sheets: List<GridSheet> = emptyList(),
+    )
 
     /** Call 24 (feature 007 contracts/sheets.md): what the calculated cells hold, with the metadata. */
     override suspend fun readCalculatedCells(spreadsheetId: String): CalculatedCells {
@@ -290,7 +301,8 @@ class SheetsLogClient(
             .addQueryParameter("ranges", "$BALANCE!A1")
             .addQueryParameter(
                 "fields",
-                "developerMetadata(metadataId,metadataKey,metadataValue),sheets(properties(title),data(startRow,rowData(values(userEnteredValue))))",
+                "properties(locale),developerMetadata(metadataId,metadataKey,metadataValue)," +
+                    "sheets(properties(title),data(startRow,rowData(values(userEnteredValue,effectiveValue))))",
             )
             .build()
         val response = GoogleJson.decodeFromString<CellsResponse>(http.execute(Request.Builder().url(url).build()))
@@ -306,12 +318,14 @@ class SheetsLogClient(
             balance = balance,
             metadata = response.developerMetadata.associate { it.metadataKey to it.metadataValue },
             metadataIds = response.developerMetadata.associate { it.metadataKey to it.metadataId },
+            locale = response.properties.locale.ifBlank { null },
         )
     }
 
     private fun content(cell: CellJson?): CellContent {
         val value = cell?.userEnteredValue ?: return CellContent(formula = null, empty = true)
-        return CellContent(formula = (value["formulaValue"] as? JsonPrimitive)?.content, empty = false)
+        val error = (cell.effectiveValue?.get("errorValue") as? JsonObject)?.get("type") as? JsonPrimitive
+        return CellContent(formula = (value["formulaValue"] as? JsonPrimitive)?.content, empty = false, parseError = error?.content == "ERROR")
     }
 
     /** Call 25: formulas back into the calculated cells, and the conversion marker, in one write. */
@@ -329,7 +343,7 @@ class SheetsLogClient(
                                 put("startColumnIndex", 1)
                                 put("endColumnIndex", 2)
                             }
-                            putJsonObject("cell") { put("userEnteredValue", formula(ReferenceStructure.DURATION_FORMULA)) }
+                            putJsonObject("cell") { put("userEnteredValue", formula(repair.durationFormula)) }
                             put("fields", "userEnteredValue")
                         }
                     },
@@ -431,7 +445,10 @@ class SheetsLogClient(
         }
     }
 
-    /** Column B holds the duration formula (feature 007 research R1). */
+    /**
+     * Column B is left empty: the form step right after the sync writes the duration formula in the
+     * spreadsheet's locale (feature 007 research R1, R5).
+     */
     private fun appendWorkouts(sheetId: Int, appends: List<WorkoutAppend>) = buildJsonObject {
         putJsonObject("appendCells") {
             put("sheetId", sheetId)
@@ -441,7 +458,7 @@ class SheetsLogClient(
                         buildJsonObject {
                             putJsonArray("values") {
                                 add(buildJsonObject { put("userEnteredValue", number(append.serial)) })
-                                add(buildJsonObject { put("userEnteredValue", formula(ReferenceStructure.DURATION_FORMULA)) })
+                                add(buildJsonObject { })
                                 add(buildJsonObject { put("userEnteredValue", number(DayStatusRules.toSheet(append.status))) })
                             }
                         },

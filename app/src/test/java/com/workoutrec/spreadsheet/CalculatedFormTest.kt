@@ -64,6 +64,30 @@ class CalculatedFormTest {
     }
 
     @Test
+    fun `a duration formula that did not parse is rewritten without a report`() {
+        val unparsed = CellContent(ReferenceStructure.DURATION_FORMULA, empty = false, parseError = true)
+        val decision = decide(cells(duration, unparsed))
+        assertEquals(listOf(2..2), decision.repair?.durationRuns)
+        assertEquals(emptyMap<String, Int>(), decision.restored)
+    }
+
+    @Test
+    fun `durations are written in the spreadsheet's locale`() {
+        val ru = decide(cells(empty).copy(locale = "ru_RU")).repair!!.durationFormula
+        assertEquals(ReferenceStructure.DURATION_FORMULA.replace(',', ';'), ru)
+        assertEquals(ReferenceStructure.DURATION_FORMULA, decide(cells(empty).copy(locale = "en_US")).repair!!.durationFormula)
+        assertEquals(ReferenceStructure.DURATION_FORMULA, decide(cells(empty)).repair!!.durationFormula)
+    }
+
+    @Test
+    fun `the locale's argument separator follows its decimal separator`() {
+        assertEquals(false, ReferenceStructure.durationFormula("de_DE").contains(','))
+        assertEquals(false, ReferenceStructure.durationFormula("fr_FR").contains(','))
+        assertEquals(false, ReferenceStructure.durationFormula("en_GB").contains(';'))
+        assertEquals(false, ReferenceStructure.durationFormula("ja_JP").contains(';'))
+    }
+
+    @Test
     fun `rows without a date are left alone`() {
         val cells = cells(duration).copy(rows = listOf(CalculatedRow(1, hasDate = false, duration = value), CalculatedRow(2, hasDate = true, duration = duration)))
         assertNull(decide(cells).repair)
