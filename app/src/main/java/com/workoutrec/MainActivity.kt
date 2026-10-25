@@ -217,9 +217,14 @@ private fun AppNavHost(container: AppContainer) {
                             LogRoutes.PICKER,
                             arguments = listOf(navArgument("exercise") { type = NavType.StringType; nullable = true; defaultValue = null }),
                         ) { entry ->
-                            PickerRoute(container, onBack = { navController.popBackStack() }, onStart = { exercise, sets ->
-                                navController.navigate(LogRoutes.logging(exercise, sets)) { popUpTo(Routes.HOME) }
-                            }, preselected = entry.arguments?.getString("exercise"))
+                            PickerRoute(
+                                container,
+                                onBack = { navController.popBackStack() },
+                                onStart = { exercise, sets -> navController.navigate(LogRoutes.logging(exercise, sets)) { popUpTo(Routes.HOME) } },
+                                // The picker stays on Today's stack and lists the new exercises on return.
+                                onAddExercises = { navController.selectTab(Tab.EXERCISES, reselect = false) },
+                                preselected = entry.arguments?.getString("exercise"),
+                            )
                         }
                         composable(
                             LogRoutes.LOGGING,

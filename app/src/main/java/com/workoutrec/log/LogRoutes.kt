@@ -22,7 +22,6 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.LifecycleResumeEffect
@@ -33,7 +32,6 @@ import com.workoutrec.AppContainer
 import com.workoutrec.R
 import com.workoutrec.monitoring.ProfileTarget
 import com.workoutrec.monitoring.ScreenProfile
-import com.workoutrec.setup.Browser
 import com.workoutrec.sync.RefreshPolicy
 import com.workoutrec.sync.SyncStatus
 import com.workoutrec.workout.DayStatusRules
@@ -243,11 +241,15 @@ fun EditSetRoute(container: AppContainer, set: DisplaySet, zone: ZoneId, onDone:
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PickerRoute(container: AppContainer, onBack: () -> Unit, onStart: (exercise: String, sets: Int) -> Unit, preselected: String? = null) {
-    val context = LocalContext.current
+fun PickerRoute(
+    container: AppContainer,
+    onBack: () -> Unit,
+    onStart: (exercise: String, sets: Int) -> Unit,
+    onAddExercises: () -> Unit,
+    preselected: String? = null,
+) {
     val exercises by container.workoutRepository.exercises.collectAsState(initial = emptyList())
     val sets by container.workoutRepository.displaySets.collectAsState(initial = emptyList())
-    val binding by container.settingsStore.binding.collectAsState(initial = null)
     var picked by rememberSaveable { mutableStateOf(preselected) }
     Scaffold(
         topBar = {
@@ -262,9 +264,7 @@ fun PickerRoute(container: AppContainer, onBack: () -> Unit, onStart: (exercise:
             exercises = exercises,
             recent = remember(sets) { DisplayModel.recentExercises(sets) },
             onPick = { picked = it },
-            onOpenDrills = {
-                binding?.spreadsheetId?.let { Browser.open(context, "https://docs.google.com/spreadsheets/d/$it/edit") }
-            },
+            onAddExercises = onAddExercises,
             modifier = Modifier.padding(padding),
         )
     }

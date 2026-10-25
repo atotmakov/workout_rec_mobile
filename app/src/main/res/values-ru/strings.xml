@@ -49,8 +49,8 @@
     <string name="picker_search">Поиск</string>
     <string name="picker_recent">Недавние</string>
     <string name="picker_other_group">Другое</string>
-    <string name="picker_empty">Упражнений пока нет. Добавьте их на вкладку drills в таблице: группа мышц в столбце A, упражнение в столбце B.</string>
-    <string name="picker_open_drills">Открыть вкладку drills</string>
+    <string name="picker_empty">Упражнений пока нет. Добавьте их на вкладке «Упражнения».</string>
+    <string name="picker_add_exercises">Добавить упражнения</string>
     <string name="plan_title">Сколько подходов?</string>
     <string name="plan_ok">Начать</string>
     <string name="plan_cancel">Отмена</string>

@@ -35,7 +35,7 @@ class ExercisePickerTest {
 
     @Test
     fun exercisesAreGroupedByMuscleGroup() {
-        compose.setContent { ExercisePicker(exercises, recent = emptyList(), onPick = {}, onOpenDrills = {}) }
+        compose.setContent { ExercisePicker(exercises, recent = emptyList(), onPick = {}, onAddExercises = {}) }
         compose.onNodeWithText("back").assertIsDisplayed()
         compose.onNodeWithText("chest").assertIsDisplayed()
         compose.onNodeWithText(context.getString(R.string.picker_other_group)).assertIsDisplayed()
@@ -44,7 +44,7 @@ class ExercisePickerTest {
 
     @Test
     fun searchFiltersByPartOfTheNameIgnoringCase() {
-        compose.setContent { ExercisePicker(exercises, recent = listOf("plank"), onPick = {}, onOpenDrills = {}) }
+        compose.setContent { ExercisePicker(exercises, recent = listOf("plank"), onPick = {}, onAddExercises = {}) }
         compose.onNodeWithTag(PickerTags.RECENT).assertIsDisplayed()
         compose.onNodeWithTag(PickerTags.SEARCH).performTextInput("ROW")
         compose.onNodeWithTag(PickerTags.item("Barbell row")).assertIsDisplayed()
@@ -55,17 +55,17 @@ class ExercisePickerTest {
     @Test
     fun recentExercisesComeFirstAndCanBePicked() {
         var picked: String? = null
-        compose.setContent { ExercisePicker(exercises, recent = listOf("bench press"), onPick = { picked = it }, onOpenDrills = {}) }
+        compose.setContent { ExercisePicker(exercises, recent = listOf("bench press"), onPick = { picked = it }, onAddExercises = {}) }
         compose.onNodeWithTag(PickerTags.recentItem("bench press")).performClick()
         assertEquals("bench press", picked)
     }
 
     @Test
-    fun emptyListOffersToOpenTheDrillsTab() {
+    fun emptyListOffersToAddExercisesInTheApp() {
         var opened = 0
-        compose.setContent { ExercisePicker(emptyList(), recent = emptyList(), onPick = {}, onOpenDrills = { opened++ }) }
+        compose.setContent { ExercisePicker(emptyList(), recent = emptyList(), onPick = {}, onAddExercises = { opened++ }) }
         compose.onNodeWithTag(PickerTags.EMPTY).assertIsDisplayed()
-        compose.onNodeWithText(context.getString(R.string.picker_open_drills)).performClick()
+        compose.onNodeWithText(context.getString(R.string.picker_add_exercises)).performClick()
         assertEquals(1, opened)
     }
 }
