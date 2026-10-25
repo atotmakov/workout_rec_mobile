@@ -139,11 +139,12 @@ test('dailyJob appends three-value workout rows, then balance, then last run (in
   });
   ctx.dailyJob();
   const kinds = fakes.calls.map((c) => c[0] === 'setValue' ? `setValue ${c[1]}` : c[0]);
-  assert.deepEqual(kinds, ['appendRow', 'setValue balance!A1', 'addMetadata']);
+  assert.deepEqual(kinds, ['appendRow', 'setFormula', 'setValue balance!A1', 'addMetadata']);
   const appended = fakes.calls[0][2];
   assert.equal(appended.length, 3);
   assert.equal(appended[0].toISOString().slice(0, 10), '2026-01-14');
-  assert.deepEqual(appended.slice(1), [DURATION_FORMULA, 0]);
+  assert.deepEqual(appended.slice(1), ['', 0]);
+  assert.deepEqual(plain(fakes.calls[1]), ['setFormula', 'workout!B3', DURATION_FORMULA], 'the formula goes in with setFormula');
   assert.equal(ss.getSheetByName('balance').cell(1, 1), 22, '24 paid - 2 workouts');
   assert.ok(ss.metadataValue('workout_rec.last_daily_run'));
 });
@@ -165,11 +166,12 @@ test('dailyJob puts the formula in empty durations, appends new days with the pr
   });
   ctx.dailyJob();
   const kinds = fakes.calls.map((c) => c[0] === 'setValue' ? `setValue ${c[1]}` : c[0]);
-  assert.deepEqual(kinds, ['setFormula', 'appendRow', 'setValue balance!A1', 'addMetadata']);
+  assert.deepEqual(kinds, ['setFormula', 'appendRow', 'setFormula', 'setValue balance!A1', 'addMetadata']);
   assert.deepEqual(plain(fakes.calls[0]), ['setFormula', 'workout!B2', DURATION_FORMULA]);
   const appended = fakes.calls[1][2];
   assert.equal(appended[0].toISOString().slice(0, 10), '2026-01-14');
-  assert.deepEqual(appended.slice(1), [DURATION_FORMULA, 1], 'copies the free day before');
+  assert.deepEqual(appended.slice(1), ['', 1], 'copies the free day before');
+  assert.deepEqual(plain(fakes.calls[2]), ['setFormula', 'workout!B3', DURATION_FORMULA]);
   assert.equal(ss.getSheetByName('balance').cell(1, 1), 24, '24 paid - 0 counted (both days free)');
 });
 

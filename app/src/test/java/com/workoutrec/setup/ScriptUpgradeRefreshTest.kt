@@ -49,7 +49,7 @@ class ScriptUpgradeRefreshTest {
 
     @Test
     fun `a current script is left alone`() = runTest {
-        flowWith(enabled + (AutomationStatusEvaluator.SCRIPT_VERSION to "3")).refresh(account)
+        flowWith(enabled + (AutomationStatusEvaluator.SCRIPT_VERSION to "4")).refresh(account)
         assertEquals(emptyList<String>(), installer.log)
     }
 

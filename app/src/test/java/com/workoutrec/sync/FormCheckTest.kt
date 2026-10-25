@@ -43,6 +43,20 @@ class FormCheckTest {
     }
 
     @Test
+    fun `a ru_RU spreadsheet gets durations with its separator, and unparsed ones are rewritten once`() = runTest {
+        sheets.locale = "ru_RU"
+        sheets.metadata[version] = "3"
+        sheets.balanceA1 = ReferenceStructure.BALANCE_FORMULA
+        sheets.log += FakeSheetsLogApi.Cells(serial20 + 0.75, "squat", 20.0, 10)
+        sheets.workout += WorkoutCells(serial20, ReferenceStructure.DURATION_FORMULA, 0.0)
+        sync.run()
+        assertEquals(ReferenceStructure.DURATION_FORMULA.replace(',', ';'), sheets.workout.single().duration)
+        assertTrue(reports().isEmpty())
+        sync.run()
+        assertEquals(1, sheets.repairs.size)
+    }
+
+    @Test
     fun `a sync converts an old spreadsheet once`() = runTest {
         sheets.log += FakeSheetsLogApi.Cells(serial20 + 0.75, "squat", 20.0, 10)
         sheets.workout += WorkoutCells(serial20 + 0.75, 45.0, 0.0)

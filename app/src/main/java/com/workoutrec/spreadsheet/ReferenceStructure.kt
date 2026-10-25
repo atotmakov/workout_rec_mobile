@@ -1,6 +1,8 @@
 package com.workoutrec.spreadsheet
 
 import com.workoutrec.google.SheetsClient
+import java.text.DecimalFormatSymbols
+import java.util.Locale
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -33,6 +35,17 @@ object ReferenceStructure {
     const val DURATION_FORMULA = "=LET(d, INDEX(A:A, ROW()), IF(d = \"\", \"\", " +
         "ROUND((MAXIFS(log!A:A, log!A:A, \">=\" & INT(d), log!A:A, \"<\" & INT(d) + 1) - " +
         "MINIFS(log!A:A, log!A:A, \">=\" & INT(d), log!A:A, \"<\" & INT(d) + 1)) * 1440)))"
+
+    /**
+     * [DURATION_FORMULA] as a spreadsheet in [locale] parses it. The Sheets API reads formula text
+     * in the spreadsheet's locale, and locales with a decimal comma (ru_RU) separate arguments
+     * with `;`. The formula has no commas inside its strings.
+     */
+    fun durationFormula(locale: String?): String =
+        if (decimalComma(locale)) DURATION_FORMULA.replace(',', ';') else DURATION_FORMULA
+
+    private fun decimalComma(locale: String?): Boolean =
+        !locale.isNullOrBlank() && DecimalFormatSymbols.getInstance(Locale.forLanguageTag(locale.replace('_', '-'))).decimalSeparator == ','
 
     /** Feature 007 research R2: paid workouts left, the old nightly rule (any non-empty row counts). */
     const val BALANCE_FORMULA = "=SUM(money!B2:B) - SUMPRODUCT(((workout!A2:A <> \"\") + (workout!B2:B <> \"\") + " +

@@ -92,8 +92,11 @@ function dailyJob() {
   plan.formulaRows.forEach(function (row) {
     workoutSheet.getRange(row, 2).setFormula(DURATION_FORMULA);
   });
+  // A formula passed to appendRow is parsed in the spreadsheet's locale (`;` in ru_RU);
+  // setFormula takes the English syntax in every locale.
   plan.appends.forEach(function (row) {
-    workoutSheet.appendRow([row[0], DURATION_FORMULA, row[1]]);
+    workoutSheet.appendRow([row[0], '', row[1]]);
+    workoutSheet.getRange(workoutSheet.getLastRow(), 2).setFormula(DURATION_FORMULA);
   });
 
   const balanceCell = ss.getSheetByName('balance').getRange('A1');

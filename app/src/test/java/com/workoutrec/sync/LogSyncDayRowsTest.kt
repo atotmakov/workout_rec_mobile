@@ -51,14 +51,14 @@ class LogSyncDayRowsTest {
     private val workoutWrite get() = sheets.writes.single().workout
 
     @Test
-    fun `a new day's first set and its status go out in one write, the row with the duration formula`() = runTest {
+    fun `a new day's first set and its status go out in one write, the duration left to the form step`() = runTest {
         store.pending += PendingChange("s", ChangeKind.NEW, key(oct20), createdAt = 1)
         store.statuses += PendingStatus(oct20, DayStatus.PAID, lastSeen = null)
         sync.run()
         val write = sheets.writes.single()
         assertEquals(1, write.appends.size)
         assertEquals(listOf(WorkoutAppend(serial20, DayStatus.PAID)), write.workout?.appends)
-        assertEquals(ReferenceStructure.DURATION_FORMULA, sheets.workout.single().duration)
+        assertEquals(null, sheets.workout.single().duration)
         assertTrue(store.statuses.isEmpty())
     }
 

@@ -23,6 +23,22 @@ the script's `toDayKey` do. `ROUND(x * 1440)` matches the script's `Math.round(m
 number: in `appendCells` (app), in `appendRow` (script), and in one `repeatCell` over a range
 (conversion). The `workout` tab is a Google Sheets table, and per-cell formulas work in tables.
 
+**Locale (found in the device check, 2026-10-25)**: the Sheets API parses `formulaValue` text in
+the spreadsheet's locale. In `ru_RU` (the locale the app creates) arguments are separated by `;`,
+so the text above with `,` was stored unparsed (`#ERROR!`, "Formula parse error"), and the
+balance, which reads column B, showed the same error. So:
+
+- the app writes the formula through call 25 only, as `ReferenceStructure.durationFormula(locale)`:
+  `,` becomes `;` when the locale's decimal separator is a comma. Call 24 reads `properties.locale`;
+- call 22 appends leave B empty, and the form step right after the sync fills it;
+- call 24 also reads `effectiveValue`, and a B whose error type is `ERROR` (parse error) is
+  rewritten even when its text matches, without a `CALCULATION_RESTORED` report. This repairs
+  spreadsheets converted by build 184;
+- script v4 appends `[date, '', flag]` and then uses `setFormula`, which takes the English syntax
+  in every locale. `appendRow` parses a formula string like typed text, in the locale.
+
+The balance formula has no argument separators, so it parses in every locale.
+
 **Alternatives**: a single `ARRAYFORMULA`/`MAP` in B2 that spills down. It would cover hand-added
 rows automatically, but a spill is broken by any typed value in its range, Sheets tables may
 refuse spills, and the empty spilled cells can confuse `appendCells`/`appendRow`, which append
