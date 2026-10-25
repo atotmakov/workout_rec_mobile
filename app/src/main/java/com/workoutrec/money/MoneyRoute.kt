@@ -17,7 +17,9 @@ import com.workoutrec.sync.SyncStatus
 import com.workoutrec.workout.DisplayModel
 import java.time.LocalDate
 import kotlin.math.roundToInt
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /** The Money tab's first screen (feature 004 US4); [onEnableAutomation] starts the optional automation steps (feature 007). */
 @Composable
@@ -60,6 +62,12 @@ fun MoneyRoute(
             scope.launch {
                 refreshing = true
                 try {
+                    // A pull is a sync first: the form step after it repairs typed-over durations and the
+                    // balance (feature 007 FR-011), so the download then shows the repaired balance.
+                    withContext(Dispatchers.Default) {
+                        container.diagnosticLog.write("money pulled to refresh")
+                        container.syncScheduler.runNow()
+                    }
                     container.moneyRefresher.refresh()
                 } finally {
                     refreshing = false
