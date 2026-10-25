@@ -39,7 +39,8 @@ fun ExercisePicker(
     exercises: List<Exercise>,
     recent: List<String>,
     onPick: (String) -> Unit,
-    onOpenDrills: () -> Unit,
+    /** The list is empty: go to the Exercises tab, where exercises are added. */
+    onAddExercises: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var query by rememberSaveable { mutableStateOf("") }
@@ -47,7 +48,7 @@ fun ExercisePicker(
         if (exercises.isEmpty()) {
             Column(Modifier.testTag(PickerTags.EMPTY)) {
                 Text(stringResource(R.string.picker_empty))
-                TextButton(onClick = onOpenDrills) { Text(stringResource(R.string.picker_open_drills)) }
+                TextButton(onClick = onAddExercises) { Text(stringResource(R.string.picker_add_exercises)) }
             }
             return@Column
         }

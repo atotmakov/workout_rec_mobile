@@ -49,8 +49,8 @@
     <string name="picker_search">Search</string>
     <string name="picker_recent">Recent</string>
     <string name="picker_other_group">Other</string>
-    <string name="picker_empty">No exercises yet. Add them to the drills tab of your spreadsheet: muscle group in column A, exercise in column B.</string>
-    <string name="picker_open_drills">Open drills tab</string>
+    <string name="picker_empty">No exercises yet. Add them on the Exercises tab.</string>
+    <string name="picker_add_exercises">Add exercises</string>
     <string name="plan_title">How many sets?</string>
     <string name="plan_ok">Start</string>
     <string name="plan_cancel">Cancel</string>

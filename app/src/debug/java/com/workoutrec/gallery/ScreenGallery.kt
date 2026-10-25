@@ -168,17 +168,17 @@ object ScreenGallery {
         // Adding an exercise and logging sets
         GalleryScreen("22-picker") {
             RouteFrame(stringResource(R.string.picker_title), tab = Tab.TODAY) { modifier ->
-                ExercisePicker(exercises = Samples.exercises(), recent = Samples.recent(), onPick = {}, onOpenDrills = {}, modifier = modifier)
+                ExercisePicker(exercises = Samples.exercises(), recent = Samples.recent(), onPick = {}, onAddExercises = {}, modifier = modifier)
             }
         },
         GalleryScreen("23-picker-empty") {
             RouteFrame(stringResource(R.string.picker_title), tab = Tab.TODAY) { modifier ->
-                ExercisePicker(exercises = emptyList(), recent = emptyList(), onPick = {}, onOpenDrills = {}, modifier = modifier)
+                ExercisePicker(exercises = emptyList(), recent = emptyList(), onPick = {}, onAddExercises = {}, modifier = modifier)
             }
         },
         GalleryScreen("24-plan-sets-dialog") {
             RouteFrame(stringResource(R.string.picker_title), tab = Tab.TODAY) { modifier ->
-                ExercisePicker(exercises = Samples.exercises(), recent = Samples.recent(), onPick = {}, onOpenDrills = {}, modifier = modifier)
+                ExercisePicker(exercises = Samples.exercises(), recent = Samples.recent(), onPick = {}, onAddExercises = {}, modifier = modifier)
             }
             PlanSetsDialog(initial = 3, onConfirm = {}, onDismiss = {})
         },
