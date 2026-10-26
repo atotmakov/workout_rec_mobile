@@ -17,14 +17,13 @@ The automation reminder banner (`AutomationReminder`) is removed. Nothing replac
 
 | State | Note text (en) |
 |-------|----------------|
-| `calculated` | "Calculated by your spreadsheet." |
-| not calculated, automation On | as today: "Calculated daily, last at {time}" |
-| not calculated, Stopped | as today: the stopped text |
-| not calculated, otherwise | "Calculated by your spreadsheet." (the first sync converts it) |
+| any | "The balance is calculated by your spreadsheet." |
 | any, with sets, statuses or payments waiting | adds the line "Updates after your changes sync." |
 
 These are removed: the `money_note_off` text, `money_note_new_payments` (replaced by the waiting
-line) and the "Enable automation" button in the card.
+line), the "Enable automation" button in the card, and (clarification 2026-10-26) the old
+script's notes `money_note_daily`, `money_note_daily_unknown` and `money_note_stopped`: the Money
+tab shows no automation notes.
 
 The Money tab has no automation entry (clarification 2026-10-26).
 

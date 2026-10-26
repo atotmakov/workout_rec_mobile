@@ -198,6 +198,8 @@ Today: 3 steps.
 
 - `Calculated`: the spreadsheet is at version 3. Text: "Calculated by your spreadsheet."
 - `Daily(lastRun)` and `Stopped(lastRun)`: not converted yet and an old script runs, as today.
+  *Removed 2026-10-26 (clarification): the Money tab shows no automation notes, so the note is
+  always "Calculated by your spreadsheet."*
 - `Waiting`: changes are waiting to sync. Text: "Updates after your changes sync." This is shown
   in addition to the above when any set, day status or payment is waiting.
 
