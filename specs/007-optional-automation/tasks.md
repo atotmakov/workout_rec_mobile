@@ -220,7 +220,7 @@ depends on them (plan risk 1).
 
 ## Phase 6: User Story 4 - Turn on automation when wanted (Priority: P2)
 
-**Goal**: An automation entry on the Money tab and in the account menu leads to the same two steps (FR-012, FR-013). The nightly run follows FR-014.
+**Goal**: An automation item in the account menu leads to the same two steps (FR-012, FR-013). *(Clarification 2026-10-26: the Money tab entry was removed, see T051.)* The nightly run follows FR-014.
 
 **Independent Test**: Quickstart #11–#12.
 
@@ -289,6 +289,7 @@ depends on them (plan risk 1).
 - [X] T047 Run the full checks: `./gradlew :app:testDebugUnitTest :app:lintDebug`, `node --test "apps-script/tests/*.test.mjs"`, and `./gradlew connectedDebugAndroidTest` on the local emulator. Fix what fails **Result 2026-10-24**: unit tests + lint green, script tests 45/45, emulator UI tests 156/156
 - [X] T048 Open the PR (title `feat: optional automation, spreadsheet-calculated balance and durations (007)`). Merge it when CI is green, per standing permission, and check that the release reaches internal testing **Result 2026-10-24**: PR #38 merged (a9a9a55); CI green; version code 184 in internal testing.
 - [ ] T049 Device quickstart #1–#13 on test spreadsheets (the user's device check). Record the results in this file
+- [ ] T051 Remove the automation entry from the Money tab; turn automation on only from the account menu (FR-012, clarification 2026-10-26): `MoneyScreen`/`MoneyRoute` lose `onEnableAutomation` and `automation`, `AutomationEntry` and `uitest/money/AutomationEntryTest.kt` go, `automation_entry_off/on/stopped` strings go, gallery screen `65-money-automation-on` goes. Update the user guide doc's automation section and screenshot
 - [ ] T050 After the release, update the user guide doc's "Getting started" and "Paid or Free, and your balance" sections (Claude Docs, https://claude.ai/artifact/MUVVKpyT7g2rcVmAAQtPD2) for the shorter first run and the optional automation
 
 ---

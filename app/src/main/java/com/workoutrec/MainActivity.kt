@@ -151,7 +151,7 @@ private fun AppNavHost(container: AppContainer) {
     }
     val onSignOut: () -> Unit = { scope.launch { clearWorkoutData(); viewModel.signOut() } }
     val onShareLog: () -> Unit = { context.startActivity(shareLogIntent(context, container.diagnosticLog)) }
-    // Feature 007 FR-012: the optional automation steps, back to the tab they were opened from.
+    // Feature 007 FR-012: the optional automation steps, from the account menu and back to the tab it was opened on.
     val automation by viewModel.automation.collectAsState()
     var automationReturn by rememberSaveable { mutableStateOf<String?>(null) }
     val startAutomation: () -> Unit = {
@@ -275,7 +275,7 @@ private fun AppNavHost(container: AppContainer) {
                     },
                     money = {
                         composable(TabRoutes.MONEY) {
-                            MoneyRoute(container, onEnableAutomation = startAutomation, actions = accountActions, automation = automation)
+                            MoneyRoute(container, actions = accountActions)
                         }
                     },
                 )

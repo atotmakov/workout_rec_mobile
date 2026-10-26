@@ -24,7 +24,7 @@ marks it `structure_version = 3`. The balance formula waits while an old script 
 overwrite it at night.
 
 Setup ends at Today with no script steps, and the reminder is gone. The automation steps are
-reached from a new entry on the Money tab and in the account menu. Script v3 adds and removes rows
+reached from a new item in the account menu. Script v3 adds and removes rows
 and writes formulas. It never writes durations, and it writes the balance only into an
 unconverted spreadsheet. A shared fixture keeps the app's and the script's day-row rules equal.
 
@@ -123,7 +123,7 @@ app/src/main/java/com/workoutrec/
 ├── setup/SpreadsheetSetupFlow.kt         # Ready without attach; refresh → automation status
 ├── setup/SetupState.kt, SetupViewModel.kt# StartAutomation, RefreshResult.Status(automation), no Reminder
 ├── home/AutomationReminder.kt            # DELETED
-├── automation/AutomationEntry.kt         # NEW: list item used on Money and in the account menu
+├── automation/AutomationStatusText.kt    # NEW: the account menu item's status text
 ├── home/MainScreen.kt, MainActivity.kt   # menu item, banner removed, return after the guide
 ├── money/BalanceNote.kt, MoneyScreens.kt, MoneyRoute.kt, MoneyRefresher.kt  # notes R9, entry
 ├── workout/data/{Entities,WorkoutDatabase}.kt  # money_summary.calculated, version 4
@@ -153,7 +153,7 @@ calls after commit, so the existing run keeps its shape.
 3. **Call 22 day-rows step**: the step in `LogSync`, and the client deletes and formula appends.
 4. **Form step**: `CalculatedForm`, `FormCheck`, calls 24/25, the gate, and monitoring.
 5. **Script v3**: `dailyJob` and the installer at version 3.
-6. **Setup and UI**: setup without attach, removing the reminder, the automation entry (Money and
+6. **Setup and UI**: setup without attach, removing the reminder, the automation item (account
    menu), Money notes, and schema 4.
 7. **Docs and device**: README and user-guide "Getting started", then device quickstart #1–#13.
 

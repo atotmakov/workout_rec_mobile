@@ -293,8 +293,6 @@ object ScreenGallery {
             PaymentDialog(today = Samples.TODAY, defaultWorkouts = 8, defaultSum = 800_000, onSave = { _, _, _ -> }, onDismiss = {})
         },
         GalleryScreen("64-money-empty") { MoneyFrame(Samples.moneyState(balance = null, payments = false, error = MoneyError.MISSING_TAB)) },
-        // Feature 007: the optional automation entry once it is on.
-        GalleryScreen("65-money-automation-on") { MoneyFrame(Samples.moneyState(balance = 11.0), automation = AutomationStatus.On) },
     )
 }
 
@@ -339,12 +337,11 @@ private fun BarFrame(tab: Tab, content: @Composable (Modifier) -> Unit) {
 }
 
 @Composable
-private fun MoneyFrame(state: MoneyState, automation: AutomationStatus = AutomationStatus.NotEnabled) {
+private fun MoneyFrame(state: MoneyState) {
     BarFrame(Tab.MONEY) { modifier ->
         MoneyScreen(
-            state, Samples.ZONE, onAdd = {}, onRefresh = {}, onEnableAutomation = {}, modifier = modifier,
+            state, Samples.ZONE, onAdd = {}, onRefresh = {}, modifier = modifier,
             actions = { SampleAccountActions(pendingCount = if (state.payments.any { it.pending }) 1 else 0) },
-            automation = automation,
         )
     }
 }

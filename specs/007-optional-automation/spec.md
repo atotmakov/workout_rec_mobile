@@ -52,6 +52,13 @@ and makes the app add every missing day row. The script becomes an optional extr
   are waiting, the Money tab says the balance updates after sync. The app does not calculate the
   balance itself.
 
+### Session 2026-10-26
+
+- Q: Where is spreadsheet automation turned on? → A: Only from the account menu. The entry on the
+  Money tab is removed: automation is mainly for people who keep their workouts in the spreadsheet
+  without the app, and the Money tab stays about the balance and payments. The user guide explains
+  what automation adds.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Start logging without the script steps (Priority: P1)
@@ -135,20 +142,19 @@ balance and every duration, open it with the new app version, and compare.
 ### User Story 4 - Turn on automation when wanted (Priority: P2)
 
 A user who wants the spreadsheet to be updated while the app is closed (for example, they log
-sets in a browser) or wants the spreadsheet conveniences finds the automation setup on the Money
-tab and in the account menu, with a short explanation of what it adds, and completes the same two
-steps as before.
+sets in a browser) or wants the spreadsheet conveniences finds the automation setup in the
+account menu and completes the same two steps as before.
 
 **Why this priority**: Useful to some users, not needed to use the app.
 
-**Independent Test**: With automation off, open it from the Money tab, read what it adds,
+**Independent Test**: With automation off, open it from the account menu,
 complete both steps and see it shown as on; then type sets for a new day in a browser and see the
 day's row the next morning without opening the app.
 
 **Acceptance Scenarios**:
 
-1. **Given** automation is off, **When** the user opens the Money tab or the account menu,
-   **Then** there is an entry for spreadsheet automation that says it is off and what it adds.
+1. **Given** automation is off, **When** the user opens the account menu, **Then** there is an
+   item for spreadsheet automation that says it is off. The Money tab has no automation entry.
 2. **Given** the user starts it, **When** they complete Allow scripts and Enable automation,
    **Then** the entry shows automation as on.
 3. **Given** automation is on, **When** days are added only in the spreadsheet and the app is not
@@ -249,10 +255,10 @@ calculation.
 
 **Optional automation**
 
-- **FR-012**: The Money tab and the account menu MUST offer spreadsheet automation, showing
-  whether it is on and, in one or two sentences, what it adds: new days' rows while the app is
-  closed, the time filled in when a set is typed in the spreadsheet, and the `rec` tab following
-  the selected exercise.
+- **FR-012**: The account menu, and only the account menu, MUST offer spreadsheet automation,
+  showing whether it is Off, On or Stopped (clarification 2026-10-26). What it adds (new days' rows
+  while the app is closed, the time filled in when a set is typed in the spreadsheet, and the `rec`
+  tab following the selected exercise) is explained in the user guide.
 - **FR-013**: Turning automation on MUST use the same two steps as before (Allow scripts, Enable
   automation), each skippable, and the entry MUST show the result.
 - **FR-014**: When automation is on, the nightly run MUST add missing day rows with the default
