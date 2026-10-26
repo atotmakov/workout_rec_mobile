@@ -81,7 +81,7 @@ removed (they stay in the spreadsheet's version history).
 
 ### Optional: spreadsheet automation
 
-**Money → Spreadsheet automation** (or the same item in the account menu) attaches a script that
+**Spreadsheet automation** in the account menu (tap your initials at the top) attaches a script that
 adds new days' rows at night while the app is closed, fills in the time when you type a set in the
 spreadsheet, and makes the `rec` tab follow the selected exercise. It takes two steps, as before:
 

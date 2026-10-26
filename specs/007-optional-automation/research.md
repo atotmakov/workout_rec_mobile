@@ -203,8 +203,8 @@ Today: 3 steps.
 
 `Off` and the "balance is not updated" text are removed (FR-002). `MoneySummary` gains
 `calculated: Boolean`, taken from call 23's metadata (`structure_version >= 3`). This adds a Room
-column (schema 3 → 4, auto-migration, default 0). The automation entry sits below the balance
-card on every state (FR-012). The old "Enable automation" button in the card goes.
+column (schema 3 → 4, auto-migration, default 0). The old "Enable automation" button in the card
+goes; automation is turned on only from the account menu (FR-012, clarification 2026-10-26).
 
 **Why**: FR-005a (clarification Q3): a single source of truth and no balance calculation in the
 app.

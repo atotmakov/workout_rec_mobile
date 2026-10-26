@@ -48,8 +48,8 @@ class MoneyScreenTest {
         shown: List<ShownPayment> = payments,
     ) = MoneyState(balance, note, downloadedAt = lastRun, error = error, payments = shown, totals = MoneyTotals(12.0, 1_200_000))
 
-    private fun show(state: MoneyState, onAdd: () -> Unit = {}, onRefresh: () -> Unit = {}, onEnable: () -> Unit = {}) {
-        compose.setContent { MoneyScreen(state, ZoneOffset.UTC, onAdd = onAdd, onRefresh = onRefresh, onEnableAutomation = onEnable) }
+    private fun show(state: MoneyState, onAdd: () -> Unit = {}, onRefresh: () -> Unit = {}) {
+        compose.setContent { MoneyScreen(state, ZoneOffset.UTC, onAdd = onAdd, onRefresh = onRefresh) }
     }
 
     @Test

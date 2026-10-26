@@ -26,24 +26,17 @@ The automation reminder banner (`AutomationReminder`) is removed. Nothing replac
 These are removed: the `money_note_off` text, `money_note_new_payments` (replaced by the waiting
 line) and the "Enable automation" button in the card.
 
-**Automation entry** (`AutomationEntry`, tag `automation_entry`)
-
-This is a list item below the balance card, shown in every state, including errors.
-
-- Headline: "Spreadsheet automation".
-- Supporting text when Off (NotEnabled or ScriptMissing): "Off. Turn it on to add new days while
-  the app is closed, fill in the time when you type a set in the spreadsheet, and make the rec tab
-  follow the selected exercise."
-- Supporting text when On: "On. Runs every night." When Stopped, the existing stopped wording is
-  used.
-- Tap: `SetupAction.StartAutomation`. This opens the existing guide screens for "Allow scripts"
-  and "Enable automation". "Continue for now" (`ContinueForNow`) and finishing both go back to the tab the
-  entry was opened from.
+The Money tab has no automation entry (clarification 2026-10-26).
 
 ## Account menu (FR-012)
 
-There is a new item, "Spreadsheet automation", placed above "Share sync log". It shows the same
-status in its supporting text and has the same tap action.
+**Automation entry**: the item "Spreadsheet automation" (tag `account_automation`), placed above
+"Share sync log". Its supporting text is the status: "Off" (NotEnabled or ScriptMissing), "On" or
+"Stopped".
+
+Tap: `SetupAction.StartAutomation`. This opens the existing guide screens for "Allow scripts" and
+"Enable automation". "Continue for now" (`ContinueForNow`) and finishing both go back to the tab
+the menu was opened on.
 
 ## Day notices
 
