@@ -192,9 +192,6 @@
         <item quantity="other">тренировки в долг</item>
     </plurals>
     <string name="money_balance_unknown">Баланса пока нет</string>
-    <string name="money_note_daily">Баланс считается раз в день; последний раз — %1$s.</string>
-    <string name="money_note_daily_unknown">Баланс считается раз в день.</string>
-    <string name="money_note_stopped">Ежедневный расчёт, похоже, остановился; баланс на %1$s.</string>
     <string name="money_note_calculated">Баланс считает ваша таблица.</string>
     <string name="money_note_waiting">Обновится, когда изменения синхронизируются.</string>
     <string name="money_downloaded">Обновлено %1$s</string>

@@ -6,7 +6,6 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
-import com.workoutrec.money.BalanceNote
 import com.workoutrec.money.BalanceNoteState
 import com.workoutrec.money.MoneyError
 import com.workoutrec.money.MoneyScreen
@@ -286,8 +285,6 @@ object ScreenGallery {
         // Feature 004 US4: Money tab
         GalleryScreen("60-money") { MoneyFrame(Samples.moneyState(balance = 11.0, newPayment = true)) },
         GalleryScreen("61-money-owed") { MoneyFrame(Samples.moneyState(balance = -2.0)) },
-        // Feature 007: a spreadsheet the old nightly script still calculates (not converted yet).
-        GalleryScreen("62-money-daily-script") { MoneyFrame(Samples.moneyState(balance = 11.0, note = BalanceNote.Daily(Samples.at(3, 0) * 1000))) },
         GalleryScreen("63-payment-dialog") {
             MoneyFrame(Samples.moneyState(balance = 11.0))
             PaymentDialog(today = Samples.TODAY, defaultWorkouts = 8, defaultSum = 800_000, onSave = { _, _, _ -> }, onDismiss = {})
@@ -492,7 +489,6 @@ private object Samples {
     fun moneyState(
         balance: Double?,
         newPayment: Boolean = false,
-        note: BalanceNote = BalanceNote.Calculated,
         payments: Boolean = true,
         error: MoneyError = MoneyError.NONE,
     ): MoneyState {
@@ -504,7 +500,7 @@ private object Samples {
         )
         return MoneyState(
             balance = balance,
-            note = BalanceNoteState(note, waiting = newPayment),
+            note = BalanceNoteState(waiting = newPayment),
             downloadedAt = at(9, 40) * 1000,
             error = error,
             payments = shown,

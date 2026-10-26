@@ -11,7 +11,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.workoutrec.AppContainer
-import com.workoutrec.automation.AutomationStatus
 import com.workoutrec.log.zone
 import com.workoutrec.sync.SyncStatus
 import com.workoutrec.workout.DisplayModel
@@ -39,12 +38,7 @@ fun MoneyRoute(
     // FR-010: opening Money downloads when the data is older than 5 minutes.
     LaunchedEffect(Unit) { container.moneyRefresher.onOpen() }
 
-    val note = BalanceNotes.of(
-        calculated = summary?.calculated ?: false,
-        automation = summary?.automation ?: AutomationStatus.ScriptMissing,
-        lastDailyRun = summary?.lastDailyRun,
-        waiting = waiting > 0,
-    )
+    val note = BalanceNoteState(waiting = waiting > 0)
     MoneyScreen(
         state = MoneyState(
             balance = summary?.balance,

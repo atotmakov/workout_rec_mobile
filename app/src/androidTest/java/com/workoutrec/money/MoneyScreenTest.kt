@@ -43,7 +43,7 @@ class MoneyScreenTest {
 
     private fun state(
         balance: Double? = 11.0,
-        note: BalanceNoteState = BalanceNoteState(BalanceNote.Calculated, waiting = false),
+        note: BalanceNoteState = BalanceNoteState(waiting = false),
         error: MoneyError = MoneyError.NONE,
         shown: List<ShownPayment> = payments,
     ) = MoneyState(balance, note, downloadedAt = lastRun, error = error, payments = shown, totals = MoneyTotals(12.0, 1_200_000))
@@ -73,7 +73,7 @@ class MoneyScreenTest {
     // Feature 007 research R9, FR-005a
     @Test
     fun noteSaysTheSpreadsheetCalculatesAndWhenChangesAreWaiting() {
-        show(state(note = BalanceNoteState(BalanceNote.Calculated, waiting = true)))
+        show(state(note = BalanceNoteState(waiting = true)))
         compose.onNodeWithTag(MoneyTags.NOTE).assertTextContains(s(R.string.money_note_calculated), substring = true)
         compose.onNodeWithTag(MoneyTags.NOTE).assertTextContains(s(R.string.money_note_waiting), substring = true)
     }
@@ -82,12 +82,6 @@ class MoneyScreenTest {
     fun noWaitingLineWhenNothingWaits() {
         show(state())
         compose.onNodeWithTag(MoneyTags.NOTE).assertTextContains(s(R.string.money_note_calculated))
-    }
-
-    @Test
-    fun anOldScriptKeepsTheDailyNote() {
-        show(state(note = BalanceNoteState(BalanceNote.Daily(lastRun), waiting = false)))
-        compose.onNodeWithTag(MoneyTags.NOTE).assertTextContains(s(R.string.money_note_daily).substringBefore("%").trim(), substring = true)
     }
 
     @Test

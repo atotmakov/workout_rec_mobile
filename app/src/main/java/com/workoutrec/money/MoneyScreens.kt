@@ -182,13 +182,7 @@ private fun BalanceCard(state: MoneyState, zone: ZoneId, locale: Locale) {
                 }
             }
             Column(Modifier.testTag(MoneyTags.NOTE).semantics(mergeDescendants = true) {}) {
-                val note = when (val n = state.note.note) {
-                    BalanceNote.Calculated -> stringResource(R.string.money_note_calculated)
-                    is BalanceNote.Daily -> n.lastRun?.let { stringResource(R.string.money_note_daily, dateTime(it, zone, locale)) }
-                        ?: stringResource(R.string.money_note_daily_unknown)
-                    is BalanceNote.Stopped -> stringResource(R.string.money_note_stopped, n.lastRun?.let { dateTime(it, zone, locale) } ?: "—")
-                }
-                Text(note, style = MaterialTheme.typography.bodySmall)
+                Text(stringResource(R.string.money_note_calculated), style = MaterialTheme.typography.bodySmall)
                 // Feature 007 FR-005a: the app never calculates the balance; it says when it will change.
                 if (state.note.waiting) Text(stringResource(R.string.money_note_waiting), style = MaterialTheme.typography.bodySmall)
             }

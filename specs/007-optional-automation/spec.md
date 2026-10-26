@@ -58,6 +58,10 @@ and makes the app add every missing day row. The script becomes an optional extr
   Money tab is removed: automation is mainly for people who keep their workouts in the spreadsheet
   without the app, and the Money tab stays about the balance and payments. The user guide explains
   what automation adds.
+- Q: Should the Money tab still say when an old nightly script calculates the balance ("calculated
+  once a day", "seems stopped")? → A: No. The Money tab shows no automation notes at all; the note
+  under the balance always says the spreadsheet calculates it, plus "updates after sync" while
+  changes are waiting.
 
 ## User Scenarios & Testing *(mandatory)*
 

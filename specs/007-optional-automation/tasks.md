@@ -290,6 +290,7 @@ depends on them (plan risk 1).
 - [X] T048 Open the PR (title `feat: optional automation, spreadsheet-calculated balance and durations (007)`). Merge it when CI is green, per standing permission, and check that the release reaches internal testing **Result 2026-10-24**: PR #38 merged (a9a9a55); CI green; version code 184 in internal testing.
 - [ ] T049 Device quickstart #1–#13 on test spreadsheets (the user's device check). Record the results in this file
 - [ ] T051 Remove the automation entry from the Money tab; turn automation on only from the account menu (FR-012, clarification 2026-10-26): `MoneyScreen`/`MoneyRoute` lose `onEnableAutomation` and `automation`, `AutomationEntry` and `uitest/money/AutomationEntryTest.kt` go, `automation_entry_off/on/stopped` strings go, gallery screen `65-money-automation-on` goes. Update the user guide doc's automation section and screenshot
+- [ ] T052 Remove the automation notes from the Money tab (clarification 2026-10-26): `BalanceNote.Daily`/`Stopped` and `BalanceNotes` go, `BalanceNoteState` keeps only `waiting`, strings `money_note_daily`, `money_note_daily_unknown`, `money_note_stopped` go, `BalanceNoteTest` and gallery screen `62-money-daily-script` go
 - [ ] T050 After the release, update the user guide doc's "Getting started" and "Paid or Free, and your balance" sections (Claude Docs, https://claude.ai/artifact/MUVVKpyT7g2rcVmAAQtPD2) for the shorter first run and the optional automation
 
 ---
