@@ -33,11 +33,13 @@ Use the release build from internal testing, or a debug build. Use test Google a
 | 8 | In the web UI, type sets for a new date. Sync | Its row is added with the default status (US2 #5) |
 | 9 | Delete all sets of one day in the app. Sync | That day's row is removed and the balance goes up by 1 if it was Paid |
 | 10 | Airplane mode. Log a set and add a payment. Open Money | The last balance is shown with "Updates after your changes sync" (FR-005a) |
-| 11 | Money → Spreadsheet automation (Off). Complete both steps | The entry says On. The account menu item says On (US4) |
+| 11 | Account menu → Spreadsheet automation (Off). Complete both steps | The account menu item says On. The Money tab has no automation entry or note (US4, clarification 2026-10-26) |
 | 12 | With #11 on, type sets for a new date in the web UI, keep the app closed overnight | The next morning the row exists, with formula B. `balance!A1` is still a formula (US4 #3, #4) |
 | 13 | An old v2 spreadsheet with automation on, and the Apps Script API setting turned off afterwards. Open the app | Durations become formulas. The balance stays a value, the Money note is the daily one, and there is no `CALCULATION_RESTORED` (gate R6) |
+| 14 | **Locales** (device check 2026-10-27): for each of United States (`,` between arguments), Germany and Russia (`;`), set File → Settings → Locale, clear the `workout` durations and type a number or a comma formula such as `=IF(1, 2, 3)` over one of them (it shows `#ERROR!` in Germany and Russia). Sync from Money | Every duration is a formula again and shows minutes; none shows `#ERROR!`. `balance!A1` shows a number (FR-011, research R1 "Locale") |
+| 15 | With automation on (script v5) and the spreadsheet in Russia, type sets for a new date in the web UI, keep the app closed overnight | The new row's B is the formula with `;` and shows minutes. A duration that showed `#ERROR!` the evening before is a formula again (T053) |
 
 ## Done when
 
 - Every automated suite is green in CI.
-- #1–#12 pass on the test phone. #13 passes, or it is recorded as a known limitation.
+- #1–#12, #14 and #15 pass on the test phone or the emulator. #13 passes, or it is recorded as a known limitation.
