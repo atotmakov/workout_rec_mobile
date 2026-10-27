@@ -107,8 +107,9 @@ class ScriptInstaller(
         const val PROJECT_TITLE = "workout_rec_automation"
         /**
          * Feature 006: 2 = `workoutRowsPlan`; feature 007: 3 = formulas and removals, no balance once
-         * converted; 4 = appended durations via setFormula, which takes English syntax in every locale.
+         * converted; 4 = appended durations via setFormula; 5 = the formula in the locale's syntax
+         * (`;` with a decimal comma) and `#ERROR!` durations rewritten (device check 2026-10-27).
          */
-        const val SCRIPT_VERSION = 4
+        const val SCRIPT_VERSION = 5
     }
 }

@@ -6,10 +6,10 @@ import { createFakes } from './fakes.mjs';
 
 const SPREADSHEET_ID = 'sheet-123';
 // Config.gs gets the app's formula text; any formula works for these tests.
-const DURATION_FORMULA = '=DURATION()';
+const DURATION_FORMULA = '=DURATION(log!A:A, A2)';
 
-function setup({ log = [['Date', 'Drill', 'W', 'R']], workout = [['date', 'duration, min', 'work alone']], money = [['date', 'workouts', 'sum']] } = {}) {
-  const fakes = createFakes();
+function setup({ log = [['Date', 'Drill', 'W', 'R']], workout = [['date', 'duration, min', 'work alone']], money = [['date', 'workouts', 'sum']], separator = ',' } = {}) {
+  const fakes = createFakes({ separator });
   const ss = fakes.useSpreadsheet(new fakes.FakeSpreadsheet([
     new fakes.FakeSheet('log', log),
     new fakes.FakeSheet('drills', [['mscl', 'drill']]),
@@ -173,6 +173,43 @@ test('dailyJob puts the formula in empty durations, appends new days with the pr
   assert.deepEqual(appended.slice(1), ['', 1], 'copies the free day before');
   assert.deepEqual(plain(fakes.calls[2]), ['setFormula', 'workout!B3', DURATION_FORMULA]);
   assert.equal(ss.getSheetByName('balance').cell(1, 1), 24, '24 paid - 0 counted (both days free)');
+});
+
+// Device check 2026-10-27: in ru_RU, setFormula needs `;` between arguments.
+test('dailyJob writes the duration formula with ; in a decimal-comma locale and repairs #ERROR! cells', () => {
+  const { ss, ctx, fakes } = setup({
+    separator: ';',
+    log: [
+      ['Date', 'Drill', 'W', 'R'],
+      [new Date('2026-01-12T10:00:00Z'), 'жим', 20, 10],
+      [new Date('2026-01-14T09:00:00Z'), 'жим', 22, 10],
+      [new Date('2026-01-15T09:00:00Z'), 'жим', 22, 10],
+    ],
+    workout: [
+      ['date', 'duration, min', 'work alone'],
+      [new Date('2026-01-12T00:00:00Z'), '#ERROR!', 1],
+    ],
+  });
+  ctx.dailyJob();
+  const local = DURATION_FORMULA.replace(/,/g, ';');
+  const formulas = fakes.calls.filter((c) => c[0] === 'setFormula').map((c) => plain(c.slice(1)));
+  assert.deepEqual(formulas, [
+    ['workout!B2', DURATION_FORMULA],
+    ['workout!B2', local],
+    ['workout!B3', local],
+    ['workout!B4', local],
+  ], 'the English text is tried once, then the run uses ;');
+  const workout = ss.getSheetByName('workout');
+  [2, 3, 4].forEach((row) => assert.equal(workout.cell(row, 2), local));
+});
+
+test('dailyJob keeps the English formula when it parses', () => {
+  const { ctx, fakes } = setup({
+    log: [['Date', 'Drill', 'W', 'R'], [new Date('2026-01-14T09:00:00Z'), 'жим', 22, 10], [new Date('2026-01-15T09:00:00Z'), 'жим', 22, 10]],
+  });
+  ctx.dailyJob();
+  const formulas = fakes.calls.filter((c) => c[0] === 'setFormula').map((c) => c[2]);
+  assert.deepEqual(plain(formulas), [DURATION_FORMULA, DURATION_FORMULA]);
 });
 
 test('dailyJob removes rows of days without sets bottom-up and never writes a duration value', () => {
