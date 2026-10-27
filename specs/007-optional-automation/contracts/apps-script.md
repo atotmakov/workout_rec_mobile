@@ -23,15 +23,20 @@ It returns:
   same as in v2. `date` is the day's first set, as in v2.
 - `removals: [row]`: sheet row numbers (header = 1), in descending order, for rows whose A is a
   Date with no log day. The list is empty when `logRows` has no Date at all (the empty-log guard).
-- `formulaRows: [row]`: rows whose A is a Date and whose B is `''`, excluding the removals. Their
+- `formulaRows: [row]`: rows whose A is a Date and whose B is `''` or `'#ERROR!'` (a formula that
+  does not parse, v5), excluding the removals. Their
   row numbers are the ones after the removals are applied.
 
 ## `dailyJob()`
 
 1. Plan from `log` and `workout`.
 2. `deleteRow(row)` for each removal, in descending order.
-3. `setFormula(DURATION_FORMULA)` on `B<row>` for each formula row.
-4. `appendRow([date, DURATION_FORMULA, flag])` for each append.
+3. `setFormula` on `B<row>` for each formula row.
+4. `appendRow([date, '', flag])`, then `setFormula` on its B, for each append.
+
+`setFormula` parses in the spreadsheet's locale (v5). The first formula written in a run is
+`DURATION_FORMULA`; after `SpreadsheetApp.flush()`, if that cell's display value is `#ERROR!`, it
+is rewritten with every `,` replaced by `;`, and the rest of the run uses that text.
 5. If `balance!A1.getFormula() === ''` (the app has not converted the spreadsheet yet), write
    `balance(...)` as in v2. Otherwise leave the cell alone.
 6. Write `workout_rec.last_daily_run`.

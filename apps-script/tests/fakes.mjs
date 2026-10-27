@@ -1,7 +1,8 @@
 // Minimal fakes of the Apps Script services used by Code.gs. Each fake records calls so
 // tests can assert order and that read-only paths never write.
 
-export function createFakes({ timeZone = 'Etc/UTC' } = {}) {
+// `separator`: the argument separator formulas need in the spreadsheet's locale (`;` for ru_RU).
+export function createFakes({ timeZone = 'Etc/UTC', separator = ',' } = {}) {
   const calls = []; // ordered log of writes and notable reads: ['setValue', 'rec!A1', 'x'], ...
 
   class FakeRange {
@@ -35,6 +36,12 @@ export function createFakes({ timeZone = 'Etc/UTC' } = {}) {
     getFormula() {
       const value = this.getValue();
       return typeof value === 'string' && value.startsWith('=') ? value : '';
+    }
+    // A formula written with the other locale's separator does not parse.
+    getDisplayValue() {
+      const formula = this.getFormula();
+      const wrong = separator === ';' ? ',' : ';';
+      return formula && formula.includes(wrong) ? '#ERROR!' : String(this.getValue());
     }
   }
 
@@ -141,6 +148,7 @@ export function createFakes({ timeZone = 'Etc/UTC' } = {}) {
   const openByIdCalls = [];
   const SpreadsheetApp = {
     DeveloperMetadataVisibility: { DOCUMENT: 'DOCUMENT', PROJECT: 'PROJECT' },
+    flush() {},
     openById(id) {
       openByIdCalls.push(id);
       return spreadsheet;

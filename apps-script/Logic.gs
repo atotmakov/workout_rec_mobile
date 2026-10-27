@@ -26,7 +26,8 @@ function autoFillPlan(columnB, editedRow) {
  * `appends`: [first set, flag] per log day without a row, in date order; flag copies the latest
  * earlier remaining day's "work alone" (1 stays 1, anything else 0; 1 when there is none);
  * `removals`: sheet rows whose date has no log day, highest first (none when the log has no sets);
- * `formulaRows`: rows that stay and have an empty duration, numbered as after the removals.
+ * `formulaRows`: rows that stay and have an empty duration or a formula that does not parse
+ * (`#ERROR!`), numbered as after the removals.
  * `toDayKey(date)` returns 'yyyy-MM-dd' in the spreadsheet's time zone. The app's DayRowsPlan
  * follows the same rule (tests/fixtures/day-rows.json).
  */
@@ -53,7 +54,7 @@ function workoutRowsPlan(logRows, workoutRows, toDayKey) {
       return;
     }
     if (!(key in flags)) flags[key] = String(row[2]) === '1' ? 1 : 0;
-    if (row[1] === '') kept.push(sheetRow);
+    if (row[1] === '' || row[1] === '#ERROR!') kept.push(sheetRow);
   });
   removals.sort(function (a, b) { return b - a; });
   const formulaRows = kept.map(function (row) {

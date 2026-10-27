@@ -89,14 +89,13 @@ function dailyJob() {
   plan.removals.forEach(function (row) {
     workoutSheet.deleteRow(row);
   });
+  const setDuration = durationFormulaWriter_();
   plan.formulaRows.forEach(function (row) {
-    workoutSheet.getRange(row, 2).setFormula(DURATION_FORMULA);
+    setDuration(workoutSheet.getRange(row, 2));
   });
-  // A formula passed to appendRow is parsed in the spreadsheet's locale (`;` in ru_RU);
-  // setFormula takes the English syntax in every locale.
   plan.appends.forEach(function (row) {
     workoutSheet.appendRow([row[0], '', row[1]]);
-    workoutSheet.getRange(workoutSheet.getLastRow(), 2).setFormula(DURATION_FORMULA);
+    setDuration(workoutSheet.getRange(workoutSheet.getLastRow(), 2));
   });
 
   const balanceCell = ss.getSheetByName('balance').getRange('A1');
@@ -109,6 +108,26 @@ function dailyJob() {
   }
 
   setMetadata_(ss, 'workout_rec.last_daily_run', new Date().toISOString());
+}
+
+/**
+ * Writes DURATION_FORMULA into a cell. setFormula parses the text in the spreadsheet's locale: with a
+ * decimal comma (ru_RU) arguments are separated by `;` (the device check of 2026-10-27). The English
+ * text is tried on the first cell; if it does not parse, the run switches to `;`.
+ */
+function durationFormulaWriter_() {
+  let formula = DURATION_FORMULA;
+  let checked = false;
+  return function (range) {
+    range.setFormula(formula);
+    if (checked) return;
+    checked = true;
+    SpreadsheetApp.flush();
+    if (range.getDisplayValue() === '#ERROR!') {
+      formula = DURATION_FORMULA.replace(/,/g, ';');
+      range.setFormula(formula);
+    }
+  };
 }
 
 /** Show status: print the app's status markers to the Execution log. Read-only. */

@@ -34,8 +34,11 @@ balance, which reads column B, showed the same error. So:
 - call 24 also reads `effectiveValue`, and a B whose error type is `ERROR` (parse error) is
   rewritten even when its text matches, without a `CALCULATION_RESTORED` report. This repairs
   spreadsheets converted by build 184;
-- script v4 appends `[date, '', flag]` and then uses `setFormula`, which takes the English syntax
-  in every locale. `appendRow` parses a formula string like typed text, in the locale.
+- script v4 appends `[date, '', flag]` and then uses `setFormula`. **Wrong assumption, found in
+  the overnight device check 2026-10-27:** `setFormula` also parses in the spreadsheet's locale, so
+  in `ru_RU` the English text gave `#ERROR!` in B and in `balance!A1`. Script v5 tries the English
+  text on the first cell of the run; when it reads back `#ERROR!`, it uses `;` for the rest of the
+  run. It also rewrites durations that show `#ERROR!`.
 
 The balance formula has no argument separators, so it parses in every locale.
 

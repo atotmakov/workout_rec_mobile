@@ -107,6 +107,12 @@ test('workoutRowsPlan removes rows without sets bottom-up and numbers formula ro
   assert.deepEqual(plan.appends, []);
 });
 
+test('workoutRowsPlan rewrites a duration that does not parse', () => {
+  const log = [[d('2026-01-12T10:00:00Z'), 'a', 1, 1], [d('2026-01-13T10:00:00Z'), 'a', 1, 1]];
+  const plan = logic.workoutRowsPlan(log, [day('2026-01-12', '#ERROR!', 0), day('2026-01-13', 20, 0)], dayKey);
+  assert.deepEqual(plan.formulaRows, [2]);
+});
+
 test('workoutRowsPlan with an empty log removes nothing', () => {
   const plan = logic.workoutRowsPlan([['', 'x', '', '']], [day('2026-01-12', '', 0)], dayKey);
   assert.deepEqual(plan.removals, []);
