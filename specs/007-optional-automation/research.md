@@ -39,6 +39,14 @@ balance, which reads column B, showed the same error. So:
   in `ru_RU` the English text gave `#ERROR!` in B and in `balance!A1`. Script v5 tries the English
   text on the first cell of the run; when it reads back `#ERROR!`, it uses `;` for the rest of the
   run. It also rewrites durations that show `#ERROR!`.
+- **Second overnight check (2026-10-28) still failed, for another reason:** the nightly trigger
+  ran "Version 1", the code from the day automation was enabled. A trigger runs the code of the
+  deployment that created it, and the Enable page was a versioned deployment, so no upload since
+  (v3, v4, v5) had reached the nightly job. Script v6: the Enable page is the Head deployment
+  (`/dev`), its `doGet` replaces any existing daily trigger and writes
+  `workout_rec.daily_trigger = head`; the app's upgrade points `enable_url` at the Head page, and
+  automation without that marker counts as not enabled, so the user opens step 2 once more.
+  Checked on the dev project: a trigger created through `/dev` is listed as deployment "Head".
 
 The balance formula has no argument separators, so it parses in every locale.
 

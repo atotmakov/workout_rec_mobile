@@ -22,7 +22,7 @@ class ScriptUpgradeRefreshTest {
     private val enabled = mapOf(
         AutomationStatusEvaluator.SCRIPT_ID to "script-1",
         AutomationStatusEvaluator.ENABLE_URL to "https://enable",
-        AutomationStatusEvaluator.ENABLED_AT to "1970-01-01T00:00:00Z",
+        AutomationStatusEvaluator.ENABLED_AT to "1970-01-01T00:00:00Z", AutomationStatusEvaluator.DAILY_TRIGGER to "head",
         AutomationStatusEvaluator.LAST_DAILY_RUN to "1970-01-01T00:00:00Z",
     )
     private val installer = FakeScriptInstaller()
@@ -49,7 +49,7 @@ class ScriptUpgradeRefreshTest {
 
     @Test
     fun `a current script is left alone`() = runTest {
-        flowWith(enabled + (AutomationStatusEvaluator.SCRIPT_VERSION to "5")).refresh(account)
+        flowWith(enabled + (AutomationStatusEvaluator.SCRIPT_VERSION to "6")).refresh(account)
         assertEquals(emptyList<String>(), installer.log)
     }
 

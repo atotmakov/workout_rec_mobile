@@ -43,8 +43,8 @@ class ScriptInstaller(
 ) : ScriptInstall {
 
     /**
-     * Creates the attached project (unless one is recorded), uploads the files, publishes the
-     * "Enable automation" page, and records both in the spreadsheet's metadata. Throws
+     * Creates the attached project (unless one is recorded), uploads the files, and records the
+     * project and its "Enable automation" page in the spreadsheet's metadata. Throws
      * ApiError.AppsScriptApiDisabled when the user's Apps Script API setting is off (step 1).
      */
     override suspend fun install(
@@ -54,13 +54,12 @@ class ScriptInstaller(
         existingIds: Map<String, Int>,
     ): InstalledScript {
         val existingScript = existingMetadata[AutomationStatusEvaluator.SCRIPT_ID]?.takeIf { it.isNotBlank() }
-        val existingUrl = existingMetadata[AutomationStatusEvaluator.ENABLE_URL]?.takeIf { it.isNotBlank() }
+        val existingUrl = existingMetadata[AutomationStatusEvaluator.ENABLE_URL]?.takeIf { isHeadPage(it) }
         if (existingScript != null && existingUrl != null) return InstalledScript(existingScript, existingUrl)
 
         val scriptId = existingScript ?: script.createProject(title = PROJECT_TITLE, parentId = spreadsheetId)
         script.updateContent(scriptId, files(spreadsheetId, timeZone))
-        val version = script.createVersion(scriptId, "workout_rec v$SCRIPT_VERSION")
-        val url = script.deployWebApp(scriptId, version, description = "enable")
+        val url = enablePage(scriptId)
         sheets.upsertMetadata(
             spreadsheetId,
             linkedMapOf(
@@ -74,13 +73,28 @@ class ScriptInstaller(
     }
 
     /**
-     * The nightly trigger runs the project's current code, so uploading is enough; the "Enable
-     * automation" page keeps its deployed version (its `doGet` is unchanged).
+     * Uploads the current files. A daily trigger made by the Head page runs them at once. One made
+     * by an older, versioned page does not (device check 2026-10-28), so the recorded page becomes
+     * the Head page; opening it again replaces the trigger (AutomationStatusEvaluator.DAILY_TRIGGER).
      */
     override suspend fun upgrade(spreadsheetId: String, scriptId: String, timeZone: String, existingIds: Map<String, Int>) {
         script.updateContent(scriptId, files(spreadsheetId, timeZone))
-        sheets.upsertMetadata(spreadsheetId, linkedMapOf(AutomationStatusEvaluator.SCRIPT_VERSION to "$SCRIPT_VERSION"), existingIds)
+        sheets.upsertMetadata(
+            spreadsheetId,
+            linkedMapOf(
+                AutomationStatusEvaluator.ENABLE_URL to enablePage(scriptId),
+                AutomationStatusEvaluator.SCRIPT_VERSION to "$SCRIPT_VERSION",
+            ),
+            existingIds,
+        )
     }
+
+    /**
+     * The "Enable automation" page as the Head deployment's web app: it runs the project's current
+     * code, and so does the daily trigger it creates. Only the owner can open it, which is the user.
+     */
+    private suspend fun enablePage(scriptId: String): String =
+        "https://script.google.com/macros/s/${script.headDeploymentId(scriptId)}/dev"
 
     private fun files(spreadsheetId: String, timeZone: String): List<ScriptFile> = listOf(
         ScriptFile("appsscript", ScriptFileType.JSON, manifest(timeZone)),
@@ -108,8 +122,12 @@ class ScriptInstaller(
         /**
          * Feature 006: 2 = `workoutRowsPlan`; feature 007: 3 = formulas and removals, no balance once
          * converted; 4 = appended durations via setFormula; 5 = the formula in the locale's syntax
-         * (`;` with a decimal comma) and `#ERROR!` durations rewritten (device check 2026-10-27).
+         * (`;` with a decimal comma) and `#ERROR!` durations rewritten (device check 2026-10-27);
+         * 6 = the Enable page is the Head deployment and replaces the daily trigger (2026-10-28).
          */
-        const val SCRIPT_VERSION = 5
+        const val SCRIPT_VERSION = 6
+
+        /** A page recorded before version 6 was a versioned deployment (`/exec`). */
+        fun isHeadPage(url: String): Boolean = url.endsWith("/dev")
     }
 }

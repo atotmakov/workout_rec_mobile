@@ -30,18 +30,16 @@ class ScriptInstallerTest {
     private val installer = ScriptInstaller(script, sheets, assets)
 
     @Test
-    fun `creates, uploads, versions, deploys, then records metadata`() = runTest {
+    fun `creates, uploads, finds the Head page, then records metadata`() = runTest {
         val installed = installer.install("sheet-1", "Europe/Moscow", existingMetadata = emptyMap(), existingIds = emptyMap())
-        assertEquals(InstalledScript("script-1", "https://script.google.com/macros/s/dep/exec"), installed)
-        assertEquals(
-            listOf("createProject:sheet-1", "content:script-1", "version:script-1", "deploy:script-1:1", "upsert:sheet-1"),
-            log,
-        )
+        // The Enable page is the Head deployment, so the trigger it creates runs every later upload.
+        assertEquals(InstalledScript("script-1", "https://script.google.com/macros/s/dep/dev"), installed)
+        assertEquals(listOf("createProject:sheet-1", "content:script-1", "head:script-1", "upsert:sheet-1"), log)
         assertEquals(
             mapOf(
                 "workout_rec.script_id" to "script-1",
-                "workout_rec.enable_url" to "https://script.google.com/macros/s/dep/exec",
-                "workout_rec.script_version" to "5",
+                "workout_rec.enable_url" to "https://script.google.com/macros/s/dep/dev",
+                "workout_rec.script_version" to "6",
             ),
             sheets.upserts.single(),
         )
@@ -61,7 +59,7 @@ class ScriptInstallerTest {
         assertEquals("V8", manifest["runtimeVersion"]!!.jsonPrimitive.content)
         val config = files.getValue("Config").source
         assertTrue(config.contains("const SPREADSHEET_ID = 'sheet-1';"))
-        assertTrue(config.contains("const SCRIPT_VERSION = 5;"))
+        assertTrue(config.contains("const SCRIPT_VERSION = 6;"))
         // Feature 007 research R7: the script writes the app's duration formula, as a JS string.
         val line = config.lines().single { it.startsWith("const DURATION_FORMULA = ") }
         val literal = line.removePrefix("const DURATION_FORMULA = ").removeSuffix(";")
@@ -71,18 +69,32 @@ class ScriptInstallerTest {
     @Test
     fun `skips project creation when a script id already exists`() = runTest {
         installer.install("sheet-1", "Europe/Moscow", mapOf("workout_rec.script_id" to "existing"), mapOf("workout_rec.script_id" to 5))
-        assertEquals(listOf("content:existing", "version:existing", "deploy:existing:1", "upsert:sheet-1"), log)
+        assertEquals(listOf("content:existing", "head:existing", "upsert:sheet-1"), log)
     }
 
     @Test
-    fun `does nothing when the script and its page already exist`() = runTest {
+    fun `does nothing when the script and its Head page already exist`() = runTest {
+        val page = "https://script.google.com/macros/s/head/dev"
         val installed = installer.install(
             "sheet-1",
             "Europe/Moscow",
-            mapOf("workout_rec.script_id" to "existing", "workout_rec.enable_url" to "https://e"),
+            mapOf("workout_rec.script_id" to "existing", "workout_rec.enable_url" to page),
             emptyMap(),
         )
-        assertEquals(InstalledScript("existing", "https://e"), installed)
+        assertEquals(InstalledScript("existing", page), installed)
         assertEquals(emptyList<String>(), log)
+    }
+
+    // Device check 2026-10-28: a versioned page made a trigger that never ran later uploads.
+    @Test
+    fun `an older versioned page is replaced by the Head page`() = runTest {
+        val installed = installer.install(
+            "sheet-1",
+            "Europe/Moscow",
+            mapOf("workout_rec.script_id" to "existing", "workout_rec.enable_url" to "https://script.google.com/macros/s/v1/exec"),
+            emptyMap(),
+        )
+        assertEquals(InstalledScript("existing", "https://script.google.com/macros/s/dep/dev"), installed)
+        assertEquals(listOf("content:existing", "head:existing", "upsert:sheet-1"), log)
     }
 }

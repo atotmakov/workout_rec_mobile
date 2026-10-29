@@ -79,36 +79,25 @@ class ScriptClientTest {
     }
 
     @Test
-    fun `call 9 creates a version and returns its number`() = runTest {
-        server.enqueue(MockResponse().setBody("""{"scriptId":"s1","versionNumber":3,"description":"workout_rec v1"}"""))
-        assertEquals(3, script.createVersion("s1", "workout_rec v1"))
-        val request = server.takeRequest()
-        assertEquals("/v1/projects/s1/versions", request.requestUrl!!.encodedPath)
-        assertTrue(request.body.readUtf8().contains("\"description\":\"workout_rec v1\""))
-    }
-
-    @Test
-    fun `call 10 deploys and returns the web app url`() = runTest {
+    fun `call 9 finds the Head deployment among the deployments`() = runTest {
         server.enqueue(
             MockResponse().setBody(
-                """{"deploymentId":"d1","deploymentConfig":{"versionNumber":3},
-                   "entryPoints":[{"entryPointType":"EXECUTION_API"},
-                                  {"entryPointType":"WEB_APP","webApp":{"url":"https://script.google.com/macros/s/d1/exec"}}]}""",
+                """{"deployments":[
+                     {"deploymentId":"v1","deploymentConfig":{"versionNumber":1,"description":"enable"}},
+                     {"deploymentId":"head","deploymentConfig":{"description":"Head deployment"}}]}""",
             ),
         )
-        assertEquals("https://script.google.com/macros/s/d1/exec", script.deployWebApp("s1", versionNumber = 3, description = "enable"))
+        assertEquals("head", script.headDeploymentId("s1"))
         val request = server.takeRequest()
+        assertEquals("GET", request.method)
         assertEquals("/v1/projects/s1/deployments", request.requestUrl!!.encodedPath)
-        val body = GoogleJson.parseToJsonElement(request.body.readUtf8()).jsonObject
-        assertEquals(3, body["versionNumber"]!!.jsonPrimitive.content.toInt())
-        assertEquals("appsscript", body["manifestFileName"]!!.jsonPrimitive.content)
     }
 
     @Test
-    fun `call 10 without a web app entry point is an error`() = runTest {
-        server.enqueue(MockResponse().setBody("""{"deploymentId":"d1","entryPoints":[]}"""))
+    fun `call 9 without a Head deployment is an error`() = runTest {
+        server.enqueue(MockResponse().setBody("""{"deployments":[{"deploymentId":"v1","deploymentConfig":{"versionNumber":1}}]}"""))
         try {
-            script.deployWebApp("s1", 3, "enable")
+            script.headDeploymentId("s1")
             fail("expected an error")
         } catch (e: ApiError.Unexpected) {
             // expected

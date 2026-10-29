@@ -97,13 +97,8 @@ class FakeScriptApi(
         uploaded += files
     }
 
-    override suspend fun createVersion(scriptId: String, description: String): Int {
-        log += "version:$scriptId"
-        return 1
-    }
-
-    override suspend fun deployWebApp(scriptId: String, versionNumber: Int, description: String): String {
-        log += "deploy:$scriptId:$versionNumber"
-        return "https://script.google.com/macros/s/dep/exec"
+    override suspend fun headDeploymentId(scriptId: String): String {
+        log += "head:$scriptId"
+        return "dep"
     }
 }
