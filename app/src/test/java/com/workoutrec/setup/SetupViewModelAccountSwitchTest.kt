@@ -61,7 +61,7 @@ class SetupViewModelAccountSwitchTest {
         setup.metadata = mapOf(
             "workout_rec.script_id" to "sb",
             "workout_rec.enable_url" to "https://eb",
-            "workout_rec.automation_enabled_at" to "2026-10-05T11:00:00Z",
+            "workout_rec.automation_enabled_at" to "2026-10-05T11:00:00Z", "workout_rec.daily_trigger" to "head",
         )
         vm.switchAccount(FakeAccountPicker(PickResult.Picked(b)))
         assertEquals(b, store.account.first())

@@ -18,7 +18,7 @@ class AutomationStatusEvaluatorTest {
     @Test
     fun `an unreadable timestamp is skipped and reported`() {
         val bad = mutableListOf<String>()
-        val metadata = mapOf("workout_rec.script_id" to "s1", "workout_rec.automation_enabled_at" to ago(2), "workout_rec.last_daily_run" to "yesterday")
+        val metadata = mapOf("workout_rec.script_id" to "s1", "workout_rec.automation_enabled_at" to ago(2), "workout_rec.daily_trigger" to "head", "workout_rec.last_daily_run" to "yesterday")
         assertEquals(AutomationStatus.On, AutomationStatusEvaluator.evaluate(metadata, now) { bad += it })
         assertEquals(listOf("automation-timestamp"), bad)
     }
@@ -26,7 +26,7 @@ class AutomationStatusEvaluatorTest {
     @Test
     fun `readable timestamps report nothing`() {
         val bad = mutableListOf<String>()
-        val metadata = mapOf("workout_rec.script_id" to "s1", "workout_rec.automation_enabled_at" to ago(2), "workout_rec.last_daily_run" to ago(1))
+        val metadata = mapOf("workout_rec.script_id" to "s1", "workout_rec.automation_enabled_at" to ago(2), "workout_rec.daily_trigger" to "head", "workout_rec.last_daily_run" to ago(1))
         AutomationStatusEvaluator.evaluate(metadata, now) { bad += it }
         assertEquals(emptyList<String>(), bad)
     }
@@ -34,7 +34,7 @@ class AutomationStatusEvaluatorTest {
     @Test
     fun `no script id is ScriptMissing`() {
         assertEquals(AutomationStatus.ScriptMissing, status())
-        assertEquals(AutomationStatus.ScriptMissing, status("workout_rec.automation_enabled_at" to ago(1)))
+        assertEquals(AutomationStatus.ScriptMissing, status("workout_rec.automation_enabled_at" to ago(1), "workout_rec.daily_trigger" to "head"))
     }
 
     @Test
@@ -42,9 +42,19 @@ class AutomationStatusEvaluatorTest {
         assertEquals(AutomationStatus.NotEnabled, status("workout_rec.script_id" to "s1"))
     }
 
+    // Device check 2026-10-28: a trigger made by a versioned page never runs later uploads.
+    @Test
+    fun `enabled without the Head trigger marker is NotEnabled`() {
+        assertEquals(AutomationStatus.NotEnabled, status("workout_rec.script_id" to "s1", "workout_rec.automation_enabled_at" to ago(2)))
+        assertEquals(
+            AutomationStatus.NotEnabled,
+            status("workout_rec.script_id" to "s1", "workout_rec.automation_enabled_at" to ago(2), "workout_rec.daily_trigger" to "version"),
+        )
+    }
+
     @Test
     fun `recently enabled is On`() {
-        assertEquals(AutomationStatus.On, status("workout_rec.script_id" to "s1", "workout_rec.automation_enabled_at" to ago(2)))
+        assertEquals(AutomationStatus.On, status("workout_rec.script_id" to "s1", "workout_rec.automation_enabled_at" to ago(2), "workout_rec.daily_trigger" to "head"))
     }
 
     @Test
@@ -53,7 +63,7 @@ class AutomationStatusEvaluatorTest {
             AutomationStatus.On,
             status(
                 "workout_rec.script_id" to "s1",
-                "workout_rec.automation_enabled_at" to ago(24 * 30),
+                "workout_rec.automation_enabled_at" to ago(24 * 30), "workout_rec.daily_trigger" to "head",
                 "workout_rec.last_daily_run" to ago(10),
             ),
         )
@@ -61,21 +71,21 @@ class AutomationStatusEvaluatorTest {
 
     @Test
     fun `48 h boundary uses the newer timestamp`() {
-        val base = arrayOf("workout_rec.script_id" to "s1", "workout_rec.automation_enabled_at" to ago(24 * 10))
+        val base = arrayOf("workout_rec.script_id" to "s1", "workout_rec.automation_enabled_at" to ago(24 * 10), "workout_rec.daily_trigger" to "head")
         assertEquals(AutomationStatus.On, status(*base, "workout_rec.last_daily_run" to ago(48)))
         assertEquals(AutomationStatus.Stopped, status(*base, "workout_rec.last_daily_run" to ago(49)))
     }
 
     @Test
     fun `old enabled time without runs is Stopped`() {
-        assertEquals(AutomationStatus.Stopped, status("workout_rec.script_id" to "s1", "workout_rec.automation_enabled_at" to ago(72)))
+        assertEquals(AutomationStatus.Stopped, status("workout_rec.script_id" to "s1", "workout_rec.automation_enabled_at" to ago(72), "workout_rec.daily_trigger" to "head"))
     }
 
     @Test
     fun `unreadable timestamps count as missing`() {
         assertEquals(
             AutomationStatus.Stopped,
-            status("workout_rec.script_id" to "s1", "workout_rec.automation_enabled_at" to "garbage"),
+            status("workout_rec.script_id" to "s1", "workout_rec.automation_enabled_at" to "garbage", "workout_rec.daily_trigger" to "head"),
         )
     }
 }

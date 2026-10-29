@@ -56,17 +56,23 @@ function onSelectionChange(e) {
   if (rec) rec.getRange('A1').setValue(value);
 }
 
-/** "Enable automation" page: installs the daily schedule once and records that it is on. */
+/**
+ * "Enable automation" page: installs the daily schedule and records that it is on.
+ *
+ * A trigger runs the code of the deployment that created it. The app opens this page as the test
+ * deployment (/dev), so the trigger runs the project's current code and every upgrade reaches it.
+ * A trigger made by an older, versioned page kept running that version's code (device check
+ * 2026-10-28), so any existing daily trigger is replaced.
+ */
 function doGet(e) {
   const lang = e && e.parameter && e.parameter.lang === 'ru' ? 'ru' : 'en';
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const installed = ScriptApp.getProjectTriggers().some(function (t) {
-    return t.getHandlerFunction() === 'dailyJob';
-  });
-  if (!installed) {
-    ScriptApp.newTrigger('dailyJob').timeBased().everyDays(1).atHour(3).create();
-  }
+  ScriptApp.getProjectTriggers()
+    .filter(function (t) { return t.getHandlerFunction() === 'dailyJob'; })
+    .forEach(function (t) { ScriptApp.deleteTrigger(t); });
+  ScriptApp.newTrigger('dailyJob').timeBased().everyDays(1).atHour(3).create();
   setMetadata_(ss, 'workout_rec.automation_enabled_at', new Date().toISOString());
+  setMetadata_(ss, 'workout_rec.daily_trigger', 'head');
 
   const template = HtmlService.createTemplateFromFile('Enable');
   template.lang = lang;

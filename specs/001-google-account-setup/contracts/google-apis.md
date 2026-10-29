@@ -17,8 +17,12 @@ recorded response fixture).
 | 6 | Write app metadata | `POST .../v4/spreadsheets/{id}:batchUpdate` | `createDeveloperMetadata` / `updateDeveloperMetadata` for `script_id`, `enable_url` | AttachingScript |
 | 7 | Create attached script | `POST https://script.googleapis.com/v1/projects` | `{"title":"workout_rec_automation","parentId":"<spreadsheetId>"}` | AttachingScript |
 | 8 | Upload script files | `PUT .../v1/projects/{scriptId}/content` | files: `appsscript` (JSON), `Config`, `Code`, `Logic` (SERVER_JS), `Enable` (HTML) | AttachingScript |
-| 9 | Create version | `POST .../v1/projects/{scriptId}/versions` | `{"description":"workout_rec v<SCRIPT_VERSION>"}` | AttachingScript |
-| 10 | Deploy web app | `POST .../v1/projects/{scriptId}/deployments` | `{"versionNumber":N,"manifestFileName":"appsscript","description":"enable"}` → read `entryPoints[type=WEB_APP].webApp.url` | AttachingScript |
+| 9 | Find the Head deployment | `GET .../v1/projects/{scriptId}/deployments` | the deployment without `deploymentConfig.versionNumber`; the Enable page is `https://script.google.com/macros/s/{deploymentId}/dev` | AttachingScript, script upgrade |
+
+Until script version 6 (2026-10-28) calls 9 and 10 created a version and a web app deployment of it
+(`/exec`). A trigger created from that page ran that version's code forever, so later uploads never
+reached the nightly job (feature 007 device check). The Head page runs the current code, and so
+does the trigger it creates.
 | 11 | Check spreadsheet still exists | `GET https://www.googleapis.com/drive/v3/files/{fileId}` | `fields=id,trashed` | Launch, before status refresh |
 
 ## Error mapping

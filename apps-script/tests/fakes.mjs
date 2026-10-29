@@ -127,6 +127,10 @@ export function createFakes({ timeZone = 'Etc/UTC', separator = ',' } = {}) {
   const triggers = [];
   const ScriptApp = {
     getProjectTriggers: () => [...triggers],
+    deleteTrigger(trigger) {
+      calls.push(['deleteTrigger', trigger.handler]);
+      triggers.splice(triggers.indexOf(trigger), 1);
+    },
     newTrigger(handler) {
       const spec = { handler };
       const builder = {

@@ -27,7 +27,7 @@ class MoneyRefresherTest {
                 balance = 11.0,
                 metadata = mapOf(
                     "workout_rec.script_id" to "s",
-                    "workout_rec.automation_enabled_at" to "2026-10-01T00:00:00Z",
+                    "workout_rec.automation_enabled_at" to "2026-10-01T00:00:00Z", "workout_rec.daily_trigger" to "head",
                     "workout_rec.last_daily_run" to "2026-10-21T03:00:00Z",
                 ),
             )
@@ -146,7 +146,7 @@ class MoneyRefresherTest {
     @Test
     fun `an unreadable last daily run is kept empty and reported once`() = runTest {
         api.next = {
-            MoneyRead(emptyList(), 3.0, mapOf("workout_rec.script_id" to "s", "workout_rec.automation_enabled_at" to "2026-10-21T00:00:00Z", "workout_rec.last_daily_run" to "yesterday"))
+            MoneyRead(emptyList(), 3.0, mapOf("workout_rec.script_id" to "s", "workout_rec.automation_enabled_at" to "2026-10-21T00:00:00Z", "workout_rec.daily_trigger" to "head", "workout_rec.last_daily_run" to "yesterday"))
         }
         refresher.refresh()
         assertEquals(null, store.summary?.lastDailyRun)

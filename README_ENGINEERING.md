@@ -145,7 +145,8 @@ Script** → select `logMetadata` → **Run** → open the **Execution log**. Ex
 
 ```
 workout_rec.automation_enabled_at = 2026-10-03T09:12:44Z
-workout_rec.enable_url = https://script.google.com/macros/s/…/exec
+workout_rec.daily_trigger = head
+workout_rec.enable_url = https://script.google.com/macros/s/…/dev
 workout_rec.last_daily_run = 2026-10-04T00:03:10Z
 workout_rec.script_id = 1AbC…
 workout_rec.structure_version = 3
@@ -156,5 +157,8 @@ automation is on, the daily job (`dailyJob`) runs at about 03:00 in the spreadsh
 adds a row to `workout` for each new day in `log` (with the previous day's paid/free status),
 removes rows of days without sets, and puts the duration formula in empty cells; it never writes
 durations, nor the balance of a converted spreadsheet. The app updates the attached script on start
-when `workout_rec.script_version` is older than its own. If a duration or `balance!A1` is typed
+when `workout_rec.script_version` is older than its own. The daily job runs that new code because
+the Enable page is the project's Head deployment (`/dev`) and its trigger runs Head; a trigger made
+before script version 6 ran a fixed version, so without `workout_rec.daily_trigger = head`
+automation shows as off until the Enable page is opened again. If a duration or `balance!A1` is typed
 over, the next sync puts the formula back.

@@ -65,7 +65,7 @@ class SetupViewModelSpreadsheetTest {
     private val enabledNow = mapOf(
         "workout_rec.script_id" to "s1",
         "workout_rec.enable_url" to "https://enable",
-        "workout_rec.automation_enabled_at" to "2026-10-05T10:00:00Z",
+        "workout_rec.automation_enabled_at" to "2026-10-05T10:00:00Z", "workout_rec.daily_trigger" to "head",
     )
 
     // Feature 007 FR-001: setup ends at Today; the script steps are an optional action.

@@ -101,13 +101,16 @@ test('onSelectionChange ignores the header row, empty cells and other columns', 
   assert.equal(fakes.calls.length, 0);
 });
 
-test('doGet installs the daily trigger once and records enabling', () => {
+test('doGet installs one daily trigger, replacing an older one, and records enabling', () => {
   const { ss, ctx, fakes } = setup();
   ctx.doGet({ parameter: { lang: 'en' } });
   ctx.doGet({ parameter: { lang: 'en' } });
-  const created = fakes.calls.filter((c) => c[0] === 'createTrigger').map((c) => c[1]);
-  assert.deepEqual(plain(created), [{ handler: 'dailyJob', timeBased: true, everyDays: 1, atHour: 3 }]);
+  const triggerCalls = fakes.calls.filter((c) => c[0] === 'createTrigger' || c[0] === 'deleteTrigger').map((c) => c[0]);
+  assert.deepEqual(triggerCalls, ['createTrigger', 'deleteTrigger', 'createTrigger'], 'a visit replaces the trigger');
+  assert.deepEqual(plain(fakes.triggers.map((t) => t.handler)), ['dailyJob'], 'one trigger');
+  assert.equal(fakes.triggers[0].atHour, 3);
   assert.match(ss.metadataValue('workout_rec.automation_enabled_at'), /^\d{4}-\d\d-\d\dT/);
+  assert.equal(ss.metadataValue('workout_rec.daily_trigger'), 'head');
   assert.equal(ss.metadata.filter((m) => m.key === 'workout_rec.automation_enabled_at').length, 1, 'one entry per key');
   assert.deepEqual(fakes.openByIdCalls, [SPREADSHEET_ID, SPREADSHEET_ID]);
 });

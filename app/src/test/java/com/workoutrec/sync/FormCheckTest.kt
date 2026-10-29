@@ -36,7 +36,7 @@ class FormCheckTest {
     private fun automationOn(scriptVersion: String) {
         sheets.metadata += mapOf(
             AutomationStatusEvaluator.SCRIPT_ID to "s",
-            AutomationStatusEvaluator.ENABLED_AT to "2026-10-01T00:00:00Z",
+            AutomationStatusEvaluator.ENABLED_AT to "2026-10-01T00:00:00Z", AutomationStatusEvaluator.DAILY_TRIGGER to "head",
             AutomationStatusEvaluator.LAST_DAILY_RUN to "2026-10-24T03:00:00Z",
             AutomationStatusEvaluator.SCRIPT_VERSION to scriptVersion,
         )
