@@ -24,14 +24,17 @@ You can also change things directly in the spreadsheet on a computer. The app pi
 
 ## Getting started
 
-You need an Android phone (8.0 or newer) and a Google account. Joining the test takes one email to the app's owner; after that, setup takes about a minute.
+You need an Android phone (8.0 or newer) and a Google account. 
 
-1. **Ask to join the test.** The app is in a closed test on Google Play, so only listed accounts can install it and sign in. Email the app's owner at atotmakov.dev@gmail.com with the Gmail address you use for Google Play on your phone. The owner adds it to the testers list and to the accounts allowed to sign in, then replies that you are in.
-2. **Become a tester.** On your phone, signed in to Google Play with that same account, open [play.google.com/apps/testing/com.workoutrec](https://play.google.com/apps/testing/com.workoutrec) and tap **Become a tester**. If the page says the app is not available, your address hasn't been added yet, or the phone uses another account.
-3. **Install the app.** On the same page tap **download it on Google Play**, or search for Workout Rec in the Play Store, and install it. New versions arrive through Google Play like any other app. It can take a few hours after step 2 before Google Play shows the app.
-4. **Choose your Google account** and allow access. Use the same account you gave the owner. The app can only see files it creates itself, not the rest of your Drive.
-5. **Wait a few seconds** while the app creates your spreadsheet, named `workout_rec_database_`. Then you are on **Today**, ready to log.
-6. **Add your exercises** on the **Exercises** tab: a muscle group and a name for each. If you tap **Add exercise** on Today before that, the app takes you there.
+How to join test:
+1. Join the Workout Rec Testers Google Group: https://groups.google.com/g/workout-rec-testers
+2. Opt into the Google Play test: https://play.google.com/apps/testing/com.workoutrec
+3. Install the app using the same Google account: https://play.google.com/store/apps/details?id=com.workoutrec
+
+After install:
+1. **Choose your Google account** and allow access. Use the same account you gave the owner. The app can only see files it creates itself, not the rest of your Drive.
+2. **Wait a few seconds** while the app creates your spreadsheet, named `workout_rec_database_`. Then you are on **Today**, ready to log.
+3. **Add your exercises** on the **Exercises** tab: a muscle group and a name for each. If you tap **Add exercise** on Today before that, the app takes you there.
 
 ![Welcome screen, Today on first run, the empty exercise list](docs/guide/en/getting-started.png)
 
