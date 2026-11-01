@@ -6,7 +6,7 @@ import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.credentials.exceptions.GetCredentialException
-import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.workoutrec.data.SelectedAccount
 
@@ -25,6 +25,12 @@ fun interface AccountPicker {
     suspend fun pick(): PickResult
 }
 
+/** An explicit sign-in/switch button must also allow adding or reauthenticating an account. */
+internal fun googleAccountRequest(webClientId: String): GetCredentialRequest =
+    GetCredentialRequest.Builder().addCredentialOption(
+        GetSignInWithGoogleOption.Builder(webClientId).build(),
+    ).build()
+
 /** Credential Manager "Sign in with Google"; [activityContext] must be an Activity. */
 class CredentialManagerAccountPicker(
     private val activityContext: Context,
@@ -32,12 +38,7 @@ class CredentialManagerAccountPicker(
 ) : AccountPicker {
 
     override suspend fun pick(): PickResult {
-        val option = GetGoogleIdOption.Builder()
-            .setFilterByAuthorizedAccounts(false)
-            .setAutoSelectEnabled(false)
-            .setServerClientId(webClientId)
-            .build()
-        val request = GetCredentialRequest.Builder().addCredentialOption(option).build()
+        val request = googleAccountRequest(webClientId)
         return try {
             val credential = CredentialManager.create(activityContext).getCredential(activityContext, request).credential
             if (credential is CustomCredential &&
