@@ -130,4 +130,16 @@ class SetupViewModelReportsTest {
         vm.start()
         assertEquals(listOf(NonFatalIssue.AUTHORIZATION_FAILED to "operation=authorization; outcome=Failed; status=8"), reports())
     }
+
+    @Test
+    fun `cancelled consent does not parse an absent Google result as an internal error`() = runTest {
+        val authorizer = FakeApiAuthorizer(AuthOutcome.NeedsUserConsent(com.workoutrec.auth.ConsentRequest(null)))
+        authorizer.consentResult = AuthOutcome.Failed(8)
+        val vm = SetupViewModel(AccountRepository(authorizer, FakeSettingsStore(null)), readyStep, monitoring)
+        vm.start()
+        vm.chooseAccount(FakeAccountPicker(PickResult.Picked(account)))
+        vm.onConsentResult(null)
+        assertEquals(SetupState.SignedOut(SetupMessage.AccountRequired), vm.state.value)
+        assertEquals(emptyList<Any>(), reports())
+    }
 }

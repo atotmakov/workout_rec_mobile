@@ -1,5 +1,7 @@
 package com.workoutrec.setup
 
+import android.app.Application
+import android.content.Intent
 import com.workoutrec.auth.AccountRepository
 import com.workoutrec.auth.AuthOutcome
 import com.workoutrec.auth.ConsentRequest
@@ -8,6 +10,8 @@ import com.workoutrec.data.SelectedAccount
 import com.workoutrec.fakes.FakeAccountPicker
 import com.workoutrec.fakes.FakeApiAuthorizer
 import com.workoutrec.fakes.FakeSettingsStore
+import com.workoutrec.fakes.FakeMonitoring
+import com.workoutrec.monitoring.NonFatalIssue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
@@ -21,9 +25,14 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
 // US1 acceptance scenarios, FR-001, FR-004
 @OptIn(ExperimentalCoroutinesApi::class)
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [35], application = Application::class)
 class SetupViewModelAccountTest {
 
     private val account = SelectedAccount("a@example.com", "Alex T", null)
@@ -84,7 +93,7 @@ class SetupViewModelAccountTest {
         vm.chooseAccount(FakeAccountPicker(PickResult.Picked(account)))
         assertEquals(SetupState.NeedsConsent(consent), vm.state.value)
         authorizer.consentResult = AuthOutcome.Granted("t")
-        vm.onConsentResult(data = null)
+        vm.onConsentResult(data = Intent())
         assertEquals(SetupState.Ready, vm.state.value)
     }
 
@@ -97,6 +106,19 @@ class SetupViewModelAccountTest {
         authorizer.consentResult = AuthOutcome.Denied
         vm.onConsentResult(data = null)
         assertEquals(SetupState.SignedOut(SetupMessage.AccountRequired), vm.state.value)
+    }
+
+    @Test
+    fun `an actual Google consent failure is still reported`() = runTest {
+        val authorizer = FakeApiAuthorizer(AuthOutcome.NeedsUserConsent(ConsentRequest(null)))
+        authorizer.consentResult = AuthOutcome.Failed(8)
+        val monitoring = FakeMonitoring()
+        val vm = SetupViewModel(AccountRepository(authorizer, FakeSettingsStore()), afterAuth, monitoring)
+        vm.start()
+        vm.chooseAccount(FakeAccountPicker(PickResult.Picked(account)))
+        vm.onConsentResult(Intent())
+        assertEquals(SetupState.SignedOut(SetupMessage.AccountRequired), vm.state.value)
+        assertEquals(listOf(NonFatalIssue.AUTHORIZATION_FAILED), monitoring.nonFatals.map { it.issue })
     }
 
     @Test

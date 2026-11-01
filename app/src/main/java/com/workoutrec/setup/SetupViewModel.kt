@@ -154,7 +154,10 @@ class SetupViewModel(
                 _state.value = SetupState.SignedOut(SetupMessage.AccountRequired)
                 return@launch
             }
-            handleAuthorization(account, accounts.resultFromConsent(data))
+            // The activity sends null for a cancelled/unsuccessful consent result. Parsing it
+            // as a successful Google result can turn a normal cancellation into status 8.
+            val outcome = if (data == null) AuthOutcome.Denied else accounts.resultFromConsent(data)
+            handleAuthorization(account, outcome)
         }
     }
 
