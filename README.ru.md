@@ -26,13 +26,23 @@ Workout Rec — приложение для Android, чтобы за секун�
 
 Нужны телефон на Android (8.0 или новее) и аккаунт Google.
 
-Чтобы начать тестирование:
-1. Присоединиться в группу Workout Rec Testers Google Group: https://groups.google.com/g/workout-rec-testers
+Чтобы начать тестирование, используйте один и тот же аккаунт Google на всех трёх шагах:
+
+1. Присоединиться к группе Workout Rec Testers: https://groups.google.com/g/workout-rec-testers
+
+   <a href="https://groups.google.com/g/workout-rec-testers"><img src="docs/guide/qr/google-group-qr.png" alt="Присоединиться к группе Google — QR" width="240"></a>
+
 2. Стать тестером в Google Play: https://play.google.com/apps/testing/com.workoutrec
-3. Установить приложение, использую тот же гугл-аккаунт: https://play.google.com/store/apps/details?id=com.workoutrec
+
+   <a href="https://play.google.com/apps/testing/com.workoutrec"><img src="docs/guide/qr/become-tester-qr.png" alt="Стать тестировщиком — QR" width="240"></a>
+
+3. Установить приложение, используя тот же аккаунт Google: https://play.google.com/store/apps/details?id=com.workoutrec
+
+   <a href="https://play.google.com/store/apps/details?id=com.workoutrec"><img src="docs/guide/qr/google-play-download-qr.png" alt="Скачать из Google Play — QR" width="240"></a>
 
 После установки:
-1. **Выберите аккаунт Google** и разрешите доступ. Используйте тот же аккаунт, который вы назвали автору. Приложение видит только файлы, которые создало само, и не видит остальное содержимое вашего Диска.
+
+1. **Выберите аккаунт Google** и разрешите доступ. Используйте тот же аккаунт, с которым присоединились к тестированию. Приложение видит только файлы, которые создало само, и не видит остальное содержимое вашего Диска.
 2. **Подождите несколько секунд**, пока приложение создаёт вашу таблицу `workout_rec_database_`. После этого откроется вкладка **Сегодня** — можно записывать.
 3. **Добавьте упражнения** на вкладке **Упражнения**: для каждого — группу мышц и название. Если нажать **Добавить упражнение** на вкладке «Сегодня» раньше, приложение само переведёт вас туда.
 

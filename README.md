@@ -26,13 +26,23 @@ You can also change things directly in the spreadsheet on a computer. The app pi
 
 You need an Android phone (8.0 or newer) and a Google account. 
 
-How to join test:
+How to join the test (use the same Google account for all three steps):
+
 1. Join the Workout Rec Testers Google Group: https://groups.google.com/g/workout-rec-testers
+
+   <a href="https://groups.google.com/g/workout-rec-testers"><img src="docs/guide/qr/google-group-qr.png" alt="Join the Google Group — QR" width="240"></a>
+
 2. Opt into the Google Play test: https://play.google.com/apps/testing/com.workoutrec
+
+   <a href="https://play.google.com/apps/testing/com.workoutrec"><img src="docs/guide/qr/become-tester-qr.png" alt="Become a tester — QR" width="240"></a>
+
 3. Install the app using the same Google account: https://play.google.com/store/apps/details?id=com.workoutrec
 
-After install:
-1. **Choose your Google account** and allow access. Use the same account you gave the owner. The app can only see files it creates itself, not the rest of your Drive.
+   <a href="https://play.google.com/store/apps/details?id=com.workoutrec"><img src="docs/guide/qr/google-play-download-qr.png" alt="Download from Google Play — QR" width="240"></a>
+
+After installation:
+
+1. **Choose your Google account** and allow access. Use the same account you used to join the test. The app can only see files it creates itself, not the rest of your Drive.
 2. **Wait a few seconds** while the app creates your spreadsheet, named `workout_rec_database_`. Then you are on **Today**, ready to log.
 3. **Add your exercises** on the **Exercises** tab: a muscle group and a name for each. If you tap **Add exercise** on Today before that, the app takes you there.
 
