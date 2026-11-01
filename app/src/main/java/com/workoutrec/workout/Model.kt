@@ -30,7 +30,8 @@ enum class SyncState { SYNCED, NOT_SYNCED }
 /** What an edit or delete of a displayed set targets. */
 sealed interface SetRef {
     data class Row(val rowIndex: Int, val key: SetKey) : SetRef
-    data class Pending(val id: String) : SetRef
+    /** [key] is the shown values, so the set is still found in the sheet once its change has synced. */
+    data class Pending(val id: String, val key: SetKey) : SetRef
 }
 
 data class DisplaySet(val key: SetKey, val syncState: SyncState, val ref: SetRef)

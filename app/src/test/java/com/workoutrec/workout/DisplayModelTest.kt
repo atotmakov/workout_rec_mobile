@@ -40,7 +40,7 @@ class DisplayModelTest {
         assertEquals(listOf(old, a1, p), sets.map { it.key })
         assertEquals(listOf(SyncState.SYNCED, SyncState.SYNCED, SyncState.NOT_SYNCED), sets.map { it.syncState })
         assertEquals(SetRef.Row(2, a1), sets[1].ref)
-        assertEquals(SetRef.Pending("n1"), sets[2].ref)
+        assertEquals(SetRef.Pending("n1", p), sets[2].ref)
     }
 
     @Test
@@ -49,7 +49,7 @@ class DisplayModelTest {
         val sets = DisplayModel.sets(listOf(row(1, a1), row(2, a2)), listOf(edit("e1", a1, 1, edited)))
         assertEquals(listOf(edited, a2), sets.map { it.key })
         assertEquals(SyncState.NOT_SYNCED, sets[0].syncState)
-        assertEquals(SetRef.Pending("e1"), sets[0].ref)
+        assertEquals(SetRef.Pending("e1", edited), sets[0].ref)
     }
 
     @Test

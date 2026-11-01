@@ -27,25 +27,37 @@ class CoalescerTest {
 
     @Test
     fun `editing a new set changes its values and keeps it new`() {
-        val change = Coalescer.edit(SetRef.Pending("n1"), listOf(new()), values, newId = "x", now = 9)
+        val change = Coalescer.edit(SetRef.Pending("n1", row), listOf(new()), values, newId = "x", now = 9)
         assertEquals(PendingUpdate.Upsert(new(edited)), change)
     }
 
     @Test
     fun `deleting a new set removes it`() {
-        assertEquals(PendingUpdate.Remove("n1"), Coalescer.delete(SetRef.Pending("n1"), listOf(new()), newId = "x", now = 9))
+        assertEquals(PendingUpdate.Remove("n1"), Coalescer.delete(SetRef.Pending("n1", row), listOf(new()), newId = "x", now = 9))
     }
 
     @Test
     fun `editing an edit keeps the row it remembers`() {
-        val change = Coalescer.edit(SetRef.Pending("e1"), listOf(edit()), values, newId = "x", now = 9)
+        val change = Coalescer.edit(SetRef.Pending("e1", edit().key), listOf(edit()), values, newId = "x", now = 9)
         assertEquals(PendingUpdate.Upsert(edit().copy(key = edited)), change)
     }
 
     @Test
     fun `deleting an edit becomes a delete of the remembered row`() {
-        val change = Coalescer.delete(SetRef.Pending("e1"), listOf(edit()), newId = "x", now = 9)
+        val change = Coalescer.delete(SetRef.Pending("e1", edit().key), listOf(edit()), newId = "x", now = 9)
         assertEquals(PendingUpdate.Upsert(edit().copy(kind = ChangeKind.DELETE, key = row)), change)
+    }
+
+    @Test
+    fun `editing a set whose change synced meanwhile edits the row with its values`() {
+        val change = Coalescer.edit(SetRef.Pending("n1", row), emptyList(), values, newId = "x", now = 9)
+        assertEquals(PendingUpdate.Upsert(PendingChange("x", ChangeKind.EDIT, edited, lastSeen = row, createdAt = 9)), change)
+    }
+
+    @Test
+    fun `deleting a set whose change synced meanwhile deletes the row with its values`() {
+        val change = Coalescer.delete(SetRef.Pending("n1", row), emptyList(), newId = "x", now = 9)
+        assertEquals(PendingUpdate.Upsert(PendingChange("x", ChangeKind.DELETE, row, lastSeen = row, createdAt = 9)), change)
     }
 
     @Test

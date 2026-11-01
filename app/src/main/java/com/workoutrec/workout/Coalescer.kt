@@ -17,9 +17,12 @@ object Coalescer {
             is SetRef.Row -> PendingUpdate.Upsert(
                 PendingChange(newId, ChangeKind.EDIT, target.key.with(values), lastSeen = target.key, rowHint = target.rowIndex, createdAt = now),
             )
-            is SetRef.Pending -> {
-                val existing = pending.first { it.id == target.id }
-                PendingUpdate.Upsert(existing.copy(key = existing.key.with(values)))
+            is SetRef.Pending -> when (val existing = pending.find { it.id == target.id }) {
+                // Synced while the set was open: the sheet now holds its values; the row number is not known.
+                null -> PendingUpdate.Upsert(
+                    PendingChange(newId, ChangeKind.EDIT, target.key.with(values), lastSeen = target.key, createdAt = now),
+                )
+                else -> PendingUpdate.Upsert(existing.copy(key = existing.key.with(values)))
             }
         }
 
@@ -29,8 +32,11 @@ object Coalescer {
                 PendingChange(newId, ChangeKind.DELETE, target.key, lastSeen = target.key, rowHint = target.rowIndex, createdAt = now),
             )
             is SetRef.Pending -> {
-                val existing = pending.first { it.id == target.id }
-                when (existing.kind) {
+                val existing = pending.find { it.id == target.id }
+                when (existing?.kind) {
+                    null -> PendingUpdate.Upsert(
+                        PendingChange(newId, ChangeKind.DELETE, target.key, lastSeen = target.key, createdAt = now),
+                    )
                     ChangeKind.NEW -> PendingUpdate.Remove(existing.id)
                     else -> PendingUpdate.Upsert(existing.copy(kind = ChangeKind.DELETE, key = existing.lastSeen ?: existing.key))
                 }

@@ -109,7 +109,7 @@ object DisplayModel {
 
     private fun SetKey.renamed(renames: Map<String, String>) = renames[exercise]?.let { copy(exercise = it) } ?: this
 
-    private fun PendingChange.toDisplay() = DisplaySet(key, SyncState.NOT_SYNCED, SetRef.Pending(id))
+    private fun PendingChange.toDisplay() = DisplaySet(key, SyncState.NOT_SYNCED, SetRef.Pending(id, key))
 }
 
 /** Finds the row an edit or delete targets (research R5). */

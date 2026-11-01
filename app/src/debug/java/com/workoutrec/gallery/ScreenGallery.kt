@@ -421,7 +421,7 @@ private object Samples {
 
     private fun set(time: Long, exercise: String, kg: Double, reps: Int, synced: Boolean = true, row: Int = 0): DisplaySet {
         val key = SetKey(time, exercise, w(kg), Reps(reps))
-        return DisplaySet(key, if (synced) SyncState.SYNCED else SyncState.NOT_SYNCED, if (synced) SetRef.Row(row, key) else SetRef.Pending("p$row"))
+        return DisplaySet(key, if (synced) SyncState.SYNCED else SyncState.NOT_SYNCED, if (synced) SetRef.Row(row, key) else SetRef.Pending("p$row", key))
     }
 
     @Composable

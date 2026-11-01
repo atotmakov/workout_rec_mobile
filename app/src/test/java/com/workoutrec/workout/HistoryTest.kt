@@ -17,7 +17,7 @@ class HistoryTest {
         SetKey(LocalDateTime.parse(time).toEpochSecond(zone), exercise, Weight.ofHundredths(kg * 100L), Reps(reps))
 
     private fun synced(key: SetKey) = DisplaySet(key, SyncState.SYNCED, SetRef.Row(1, key))
-    private fun pending(key: SetKey) = DisplaySet(key, SyncState.NOT_SYNCED, SetRef.Pending("p"))
+    private fun pending(key: SetKey) = DisplaySet(key, SyncState.NOT_SYNCED, SetRef.Pending("p", key))
 
     private val older = listOf(key("2026-01-05T18:00:00", 30, 12), key("2026-01-05T18:03:00", 35, 10))
     private val last = listOf(key("2026-01-09T18:00:00", 40, 6), key("2026-01-09T18:03:00", 40, 8), key("2026-01-09T18:06:00", 35, 12))
