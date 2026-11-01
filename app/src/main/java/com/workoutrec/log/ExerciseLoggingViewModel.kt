@@ -144,7 +144,7 @@ class ExerciseLoggingViewModel(
         drafts.value = drafts.value.filterIndexed { i, _ -> i != index }
         val key = SetKey(time, exercise, weight, reps)
         // Keep the next set's time unique even before the store emits the saved set.
-        latestSets = latestSets + DisplaySet(key, SyncState.NOT_SYNCED, SetRef.Pending(""))
+        latestSets = latestSets + DisplaySet(key, SyncState.NOT_SYNCED, SetRef.Pending("", key))
         viewModelScope.launch {
             store.confirmSet(key)
             requestSync()

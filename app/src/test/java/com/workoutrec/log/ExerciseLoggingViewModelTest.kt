@@ -37,7 +37,7 @@ class ExerciseLoggingViewModelTest {
         override suspend fun confirmSet(key: SetKey): String {
             confirmed += key
             val id = "p${confirmed.size}"
-            displaySets.value = displaySets.value + DisplaySet(key, SyncState.NOT_SYNCED, SetRef.Pending(id))
+            displaySets.value = displaySets.value + DisplaySet(key, SyncState.NOT_SYNCED, SetRef.Pending(id, key))
             return id
         }
     }
