@@ -24,6 +24,8 @@ class AccountRepository(
     private val log: (String) -> Unit = {},
     /** Feature 003: failed token requests as non-fatal events (FR-005). */
     private val monitoring: Monitoring = NoMonitoring,
+    /** Whether the device has a network now; offline, Google's consent screen can only fail (issue 54). */
+    private val online: () -> Boolean = { true },
 ) : TokenProvider {
 
     private val tokenLock = Mutex()
@@ -47,10 +49,15 @@ class AccountRepository(
     /**
      * Silent authorization for the stored account on launch (FR-004). Returns null when no account
      * is stored. Denied means access was revoked, so the stored account is forgotten.
+     * No answer, or consent asked while offline (an expired token), is no connection (issue 54).
      */
     suspend fun authorizeOnLaunch(): AuthOutcome? {
         val account = store.account.first() ?: return null
-        val outcome = authorize(account)
+        val outcome = when (val answer = withTimeoutOrNull(AUTHORIZE_TIMEOUT_MILLIS) { authorize(account) }) {
+            null -> AuthOutcome.Unavailable
+            is AuthOutcome.NeedsUserConsent -> if (online()) answer else AuthOutcome.Unavailable
+            else -> answer
+        }
         if (outcome is AuthOutcome.Denied || outcome is AuthOutcome.Failed) forgetAccount()
         return outcome
     }

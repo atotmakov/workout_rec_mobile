@@ -26,6 +26,17 @@ object DeviceState {
         "unknown"
     }
 
+    /** A validated internet connection, as background sync requires; true when it cannot be checked (issue 54). */
+    fun online(context: Context, monitoring: Monitoring = NoMonitoring): Boolean = try {
+        val connectivity = context.getSystemService(ConnectivityManager::class.java)
+        val caps = connectivity?.activeNetwork?.let(connectivity::getNetworkCapabilities)
+        caps != null && caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+            caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+    } catch (e: SecurityException) {
+        monitoring.nonFatal(NonFatalIssue.AUTHORIZATION_FAILED, e, "operation=online-check")
+        true
+    }
+
     private fun network(context: Context): String {
         val connectivity = context.getSystemService(ConnectivityManager::class.java)
         val caps = connectivity?.activeNetwork?.let(connectivity::getNetworkCapabilities)
