@@ -20,6 +20,7 @@ import com.workoutrec.automation.ScriptAssets
 import com.workoutrec.automation.ScriptInstaller
 import com.workoutrec.data.DataStoreSettingsStore
 import com.workoutrec.data.SettingsStore
+import com.workoutrec.diag.DeviceState
 import com.workoutrec.diag.DiagnosticLog
 import com.workoutrec.google.DriveClient
 import com.workoutrec.google.GoogleHttp
@@ -114,6 +115,7 @@ class AppContainer(context: Context, val monitoringSettings: MonitoringSettings)
         )::invoke,
         log = diagnosticLog::write,
         monitoring = monitoring,
+        online = { DeviceState.online(appContext, monitoring) },
     )
 
     val okHttpClient: OkHttpClient = OkHttpClient.Builder()

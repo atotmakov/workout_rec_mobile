@@ -70,6 +70,33 @@ class AccountRepositoryTest {
         assertEquals(account, store.account.first())
     }
 
+    // Issue 54: offline with an expired token Google asks for consent, and its screen fails with a network error.
+    @Test
+    fun `consent asked on launch without a network counts as no connection and keeps the account`() = runTest {
+        val store = FakeSettingsStore(account)
+        val consent = AuthOutcome.NeedsUserConsent(ConsentRequest(null))
+        val repo = AccountRepository(FakeApiAuthorizer(consent), store, online = { false })
+        assertEquals(AuthOutcome.Unavailable, repo.authorizeOnLaunch())
+        assertEquals(account, store.account.first())
+    }
+
+    @Test
+    fun `consent asked on launch with a network is shown`() = runTest {
+        val consent = AuthOutcome.NeedsUserConsent(ConsentRequest(null))
+        val repo = AccountRepository(FakeApiAuthorizer(consent), FakeSettingsStore(account), online = { true })
+        assertEquals(consent, repo.authorizeOnLaunch())
+    }
+
+    // Issue 54 / quickstart-results.md issue 1: launch must not wait forever for Play services.
+    @Test
+    fun `authorization on launch that never answers counts as no connection and keeps the account`() = runTest {
+        val store = FakeSettingsStore(account)
+        val repo = AccountRepository(FakeApiAuthorizer().apply { hang = true }, store)
+        assertEquals(AuthOutcome.Unavailable, repo.authorizeOnLaunch())
+        assertEquals(account, store.account.first())
+        assertTrue(testScheduler.currentTime <= AccountRepository.AUTHORIZE_TIMEOUT_MILLIS)
+    }
+
     @Test
     fun `signOut clears credential state and all local data`() = runTest {
         var cleared = 0
